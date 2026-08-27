@@ -1,69 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#171717"><meta name="description" content="Loner — crie produtos, construa negócios e evolua sua indústria.">
-  <title>Loner — Sua história começa aqui</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#11100e">
+  <meta name="description" content="Loner — uma biblioteca para explorar todo o conhecimento.">
+  <title>Loner — Biblioteca de conhecimento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="noise" aria-hidden="true"></div>
+  <div class="texture" aria-hidden="true"></div>
   <header class="topbar">
-    <a class="brand" href="#" aria-label="Loner — início"><span class="brand-mark">L</span><span>LONER</span></a>
-    <div id="account-hud" class="account-hud hidden">
-      <div class="energy-hud" aria-label="Energia 30 de 30"><span>ENERGIA</span><div class="header-energy"><i id="header-energy-progress"></i></div><small><b id="header-energy">30</b>/30</small></div>
-      <div class="level-hud" aria-label="Level 1, experiência 0 de 100"><span>LV. <strong id="header-level">1</strong></span><div class="header-xp"><i id="header-xp-progress"></i></div><small><b id="header-xp">0</b>/100 XP</small></div>
-      <span class="credits-pill" aria-label="Saldo do jogador"><i>$</i><strong id="header-credits">0</strong><span>créditos</span></span>
-      <img id="header-player-photo" class="header-avatar" alt="Foto do jogador">
+    <a class="brand" href="#" aria-label="Loner — início"><span class="brand-mark">L</span><span><b>LONER</b><small>BIBLIOTECA</small></span></a>
+    <nav id="library-nav" class="library-nav hidden" aria-label="Navegação principal">
+      <button class="nav-link active" data-view="catalog" type="button">Acervo</button>
+      <button class="nav-link" data-view="shelf" type="button">Minha estante <span id="shelf-count">0</span></button>
+      <button class="nav-link" data-view="categories" type="button">Categorias</button>
+    </nav>
+    <div id="user-menu" class="user-menu hidden">
+      <div><strong id="header-user-name">Leitor</strong><small>Leitor Loner</small></div>
+      <img id="header-user-photo" alt="Foto do usuário">
+      <button id="logout" type="button" title="Sair da conta" aria-label="Sair da conta">↗</button>
     </div>
   </header>
+
   <main>
-    <section id="landing" class="landing" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="eyebrow"><span></span> UM MUNDO CONSTRUÍDO POR VOCÊ</p>
-        <h1 id="hero-title">Comece com as mãos.<br><em>Construa um legado.</em></h1>
-        <p class="hero-description">Da primeira tora de madeira às máquinas mais avançadas. Colete recursos, fabrique produtos, negocie e construa uma indústria em uma economia viva.</p>
-        <div class="journey" aria-label="Ciclo de produção">
-          <div class="journey-item active"><b>01</b><span>Colete<small>Madeira e recursos</small></span></div><div class="journey-line"></div>
-          <div class="journey-item"><b>02</b><span>Fabrique<small>Ferramentas e máquinas</small></span></div><div class="journey-line"></div>
-          <div class="journey-item"><b>03</b><span>Venda<small>Produtos e tecnologia</small></span></div>
-        </div>
+    <section id="landing" class="landing">
+      <div class="landing-copy">
+        <p class="eyebrow">CONHECIMENTO SEM FRONTEIRAS</p>
+        <h1>Uma biblioteca para<br><em>todas as perguntas.</em></h1>
+        <p>Explore grandes obras, descubra novos assuntos e construa sua própria estante de conhecimento. Um acervo vivo, organizado para quem nunca quer parar de aprender.</p>
+        <div class="landing-numbers"><div><strong>12</strong><span>áreas iniciais</span></div><div><strong>∞</strong><span>descobertas</span></div><div><strong>1</strong><span>estante pessoal</span></div></div>
       </div>
-      <aside class="access-card" aria-labelledby="access-title">
-        <div class="card-emblem" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M32 4 53 16v25L32 60 11 41V16L32 4Z"/><path d="m22 19 10-6 10 6v13L32 43 22 32V19Z"/><path d="M32 43v9M16 20l6 4m26-4-6 4"/></svg></div>
-        <p class="card-kicker">SUA JORNADA COMEÇA AGORA</p><h2 id="access-title">Entre no mundo de Loner</h2>
-        <p class="card-copy">Uma conta. Uma história. Seu progresso salvo em todos os dispositivos.</p>
+      <aside class="login-card">
+        <div class="book-symbol" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="eyebrow">ENTRADA DO LEITOR</p>
+        <h2>Acesse a Biblioteca Loner</h2>
+        <p>Entre com sua conta Google para consultar o acervo completo e guardar seus livros favoritos.</p>
         <button id="google-login" class="google-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.87h5.38a4.6 4.6 0 0 1-2 3.02v2.52h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.41l-3.24-2.52c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.39 13.9A6 6 0 0 1 6.08 12c0-.66.11-1.3.31-1.9V7.5H3.04A10 10 0 0 0 2 12c0 1.61.38 3.14 1.04 4.5l3.35-2.6Z"/><path fill="#EA4335" d="M12 5.97c1.47 0 2.79.51 3.83 1.5l2.87-2.88A9.62 9.62 0 0 0 12 2a10 10 0 0 0-8.96 5.5l3.35 2.6C7.18 7.73 9.39 5.97 12 5.97Z"/></svg>
-          <span>Continuar com Google</span>
+          Continuar com Google
         </button>
         <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
-        <div class="divider"><span></span><i>✦</i><span></span></div>
-        <p class="terms">Ao entrar, você concorda com os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>.</p>
+        <small class="terms">Ao entrar, você concorda com os Termos de Uso e a Política de Privacidade.</small>
       </aside>
     </section>
-    <section id="profile" class="profile hidden" aria-label="Perfil do jogador">
-      <div class="profile-panel">
-        <nav class="profile-tabs" aria-label="Seções do jogador" role="tablist">
-          <button class="profile-tab active" type="button" role="tab" aria-selected="true" aria-controls="tab-profile" data-tab="profile">Perfil</button>
-          <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills">Habilidades</button>
-          <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="tab-achievements" data-tab="achievements">Conquistas</button>
-        </nav>
-        <div class="tab-stage">
-          <section id="tab-profile" class="tab-panel active" role="tabpanel">
-            <section class="inventory" aria-labelledby="inventory-title"><div class="inventory-header"><div><small>INVENTÁRIO</small><h2 id="inventory-title">Itens do personagem</h2></div><span><b id="inventory-used">0</b> / 32 espaços</span></div><div id="inventory-grid" class="inventory-grid"></div></section>
 
-          </section>
-          <section id="tab-skills" class="tab-panel construction-panel" role="tabpanel" hidden><span>⚙</span><h2>Habilidades</h2><p>Em construção</p></section>
-          <section id="tab-achievements" class="tab-panel construction-panel" role="tabpanel" hidden><span>🏆</span><h2>Conquistas</h2><p>Em construção</p></section>
-        </div>
-        <div class="profile-actions"><button id="logout" class="text-button" type="button">Sair da conta</button></div>
+    <section id="library" class="library hidden">
+      <div class="welcome-row">
+        <div><p class="eyebrow">BEM-VINDO À SUA BIBLIOTECA</p><h1>O que você quer<br>descobrir hoje?</h1></div>
+        <label class="search-box" for="book-search"><span>⌕</span><input id="book-search" type="search" placeholder="Pesquise por livro, autor ou assunto..." autocomplete="off"><kbd>ENTER</kbd></label>
       </div>
+
+      <section id="view-catalog" class="library-view active" data-library-view="catalog">
+        <div class="featured">
+          <div class="featured-copy"><p class="eyebrow">LEITURA EM DESTAQUE</p><span class="subject">Ciência · História natural</span><h2>A origem das espécies</h2><p>Uma das obras mais influentes da história da ciência. Charles Darwin apresenta os fundamentos da evolução por seleção natural e transforma nossa compreensão da vida.</p><div class="book-actions"><button class="primary-action" type="button" data-open-book="origem-especies">Conhecer a obra</button><button class="save-action" type="button" data-save-book="origem-especies">＋ Minha estante</button></div></div>
+          <div class="featured-cover cover-natural"><i>CHARLES<br>DARWIN</i><strong>A ORIGEM<br>DAS ESPÉCIES</strong><small>1859</small></div>
+          <div class="featured-quote"><span>“</span><p>Há grandeza nesta visão da vida.</p></div>
+        </div>
+        <div class="section-title"><div><p class="eyebrow">EXPLORE O ACERVO</p><h2>Obras selecionadas</h2></div><label>Ordenar por <select id="sort-books"><option value="featured">Destaques</option><option value="title">Título</option><option value="author">Autor</option><option value="year">Ano</option></select></label></div>
+        <div id="catalog-grid" class="book-grid"></div>
+        <p id="no-results" class="empty-state hidden">Nenhum livro encontrado para esta busca.</p>
+      </section>
+
+      <section id="view-shelf" class="library-view" data-library-view="shelf" hidden>
+        <div class="view-heading"><p class="eyebrow">COLEÇÃO PESSOAL</p><h2>Minha estante</h2><p>Os livros que você deseja guardar, estudar ou revisitar.</p></div>
+        <div id="shelf-grid" class="book-grid"></div>
+        <div id="empty-shelf" class="empty-state"><span>◇</span><h3>Sua estante está vazia</h3><p>Explore o acervo e salve as obras que despertarem sua curiosidade.</p><button class="primary-action" data-go-catalog type="button">Explorar acervo</button></div>
+      </section>
+
+      <section id="view-categories" class="library-view" data-library-view="categories" hidden>
+        <div class="view-heading"><p class="eyebrow">CAMINHOS DO CONHECIMENTO</p><h2>Categorias</h2><p>Escolha uma área para começar sua exploração.</p></div>
+        <div id="category-grid" class="category-grid"></div>
+      </section>
     </section>
   </main>
-  <footer><span>© 2026 LONER</span><span>◆</span><span>CRIE. PRODUZA. PROSPERE.</span></footer>
+
+  <dialog id="book-dialog" class="book-dialog"><button class="dialog-close" type="button" aria-label="Fechar">×</button><div id="dialog-content"></div></dialog>
+  <footer><span>© 2026 LONER</span><span>CONHECIMENTO PARA TODOS</span></footer>
   <script type="module" src="script.js"></script>
 </body>
 </html>
