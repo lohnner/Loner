@@ -12,7 +12,10 @@
   <div class="noise" aria-hidden="true"></div>
   <header class="topbar">
     <a class="brand" href="#" aria-label="Loner — início"><span class="brand-mark">L</span><span>LONER</span></a>
-    <span class="credits-pill" aria-label="Saldo do jogador"><i>$</i><strong id="header-credits">0</strong><span>créditos</span></span>
+    <div id="account-hud" class="account-hud hidden">
+      <div class="level-hud" aria-label="Level 1, experiência 0 de 100"><span>LV. <strong id="header-level">1</strong></span><div class="header-xp"><i id="header-xp-progress"></i></div><small><b id="header-xp">0</b>/100 XP</small></div>
+      <span class="credits-pill" aria-label="Saldo do jogador"><i>$</i><strong id="header-credits">0</strong><span>créditos</span></span>
+    </div>
   </header>
   <main>
     <section id="landing" class="landing" aria-labelledby="hero-title">
@@ -41,13 +44,20 @@
     </section>
     <section id="profile" class="profile hidden" aria-labelledby="profile-title">
       <div class="profile-panel">
-        <p class="eyebrow"><span></span> VIAJANTE IDENTIFICADO</p>
-        <div class="profile-heading"><img id="player-photo" class="avatar" alt="Foto do jogador"><div><p>Bem-vindo de volta,</p><h1 id="profile-title">Jogador</h1><small id="player-email"></small></div></div>
-        <div class="profile-grid"><article><small>NÍVEL</small><strong>1</strong><span>Produtor iniciante</span></article><article><small>NEGÓCIO</small><strong>Oficina</strong><span>Primeiros produtos</span></article><article><small>SALDO</small><strong>0</strong><span>créditos</span></article></div>
-        <section class="game-area" aria-label="Área do jogo">
-          <div class="game-grid" aria-hidden="true"></div>
-          <div class="game-placeholder"><span class="game-icon">◆</span><h2>Sua oficina</h2><p>A área de produção do Loner será construída aqui.</p></div>
-        </section>
+        <nav class="profile-tabs" aria-label="Seções do jogador" role="tablist">
+          <button class="profile-tab active" type="button" role="tab" aria-selected="true" aria-controls="tab-profile" data-tab="profile">Perfil</button>
+          <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills">Habilidades</button>
+          <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="tab-achievements" data-tab="achievements">Conquistas</button>
+        </nav>
+        <div class="tab-stage">
+          <section id="tab-profile" class="tab-panel active" role="tabpanel">
+            <div class="profile-heading"><img id="player-photo" class="avatar" alt="Foto do jogador"><div><p>Bem-vindo de volta,</p><h1 id="profile-title">Jogador</h1><small id="player-email"></small></div></div>
+            <div class="profile-grid"><article><small>LEVEL</small><strong id="profile-level">1</strong><span>Sem limite máximo</span></article><article><small>NEGÓCIO</small><strong>Oficina</strong><span>Primeiros produtos</span></article><article><small>SALDO</small><strong id="profile-credits">0</strong><span>créditos</span></article></div>
+            <div class="xp-card"><div><small>EXPERIÊNCIA</small><strong><span id="profile-xp">0</span> / <span id="profile-next-xp">100</span> XP</strong></div><div class="xp-track"><i id="profile-xp-progress"></i></div><p>Toda ação realizada no jogo concede experiência.</p></div>
+          </section>
+          <section id="tab-skills" class="tab-panel construction-panel" role="tabpanel" hidden><span>⚙</span><h2>Habilidades</h2><p>Em construção</p></section>
+          <section id="tab-achievements" class="tab-panel construction-panel" role="tabpanel" hidden><span>🏆</span><h2>Conquistas</h2><p>Em construção</p></section>
+        </div>
         <div class="profile-actions"><button id="logout" class="text-button" type="button">Sair da conta</button></div>
       </div>
     </section>

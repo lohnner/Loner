@@ -24,6 +24,9 @@ const authMessage = document.querySelector("#auth-message");
 const playerName = document.querySelector("#profile-title");
 const playerEmail = document.querySelector("#player-email");
 const playerPhoto = document.querySelector("#player-photo");
+const accountHud = document.querySelector("#account-hud");
+const tabs = document.querySelectorAll(".profile-tab");
+const tabPanels = document.querySelectorAll(".tab-panel");
 
 function fallbackAvatar(name) {
   const initial = name.trim().charAt(0).toUpperCase();
@@ -37,12 +40,14 @@ function showProfile(user) {
   playerPhoto.src = user.photoURL || fallbackAvatar(user.displayName || "L");
   landing.classList.add("hidden");
   profile.classList.remove("hidden");
+  accountHud.classList.remove("hidden");
   document.title = `${user.displayName || "Perfil"} — Loner`;
 }
 
 function showLanding() {
   profile.classList.add("hidden");
   landing.classList.remove("hidden");
+  accountHud.classList.add("hidden");
   document.title = "Loner — Sua história começa aqui";
 }
 
@@ -74,4 +79,18 @@ logoutButton.addEventListener("click", async () => {
   try { await signOut(auth); } finally { logoutButton.disabled = false; }
 });
 
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    tabs.forEach(item => {
+      const selected = item === tab;
+      item.classList.toggle("active", selected);
+      item.setAttribute("aria-selected", String(selected));
+    });
+    tabPanels.forEach(panel => {
+      const selected = panel.id === `tab-${tab.dataset.tab}`;
+      panel.classList.toggle("active", selected);
+      panel.hidden = !selected;
+    });
+  });
+});
 onAuthStateChanged(auth, user => user ? showProfile(user) : showLanding());
