@@ -21,9 +21,7 @@ const profile = document.querySelector("#profile");
 const loginButton = document.querySelector("#google-login");
 const logoutButton = document.querySelector("#logout");
 const authMessage = document.querySelector("#auth-message");
-const playerName = document.querySelector("#profile-title");
-const playerEmail = document.querySelector("#player-email");
-const playerPhoto = document.querySelector("#player-photo");
+const playerPhoto = document.querySelector("#header-player-photo");
 const accountHud = document.querySelector("#account-hud");
 const tabs = document.querySelectorAll(".profile-tab");
 const tabPanels = document.querySelectorAll(".tab-panel");
@@ -45,8 +43,6 @@ function fallbackAvatar(name) {
 }
 
 function showProfile(user) {
-  playerName.textContent = user.displayName || "Viajante";
-  playerEmail.textContent = user.email || "";
   playerPhoto.src = user.photoURL || fallbackAvatar(user.displayName || "L");
   landing.classList.add("hidden");
   profile.classList.remove("hidden");

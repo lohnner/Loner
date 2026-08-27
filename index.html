@@ -13,8 +13,10 @@
   <header class="topbar">
     <a class="brand" href="#" aria-label="Loner — início"><span class="brand-mark">L</span><span>LONER</span></a>
     <div id="account-hud" class="account-hud hidden">
+      <div class="energy-hud" aria-label="Energia 30 de 30"><span>ENERGIA</span><div class="header-energy"><i id="header-energy-progress"></i></div><small><b id="header-energy">30</b>/30</small></div>
       <div class="level-hud" aria-label="Level 1, experiência 0 de 100"><span>LV. <strong id="header-level">1</strong></span><div class="header-xp"><i id="header-xp-progress"></i></div><small><b id="header-xp">0</b>/100 XP</small></div>
       <span class="credits-pill" aria-label="Saldo do jogador"><i>$</i><strong id="header-credits">0</strong><span>créditos</span></span>
+      <img id="header-player-photo" class="header-avatar" alt="Foto do jogador">
     </div>
   </header>
   <main>
@@ -42,7 +44,7 @@
         <p class="terms">Ao entrar, você concorda com os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>.</p>
       </aside>
     </section>
-    <section id="profile" class="profile hidden" aria-labelledby="profile-title">
+    <section id="profile" class="profile hidden" aria-label="Perfil do jogador">
       <div class="profile-panel">
         <nav class="profile-tabs" aria-label="Seções do jogador" role="tablist">
           <button class="profile-tab active" type="button" role="tab" aria-selected="true" aria-controls="tab-profile" data-tab="profile">Perfil</button>
@@ -51,9 +53,6 @@
         </nav>
         <div class="tab-stage">
           <section id="tab-profile" class="tab-panel active" role="tabpanel">
-            <div class="xp-card top-xp"><div><small>EXPERIÊNCIA DO LEVEL</small><strong><span id="profile-xp">0</span> / <span id="profile-next-xp">100</span> XP</strong></div><div class="xp-track"><i id="profile-xp-progress"></i></div></div>
-            <div class="profile-heading"><img id="player-photo" class="avatar" alt="Foto do jogador"><div><p>Bem-vindo de volta,</p><h1 id="profile-title">Jogador</h1><small id="player-email"></small></div></div>
-            <div class="profile-grid"><article><small>LEVEL</small><strong id="profile-level">1</strong><span>Sem limite máximo</span></article><article><small>NEGÓCIO</small><strong>Oficina</strong><span>Primeiros produtos</span></article><article><small>SALDO</small><strong id="profile-credits">0</strong><span>créditos</span></article></div>
             <section class="inventory" aria-labelledby="inventory-title"><div class="inventory-header"><div><small>INVENTÁRIO</small><h2 id="inventory-title">Itens do personagem</h2></div><span><b id="inventory-used">0</b> / 32 espaços</span></div><div id="inventory-grid" class="inventory-grid"></div></section>
 
           </section>
