@@ -27,6 +27,16 @@ const playerPhoto = document.querySelector("#player-photo");
 const accountHud = document.querySelector("#account-hud");
 const tabs = document.querySelectorAll(".profile-tab");
 const tabPanels = document.querySelectorAll(".tab-panel");
+const inventoryGrid = document.querySelector("#inventory-grid");
+
+for (let slot = 1; slot <= 32; slot += 1) {
+  const inventorySlot = document.createElement("button");
+  inventorySlot.type = "button";
+  inventorySlot.className = "inventory-slot";
+  inventorySlot.setAttribute("aria-label", `Espaço ${slot} do inventário, vazio`);
+  inventorySlot.dataset.slot = slot;
+  inventoryGrid.appendChild(inventorySlot);
+}
 
 function fallbackAvatar(name) {
   const initial = name.trim().charAt(0).toUpperCase();
