@@ -12,10 +12,18 @@
   <link rel="stylesheet" href="../livro.css">
 </head>
 <body class="auth-pending">
-  <header class="book-topbar">
-    <a class="brand" href="../index.html"><span class="brand-mark">L</span><span><b>LONER</b><small>BIBLIOTECA</small></span></a>
-    <nav><a href="../index.html">Acervo</a><a href="#sumario">Sumário</a><a href="#sobre">Sobre a obra</a></nav>
-    <div class="reader"><span id="reader-name">Leitor</span><img id="reader-photo" alt="Foto do leitor"></div>
+  <header class="book-topbar topbar">
+    <a class="brand" href="../index.html?view=catalog" aria-label="Loner — início"><span class="brand-mark">L</span><span><b>LONER</b><small>BIBLIOTECA</small></span></a>
+    <nav class="library-nav" aria-label="Navegação principal">
+      <a class="nav-link active" href="../index.html?view=catalog">Acervo</a>
+      <a class="nav-link" href="../index.html?view=shelf">Minhas leituras</a>
+      <a class="nav-link" href="../index.html?view=categories">Categorias</a>
+    </nav>
+    <div class="user-menu">
+      <div><strong id="reader-name">Leitor</strong><small>Leitor Loner</small></div>
+      <img id="reader-photo" alt="Foto do usuário">
+      <button id="logout" type="button" title="Sair da conta" aria-label="Sair da conta">↗</button>
+    </div>
   </header>
 
   <main>
