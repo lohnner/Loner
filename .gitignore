@@ -1,0 +1,11 @@
+# Arquivos do sistema e do editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependências e configurações locais futuras
+node_modules/
+.env
+.env.*
+dist/
