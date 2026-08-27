@@ -17,7 +17,7 @@
     <a class="brand" href="#" aria-label="Loner — início"><span class="brand-mark">L</span><span><b>LONER</b><small>BIBLIOTECA</small></span></a>
     <nav id="library-nav" class="library-nav hidden" aria-label="Navegação principal">
       <button class="nav-link active" data-view="catalog" type="button">Acervo</button>
-      <button class="nav-link" data-view="shelf" type="button">Minha estante <span id="shelf-count">0</span></button>
+      <button class="nav-link" data-view="shelf" type="button">Minhas leituras <span id="shelf-count">0</span></button>
       <button class="nav-link" data-view="categories" type="button">Categorias</button>
     </nav>
     <div id="user-menu" class="user-menu hidden">
@@ -51,7 +51,7 @@
 
     <section id="library" class="library hidden">
       <div class="welcome-row">
-        <div><p class="eyebrow">BEM-VINDO À SUA BIBLIOTECA</p><h1>O que você quer<br>descobrir hoje?</h1></div>
+        <div><p class="eyebrow">SALÃO PRINCIPAL · BIBLIOTECA LONER</p><h1>Entre estantes,<br>encontre conhecimento.</h1></div>
         <label class="search-box" for="book-search"><span>⌕</span><input id="book-search" type="search" placeholder="Pesquise por livro, autor ou assunto..." autocomplete="off"><kbd>ENTER</kbd></label>
       </div>
 
@@ -67,9 +67,9 @@
       </section>
 
       <section id="view-shelf" class="library-view" data-library-view="shelf" hidden>
-        <div class="view-heading"><p class="eyebrow">COLEÇÃO PESSOAL</p><h2>Minha estante</h2><p>Os livros que você deseja guardar, estudar ou revisitar.</p></div>
+        <div class="view-heading"><p class="eyebrow">SEU DIÁRIO DE LEITURA</p><h2>Minhas leituras</h2><p>Acompanhe o que pretende ler, o que está lendo e onde parou.</p><div class="reading-filters"><button class="active" data-reading-filter="all" type="button">Todos</button><button data-reading-filter="quero-ler" type="button">Vou ler</button><button data-reading-filter="lendo" type="button">Lendo</button><button data-reading-filter="desisti" type="button">Desisti</button></div></div>
         <div id="shelf-grid" class="book-grid"></div>
-        <div id="empty-shelf" class="empty-state"><span>◇</span><h3>Sua estante está vazia</h3><p>Explore o acervo e salve as obras que despertarem sua curiosidade.</p><button class="primary-action" data-go-catalog type="button">Explorar acervo</button></div>
+        <div id="empty-shelf" class="empty-state"><span>◇</span><h3>Seu diário de leitura está vazio</h3><p>Escolha um livro e marque como “Vou ler” para começar sua jornada.</p><button class="primary-action" data-go-catalog type="button">Explorar acervo</button></div>
       </section>
 
       <section id="view-categories" class="library-view" data-library-view="categories" hidden>
