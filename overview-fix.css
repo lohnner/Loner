@@ -432,6 +432,73 @@ html {
   color: var(--green);
 }
 
+.no-drivers {
+  padding: 24px 0;
+  color: #778279;
+  font-size: .6rem;
+  line-height: 1.6;
+}
+
+.trip-summary {
+  margin-right: 10px !important;
+  padding-right: 16px;
+  border-right: 1px solid var(--line);
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-end !important;
+  gap: 2px !important;
+}
+
+.trip-summary b {
+  color: var(--green);
+  font-size: .72rem;
+}
+
+.trip-summary small {
+  color: #859187;
+  font-size: .5rem;
+}
+
+.truck-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.truck-marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.45rem;
+  filter: drop-shadow(0 3px 5px #000);
+}
+
+.truck-marker > span {
+  min-width: 92px;
+  padding: 6px 9px;
+  border: 1px solid var(--green);
+  border-radius: 3px;
+  color: #11170e;
+  background: var(--green);
+  display: flex;
+  flex-direction: column;
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1.2;
+  filter: none;
+}
+
+.truck-marker small {
+  font-size: .47rem;
+  font-weight: 600;
+}
+
+.job button:disabled {
+  border-color: #39443b;
+  color: #69746b;
+  background: #171e18;
+  cursor: not-allowed;
+}
+
 /* Melhora a leitura das áreas que usavam textos excessivamente pequenos. */
 .sidebar nav a {
   font-size: .72rem;
