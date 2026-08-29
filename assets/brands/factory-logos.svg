@@ -15,5 +15,7 @@
     <symbol id="unipar" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#0065a8"/><text x="90" y="45" text-anchor="middle" fill="white" class="word">UNIPAR</text></symbol>
     <symbol id="usiminas" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><path d="M24 19h12v34H24zm18 0h12v34H42z" fill="#176db1"/><text x="67" y="45" fill="#176db1" class="word">USIMINAS</text></symbol>
     <symbol id="yara" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#003b7a"/><path d="M33 49c-17-17 0-31 0-31s17 14 0 31Z" fill="none" stroke="white" stroke-width="2"/><text x="62" y="45" fill="white" class="word">YARA</text></symbol>
+    <symbol id="bridgestone" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><path d="M16 18h36c15 0 17 18 6 23 9 7 3 17-10 17H16Z" fill="#111"/><path d="M22 24h18l-18 28Z" fill="#e31837"/><text x="68" y="45" fill="#111" font-family="Arial" font-weight="800" font-size="18">BRIDGESTONE</text></symbol>
+    <symbol id="rhodia" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><circle cx="34" cy="36" r="20" fill="#ed1b2f"/><path d="M25 45V26h10c9 0 13 4 13 10s-4 9-13 9Zm8-6h3c3 0 5-1 5-3s-2-3-5-3h-3Z" fill="#fff"/><text x="65" y="44" fill="#333" class="word">RHODIA</text></symbol>
   </defs>
 </svg>
