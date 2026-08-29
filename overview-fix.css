@@ -4,6 +4,230 @@
   gap: 14px;
 }
 
+/* Corrige o deslocamento duplo que comprimia toda a área principal. */
+.app {
+  display: block;
+}
+
+.shell {
+  width: calc(100% - var(--side));
+  margin-left: var(--side);
+}
+
+.view {
+  width: 100%;
+  max-width: 1280px;
+}
+
+.city-hero {
+  position: relative;
+  min-height: 330px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: linear-gradient(90deg, #0b100de8 0%, #0b100d8f 56%, #0b100d22), url("assets/jundiai-ponte-torta.png") center/cover;
+}
+
+.city-hero.away {
+  min-height: 250px;
+  background: radial-gradient(circle at 85% 50%, #c5f24a1a, transparent 30%), linear-gradient(120deg, #18231a, #101611);
+}
+
+.city-shade {
+  position: absolute;
+  inset: 0;
+  padding: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.city-shade h2 {
+  margin: 0;
+  font: 700 3rem/.95 Barlow Condensed;
+  text-transform: uppercase;
+}
+
+.city-shade h2 em {
+  color: var(--green);
+  font-style: normal;
+}
+
+.city-shade > p:last-child {
+  max-width: 510px;
+  margin: 12px 0 0;
+  color: #a3ada5;
+  font-size: .65rem;
+  line-height: 1.7;
+}
+
+.company-banner {
+  min-height: 92px;
+  padding: 20px;
+  border: 1px solid #4c2424;
+  background: linear-gradient(100deg, #321616, #151412);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.company-copy {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.company-copy h3 {
+  margin: 0 0 5px;
+  font-size: .8rem;
+}
+
+.company-copy p {
+  margin: 0;
+  color: #9b8884;
+  font-size: .52rem;
+}
+
+.coke-mark {
+  width: 112px;
+  min-width: 112px;
+  height: 54px;
+  padding: 11px;
+  border-radius: 2px;
+  background: #f40009;
+  display: grid;
+  place-items: center;
+}
+
+.coke-mark img {
+  display: block;
+  width: 100%;
+  max-height: 100%;
+}
+
+.company-banner > button {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid #ff4b50;
+  color: #fff;
+  background: #d90c17;
+  font-size: .5rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.company-detail {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  border: 1px solid #4c2424;
+  background: #171311;
+}
+
+.truck-visual {
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+  background: #251311;
+}
+
+.truck-visual > img {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+}
+
+.truck-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #120d0a22, transparent 50%, #171311);
+}
+
+.truck-visual > div {
+  position: absolute;
+  z-index: 2;
+  left: 25px;
+  bottom: 24px;
+}
+
+.truck-visual > div p {
+  margin: 11px 0 2px;
+  color: #d6beb8;
+  font-size: .48rem;
+}
+
+.truck-visual > div b {
+  font-size: .68rem;
+}
+
+.company-info {
+  padding: 32px;
+}
+
+.company-info > span {
+  color: #ff6368;
+  font-size: .48rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.company-info h2 {
+  margin: 20px 0 10px;
+  font: 700 2rem/1 Barlow Condensed;
+  text-transform: uppercase;
+}
+
+.company-info > p {
+  color: #968b86;
+  font-size: .61rem;
+  line-height: 1.7;
+}
+
+.company-info dl {
+  margin: 25px 0 0;
+}
+
+.company-info dl div {
+  padding: 10px 0;
+  border-top: 1px solid #3b2825;
+  display: flex;
+  justify-content: space-between;
+}
+
+.company-info dt {
+  color: #725f5a;
+  font-size: .45rem;
+}
+
+.company-info dd {
+  margin: 0;
+  font-size: .53rem;
+  font-weight: 700;
+}
+
+.route-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.route-job .coke-mark {
+  width: 90px;
+  min-width: 90px;
+  height: 42px;
+  padding: 8px;
+}
+
+@media (max-width: 900px) {
+  .company-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .company-info {
+    padding: 24px;
+  }
+}
+
 .hero {
   min-height: 245px;
   padding: 30px;
@@ -58,7 +282,38 @@
 }
 
 @media (max-width: 720px) {
+  .shell {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .jobs {
+    grid-template-columns: 1fr;
+  }
+
+  .city-hero {
+    min-height: 380px;
+  }
+
+  .city-shade {
+    padding: 24px;
+  }
+
+  .city-shade h2 {
+    font-size: 2.35rem;
+  }
+
+  .company-banner,
+  .company-copy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .company-banner > button {
+    width: 100%;
+  }
+
+  .route-list {
     grid-template-columns: 1fr;
   }
 }
