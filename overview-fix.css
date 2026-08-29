@@ -166,6 +166,92 @@ html {
   cursor: pointer;
 }
 
+.city-factories {
+  margin-top: 26px;
+}
+
+.factory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.factory-card {
+  min-width: 0;
+  padding: 19px;
+  border: 1px solid var(--line);
+  background: #111813;
+}
+
+.factory-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.factory-logo {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #465349;
+  background: #1a241c;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font: 700 .72rem Barlow Condensed;
+}
+
+.factory-top > span {
+  color: #6f7d72;
+  font-size: .5rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.factory-card h3 {
+  margin: 16px 0 6px;
+  font-size: .78rem;
+}
+
+.factory-card p {
+  min-height: 42px;
+  margin: 0;
+  color: #8c988f;
+  font-size: .6rem;
+  line-height: 1.55;
+}
+
+.factory-card small {
+  min-height: 32px;
+  margin-top: 12px;
+  display: block;
+  color: #667269;
+  font-size: .51rem;
+}
+
+.factory-card button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 12px;
+  border: 1px solid #465349;
+  color: #bdc8bf;
+  background: #182019;
+  font-size: .52rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.factory-card button:not(:disabled) {
+  border-color: var(--green);
+  color: #11170e;
+  background: var(--green);
+}
+
+.factory-card button:disabled {
+  color: #59645b;
+  cursor: not-allowed;
+}
+
 .map-toolbar button:hover,
 .back-map:hover {
   border-color: var(--green);
@@ -720,6 +806,10 @@ html {
     border-top: 1px solid var(--line);
     border-left: 0;
   }
+
+  .factory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .hero {
@@ -840,6 +930,10 @@ html {
 
   .city-page-cover h2 {
     font-size: 3rem;
+  }
+
+  .factory-grid {
+    grid-template-columns: 1fr;
   }
 }
 
