@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>.word{font:800 25px Arial,sans-serif;letter-spacing:-1px}.sub{font:700 9px Arial,sans-serif;letter-spacing:1px}</style>
+    <symbol id="coca-cola-femsa" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#ed1c24"/><text x="90" y="37" text-anchor="middle" fill="white" class="word" font-style="italic">Coca-Cola</text><text x="90" y="55" text-anchor="middle" fill="white" class="sub">FEMSA</text></symbol>
+    <symbol id="klabin" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><circle cx="34" cy="36" r="18" fill="#f59d19"/><text x="62" y="45" fill="#202020" class="word">KLABIN</text></symbol>
+    <symbol id="fini" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#ed166d"/><text x="90" y="48" text-anchor="middle" fill="white" class="word" font-size="35">FINI</text></symbol>
+    <symbol id="bosch" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><circle cx="34" cy="36" r="16" fill="none" stroke="#666" stroke-width="5"/><text x="61" y="45" fill="#e20015" class="word">BOSCH</text></symbol>
+    <symbol id="pirelli" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#ffd800"/><text x="90" y="46" text-anchor="middle" fill="#d71920" class="word">PIRELLI</text></symbol>
+    <symbol id="samsung" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#1428a0"/><text x="90" y="44" text-anchor="middle" fill="white" class="word">SAMSUNG</text></symbol>
+    <symbol id="volkswagen" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#001e50"/><circle cx="38" cy="36" r="21" fill="none" stroke="white" stroke-width="3"/><text x="38" y="44" text-anchor="middle" fill="white" class="word">VW</text><text x="70" y="44" fill="white" class="word" font-size="17">VOLKSWAGEN</text></symbol>
+    <symbol id="mercedes-benz" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#111"/><circle cx="35" cy="36" r="21" fill="none" stroke="white" stroke-width="2"/><path d="M35 16v20L18 47m17-11 17 11" fill="none" stroke="white" stroke-width="2"/><text x="65" y="42" fill="white" font-family="Arial" font-size="14">Mercedes-Benz</text></symbol>
+    <symbol id="bauducco" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#b51f2a"/><text x="90" y="44" text-anchor="middle" fill="#f8d46b" class="word">BAUDUCCO</text></symbol>
+    <symbol id="toyota" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><ellipse cx="35" cy="36" rx="22" ry="15" fill="none" stroke="#eb0a1e" stroke-width="3"/><text x="67" y="45" fill="#eb0a1e" class="word">TOYOTA</text></symbol>
+    <symbol id="sorocaba-refrescos" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#e31b23"/><text x="90" y="33" text-anchor="middle" fill="white" font-family="Arial" font-weight="800" font-size="17">SOROCABA</text><text x="90" y="52" text-anchor="middle" fill="white" class="sub">REFRESCOS</text></symbol>
+    <symbol id="unipar" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#0065a8"/><text x="90" y="45" text-anchor="middle" fill="white" class="word">UNIPAR</text></symbol>
+    <symbol id="usiminas" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#fff"/><path d="M24 19h12v34H24zm18 0h12v34H42z" fill="#176db1"/><text x="67" y="45" fill="#176db1" class="word">USIMINAS</text></symbol>
+    <symbol id="yara" viewBox="0 0 180 72"><rect width="180" height="72" rx="10" fill="#003b7a"/><path d="M33 49c-17-17 0-31 0-31s17 14 0 31Z" fill="none" stroke="white" stroke-width="2"/><text x="62" y="45" fill="white" class="word">YARA</text></symbol>
+  </defs>
+</svg>
