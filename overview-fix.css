@@ -34,6 +34,7 @@ html {
   min-height: 250px;
   background: radial-gradient(circle at 85% 50%, #c5f24a1a, transparent 30%), linear-gradient(120deg, #18231a, #101611);
 }
+.city-hero.current-city{min-height:360px;background-image:linear-gradient(90deg,#07100de8 0%,#07100d99 42%,#07100d22 78%),var(--home-city-image);background-position:center;background-size:cover}.city-hero.current-city .city-shade{position:relative;z-index:1;max-width:560px}.city-hero.current-city .city-shade>p:last-child{max-width:520px;color:#c1ccc3;text-shadow:0 2px 10px #000}.city-hero.current-city+.metrics{margin-top:13px}.metrics+.city-factories{margin-top:28px}
 
 .city-shade {
   position: absolute;
