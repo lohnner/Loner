@@ -103,6 +103,268 @@
   display: block;
   width: 100%;
   max-height: 100%;
+  filter: brightness(0) invert(1);
+}
+
+.map-shell {
+  border: 1px solid var(--line);
+  background: #0e1510;
+}
+
+.map-toolbar {
+  min-height: 62px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-toolbar > div {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-toolbar > div > i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+}
+
+.map-toolbar span {
+  color: #69766c;
+  font-size: .43rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.map-toolbar strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: .6rem;
+  letter-spacing: 0;
+}
+
+.map-toolbar button,
+.city-page aside button,
+.back-map {
+  min-height: 35px;
+  padding: 0 14px;
+  border: 1px solid #465348;
+  color: #cbd4cc;
+  background: #182019;
+  font-size: .47rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.map-toolbar button:hover,
+.back-map:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+#game-map {
+  width: 100%;
+  height: min(650px, calc(100vh - 235px));
+  min-height: 480px;
+  background: #101914;
+}
+
+#game-map .leaflet-tile-pane {
+  filter: saturate(.5) brightness(.55) contrast(1.18) hue-rotate(65deg);
+}
+
+#game-map .leaflet-control-zoom a {
+  border-color: #344138;
+  color: var(--text);
+  background: #111a14;
+}
+
+#game-map .leaflet-control-attribution {
+  color: #768078;
+  background: #0d140fdd;
+}
+
+.city-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.city-marker {
+  width: 100px;
+  height: 48px;
+  border: 0;
+  color: #e8eee9;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: .5rem;
+  font-weight: 700;
+  text-shadow: 0 1px 4px #000;
+  cursor: pointer;
+}
+
+.city-marker i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #d8e2da;
+  border-radius: 50%;
+  background: #172019;
+  box-shadow: 0 0 0 4px #0d130faa;
+}
+
+.city-marker.is-current {
+  color: var(--green);
+}
+
+.city-marker.is-current i {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: 0 0 0 5px #c5f24a22, 0 0 16px var(--green);
+}
+
+.map-legend {
+  min-height: 48px;
+  padding: 0 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #78857b;
+  font-size: .43rem;
+  font-weight: 700;
+}
+
+.map-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dce5de;
+}
+
+.map-legend .current-dot {
+  background: var(--green);
+  box-shadow: 0 0 7px var(--green);
+}
+
+.map-legend small {
+  margin-left: auto;
+  color: #525e55;
+  font-size: .4rem;
+}
+
+.map-error {
+  padding: 35px;
+  color: #9da89f;
+  text-align: center;
+}
+
+.city-page {
+  min-height: 430px;
+  border: 1px solid var(--line);
+  background: linear-gradient(120deg, #162019, #0f1511);
+  display: grid;
+  grid-template-columns: 1.5fr 330px;
+}
+
+.city-page-cover {
+  padding: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: radial-gradient(circle at 75% 35%, #c5f24a18, transparent 28%);
+}
+
+.city-page.has-photo .city-page-cover {
+  background: linear-gradient(90deg, #0b100de0, #0b100d40), url("assets/jundiai-ponte-torta.png") center/cover;
+}
+
+.city-page-cover > span,
+.city-page aside > span {
+  color: var(--green);
+  font-size: .48rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.city-page-cover h2 {
+  margin: 12px 0;
+  font: 700 4rem/.9 Barlow Condensed;
+  text-transform: uppercase;
+}
+
+.city-page-cover p {
+  max-width: 520px;
+  margin: 0;
+  color: #a0aaa2;
+  font-size: .67rem;
+  line-height: 1.75;
+}
+
+.city-page aside {
+  padding: 30px;
+  border-left: 1px solid var(--line);
+  background: #111813e8;
+}
+
+.city-page dl {
+  margin: 25px 0;
+}
+
+.city-page dl div {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.city-page dt {
+  color: #68746a;
+  font-size: .44rem;
+}
+
+.city-page dd {
+  margin: 0;
+  font-size: .52rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.green-text {
+  color: var(--green);
+}
+
+.city-page aside button {
+  width: 100%;
+  border-color: var(--green);
+  color: #12180f;
+  background: var(--green);
+}
+
+.city-warning {
+  color: #847c71;
+  font-size: .51rem;
+  line-height: 1.6;
+}
+
+.back-map {
+  margin-top: 12px;
 }
 
 .company-banner > button {
@@ -226,6 +488,15 @@
   .company-info {
     padding: 24px;
   }
+
+  .city-page {
+    grid-template-columns: 1fr;
+  }
+
+  .city-page aside {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
 }
 
 .hero {
@@ -315,6 +586,37 @@
 
   .route-list {
     grid-template-columns: 1fr;
+  }
+
+  .map-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .map-toolbar > div {
+    width: 100%;
+  }
+
+  .map-toolbar button {
+    flex: 1;
+  }
+
+  #game-map {
+    height: 500px;
+    min-height: 500px;
+  }
+
+  .map-legend small {
+    display: none;
+  }
+
+  .city-page-cover {
+    min-height: 330px;
+    padding: 25px;
+  }
+
+  .city-page-cover h2 {
+    font-size: 3rem;
   }
 }
 

@@ -5,7 +5,7 @@
   <meta name="description" content="Rota Brasil — construa sua carreira no transporte rodoviário brasileiro.">
   <title>Rota Brasil — Sua carreira na estrada</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="overview-fix.css">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="overview-fix.css">
 </head>
 <body class="auth-pending">
 <section id="login" class="login">
@@ -16,8 +16,8 @@
   </div>
 </section>
 <div id="app" class="app hidden">
-  <aside class="sidebar"><a class="brand side-brand" href="#home"><span>RB</span><b>ROTA BRASIL<small>LOGÍSTICA & TRANSPORTES</small></b></a><nav><p>OPERAÇÃO</p><a href="#home" data-page="home"><i>⌂</i>Visão geral</a><a href="#entregas" data-page="entregas"><i>▤</i>Entregas</a><p>CARREIRA</p><a href="#perfil" data-page="perfil"><i>◎</i>Meu perfil</a><a href="#garagem" data-page="garagem"><i>▣</i>Garagem <small>EM BREVE</small></a><a href="#empresa" data-page="empresa"><i>◇</i>Minha empresa <small>EM BREVE</small></a></nav><div class="side-status"><i></i><span>Central São Paulo<small>Conectado · operação normal</small></span></div></aside>
+  <aside class="sidebar"><a class="brand side-brand" href="#home"><span>RB</span><b>ROTA BRASIL<small>LOGÍSTICA & TRANSPORTES</small></b></a><nav><p>OPERAÇÃO</p><a href="#home" data-page="home"><i>⌂</i>Visão geral</a><a href="#entregas" data-page="entregas"><i>▤</i>Entregas</a><a href="#mapa" data-page="mapa"><i>⌖</i>Mapa do Brasil</a><p>CARREIRA</p><a href="#perfil" data-page="perfil"><i>◎</i>Meu perfil</a><a href="#garagem" data-page="garagem"><i>▣</i>Garagem <small>EM BREVE</small></a><a href="#empresa" data-page="empresa"><i>◇</i>Minha empresa <small>EM BREVE</small></a></nav><div class="side-status"><i></i><span>Central São Paulo<small>Conectado · operação normal</small></span></div></aside>
   <main class="shell"><header class="topbar"><button id="menu-toggle">☰</button><div class="location"><span>BASE ATUAL</span><b>São Paulo, SP</b></div><div class="balance"><span>SALDO DISPONÍVEL</span><b id="top-balance">R$ 0,00</b></div><button id="profile-shortcut" class="user-chip"><img id="user-photo" alt=""><span><b id="user-name">Motorista</b><small id="top-level">Nível 1</small></span></button></header><div id="view" class="view"></div></main>
 </div>
-<div id="toast" class="toast"></div><script type="module" src="script.js"></script>
+<div id="toast" class="toast"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script type="module" src="script.js"></script>
 </body></html>
