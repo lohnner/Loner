@@ -1,4 +1,7 @@
 /* Visão geral: hierarquia e respiro entre os blocos */
+html {
+  font-size: 17px;
+}
 .home-grid {
   grid-template-columns: 1fr;
   gap: 14px;
@@ -290,8 +293,9 @@
   background: radial-gradient(circle at 75% 35%, #c5f24a18, transparent 28%);
 }
 
-.city-page.has-photo .city-page-cover {
-  background: linear-gradient(90deg, #0b100de0, #0b100d40), url("assets/jundiai-ponte-torta.png") center/cover;
+.city-page.has-photo .city-page-cover,
+.city-page.has-city-photo .city-page-cover {
+  background: linear-gradient(90deg, #0b100de0, #0b100d40), var(--city-image) center/cover;
 }
 
 .city-page-cover > span,
@@ -320,6 +324,158 @@
   padding: 30px;
   border-left: 1px solid var(--line);
   background: #111813e8;
+}
+
+.city-tabs {
+  margin: -8px -8px 22px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.city-tabs button {
+  min-height: 43px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #77847a;
+  background: transparent;
+  font-size: .53rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.city-tabs button.active {
+  border-bottom-color: var(--green);
+  color: var(--green);
+}
+
+.city-tabs button b {
+  margin-left: 5px;
+  color: #11180f;
+  background: var(--green);
+  padding: 2px 5px;
+  border-radius: 8px;
+  font-size: .45rem;
+}
+
+.drivers-head {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6e7b71;
+  font-size: .48rem;
+  font-weight: 700;
+}
+
+.drivers-head i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}
+
+.driver-list {
+  display: grid;
+}
+
+.driver-row {
+  min-height: 58px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.driver-row.you {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  background: #c5f24a0b;
+}
+
+.driver-avatar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #47544a;
+  background: #1a241c;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+.driver-row > div:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+}
+
+.driver-row b {
+  font-size: .56rem;
+}
+
+.driver-row small {
+  margin-top: 2px;
+  color: #69766c;
+  font-size: .47rem;
+}
+
+.driver-row > span {
+  margin-left: auto;
+  color: #867e74;
+  font-size: .46rem;
+}
+
+.driver-row > span.online-driver {
+  color: var(--green);
+}
+
+/* Melhora a leitura das áreas que usavam textos excessivamente pequenos. */
+.sidebar nav a {
+  font-size: .72rem;
+}
+
+.sidebar nav p,
+.eyebrow,
+.section-head span,
+.distance,
+.route,
+.job-meta,
+.metric small,
+.heading p:last-child,
+.company-copy p,
+.company-info > p,
+.city-page-cover p,
+.city-warning {
+  font-size: max(.58rem, 10px);
+}
+
+.metric span,
+.location span,
+.balance span,
+.company-info > span,
+.map-toolbar span,
+.map-legend span,
+.city-page dt,
+.city-page-cover > span,
+.city-page aside > span {
+  font-size: max(.53rem, 9px);
+}
+
+.job h3,
+.company-copy h3,
+.section-head h2 {
+  font-size: .78rem;
+}
+
+.job button,
+.company-banner > button,
+.map-toolbar button,
+.city-page aside button,
+.back-map {
+  font-size: .56rem;
 }
 
 .city-page dl {
