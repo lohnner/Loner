@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsDocument(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // Informações públicas necessárias para ranking, cidades e mapa multiplayer.
+    // Somente o próprio jogador pode criar ou atualizar sua presença.
+    match /players/{userId} {
+      allow read: if signedIn();
+      allow create, update: if ownsDocument(userId)
+        && request.resource.data.uid == userId;
+      allow delete: if false;
+    }
+
+    // Progresso privado: saldo, entregas, caminhões, empréstimo e histórico.
+    // Nenhum outro jogador pode consultar ou alterar estes dados.
+    match /progress/{userId} {
+      allow read, create, update: if ownsDocument(userId)
+        && request.resource.data.uid == userId;
+      allow delete: if false;
+    }
+
+    // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
