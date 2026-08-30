@@ -42,6 +42,15 @@ service cloud.firestore {
         && request.resource.data.counts is map;
       allow delete: if false;
     }
+    // Balanço permanente do mercado: cada jogador altera somente seu agregado.
+    match /marketBalance/{userId} {
+      allow read: if signedIn();
+      allow create, update: if ownsDocument(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.adjustments is map
+        && request.resource.data.selections is map;
+      allow delete: if false;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;
