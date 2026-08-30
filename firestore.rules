@@ -28,6 +28,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Atividade diária agregada por jogador para o mercado fictício.
+    match /marketActivity/{activityId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.day is string
+        && request.resource.data.counts is map;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.day == resource.data.day
+        && request.resource.data.counts is map;
+      allow delete: if false;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;
