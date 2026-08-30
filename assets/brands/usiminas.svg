@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72" role="img" aria-label="Usiminas">
+  <rect width="260" height="72" rx="9" fill="#fff"/>
+  <path fill="#176db1" d="M18 18h13v36H18zm19 0h13v36H37zm19 0h13v36H56z"/>
+  <text x="82" y="46" fill="#176db1" font-family="Arial,sans-serif" font-size="25" font-weight="800">USIMINAS</text>
+</svg>

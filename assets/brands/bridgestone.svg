@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 72" role="img" aria-label="Bridgestone">
+  <rect width="300" height="72" rx="9" fill="#fff"/>
+  <path d="M15 15h43c17 0 21 18 7 25 11 8 3 18-13 18H15Z" fill="#111"/>
+  <path d="M22 22h22L22 52Z" fill="#e31837"/>
+  <text x="78" y="46" fill="#111" font-family="Arial,sans-serif" font-size="24" font-weight="800">BRIDGESTONE</text>
+</svg>
