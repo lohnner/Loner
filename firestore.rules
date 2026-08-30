@@ -22,7 +22,8 @@ service cloud.firestore {
     // Progresso privado: saldo, entregas, caminhões, empréstimo e histórico.
     // Nenhum outro jogador pode consultar ou alterar estes dados.
     match /progress/{userId} {
-      allow read, create, update: if ownsDocument(userId)
+      allow read: if ownsDocument(userId);
+      allow create, update: if ownsDocument(userId)
         && request.resource.data.uid == userId;
       allow delete: if false;
     }
