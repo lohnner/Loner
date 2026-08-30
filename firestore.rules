@@ -51,6 +51,32 @@ service cloud.firestore {
         && request.resource.data.selections is map;
       allow delete: if false;
     }
+    // Estoque diário global. Cada escrita só pode consumir uma opção válida
+    // ou abrir a rodada seguinte depois que a última opção for consumida.
+    match /dailyOffers/{offerId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'remaining', 'updatedAt'])
+        && request.resource.data.day is string
+        && request.resource.data.city is string
+        && request.resource.data.round == 0
+        && request.resource.data.remaining is list
+        && request.resource.data.remaining.size() == 2
+        && request.resource.data.remaining.hasOnly([0, 1, 2]);
+      allow update: if signedIn()
+        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'remaining', 'updatedAt'])
+        && request.resource.data.day == resource.data.day
+        && request.resource.data.city == resource.data.city
+        && request.resource.data.remaining is list
+        && request.resource.data.remaining.hasOnly([0, 1, 2])
+        && ((request.resource.data.round == resource.data.round
+          && request.resource.data.remaining.size() == resource.data.remaining.size() - 1
+          && request.resource.data.remaining.hasOnly(resource.data.remaining))
+        || (resource.data.remaining.size() == 1
+          && request.resource.data.round == resource.data.round + 1
+          && request.resource.data.remaining == [0, 1, 2]));
+      allow delete: if false;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;

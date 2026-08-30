@@ -1066,3 +1066,23 @@ html {
 .daily-delivery-card>small{display:block;margin-top:auto;padding-top:15px;color:var(--green);font-size:.45rem;font-weight:800;line-height:1.5}
 .daily-delivery-card button{display:block;width:100%;height:38px;margin-top:13px;border:1px solid #4a594e;background:#18221a;color:#dfe8e1;font-size:.48rem;font-weight:800;cursor:pointer}
 .daily-delivery-card button:hover{border-color:var(--green);background:var(--green);color:#11170f}
+/* Menu de contexto do mapa e perfil público do motorista. */
+.map-choice-popup .leaflet-popup-content-wrapper,.map-choice-popup .leaflet-popup-tip{border:1px solid #425047;background:#101712;color:#fff}
+.map-choice-popup .leaflet-popup-content{margin:10px;min-width:230px}
+.map-choice-menu>span{display:block;padding:5px 7px 9px;color:#738078;font-size:.42rem;font-weight:800;letter-spacing:.1em}
+.map-choice-menu button{width:100%;padding:11px;border:0;border-top:1px solid var(--line);background:#131c15;color:#e8eee9;text-align:left;font-size:.5rem;font-weight:800;cursor:pointer}
+.map-choice-menu button:hover{background:var(--green);color:#11170f}
+.public-player-profile{border:1px solid var(--line);background:#101712}
+.public-player-profile>header{padding:28px;display:grid;grid-template-columns:92px 1fr auto;align-items:center;gap:20px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,#19231b,#101712)}
+.public-player-profile>header img{width:92px;height:92px;border:2px solid var(--green);border-radius:50%;object-fit:cover}
+.public-player-profile>header span{color:var(--green);font-size:.44rem;font-weight:800;letter-spacing:.12em}
+.public-player-profile>header h2{margin:6px 0 3px;font:700 2rem Barlow Condensed;text-transform:uppercase}
+.public-player-profile>header p{margin:0;color:#77847a;font-size:.52rem}
+.public-player-profile>header>b{color:var(--green);font:700 1.2rem Barlow Condensed}
+.public-player-stats{display:grid;grid-template-columns:repeat(3,1fr)}
+.public-player-stats article{min-height:112px;padding:22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.public-player-stats span{display:block;color:#6f7c72;font-size:.43rem;font-weight:800;letter-spacing:.08em}
+.public-player-stats b{display:block;margin-top:15px;font:700 1.15rem Barlow Condensed}
+.public-player-trip{margin:22px;padding:20px;border:1px solid #36443a;background:#151e17}
+.public-player-trip span,.public-player-trip small{display:block;color:#758178;font-size:.44rem}.public-player-trip b{display:block;margin:7px 0;font:700 1.25rem Barlow Condensed}
+@media(max-width:650px){.public-player-profile>header{grid-template-columns:70px 1fr}.public-player-profile>header img{width:70px;height:70px}.public-player-profile>header>b{grid-column:1/-1}.public-player-stats{grid-template-columns:1fr 1fr}}
