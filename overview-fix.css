@@ -1047,3 +1047,13 @@ html {
 .market-company>aside small{display:block;margin-top:4px;white-space:normal;line-height:1.35}
 @media(max-width:900px){.market-index-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.market-company{grid-template-columns:92px minmax(0,1fr);row-gap:10px;padding:13px}.market-company>.factory-brand,.market-company>.factory-brand.small{width:88px;max-width:88px;height:42px}.market-company>aside{grid-column:2;text-align:left}.market-company>div h3{font-size:.62rem}}
+/* Viagem livre e privacidade visual dos motoristas no mapa. */
+.city-actions{display:grid;gap:9px}
+.city-page aside .free-trip-button{border:1px solid #64c8ff;color:#dff6ff;background:#15242a}
+.city-page aside .free-trip-button:hover{background:#64c8ff;color:#0d1518}
+.city-page aside .free-trip-button:disabled{opacity:.55;cursor:wait}
+.cargo-panel.free .cargo-company-logo{display:none}
+.live-player.is-other>span{opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s ease}
+.live-player.is-other:hover>span{opacity:1;visibility:visible}
+.live-player.is-you>span{opacity:1;visibility:visible}
+@media(hover:none){.live-player.is-other>span{opacity:0;visibility:hidden}}
