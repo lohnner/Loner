@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 135" role="img" aria-labelledby="title">
+  <title id="title">Fini</title>
+  <rect width="240" height="135" rx="10" fill="#ed4775"/>
+  <ellipse cx="120" cy="68" rx="101" ry="52" fill="#2d2b83" transform="rotate(-4 120 68)"/>
+  <circle cx="100" cy="27" r="8" fill="#f6e627"/>
+  <circle cx="122" cy="22" r="9" fill="#86bd2c"/>
+  <circle cx="145" cy="19" r="10" fill="#f4b923"/>
+  <circle cx="169" cy="21" r="10" fill="#d84c34"/>
+  <circle cx="191" cy="29" r="11" fill="#fff" stroke="#2d2b83" stroke-width="3"/>
+  <text x="120" y="93" text-anchor="middle" fill="#fff" font-family="Arial Rounded MT Bold, Arial, Helvetica, sans-serif" font-size="64" font-weight="900" letter-spacing="-5">Fini</text>
+</svg>
