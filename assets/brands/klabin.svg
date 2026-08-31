@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 72" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 559 314" role="img" aria-labelledby="title">
   <title id="title">Klabin</title>
-  <rect width="240" height="72" rx="10" fill="#fff"/>
-  <circle cx="38" cy="36" r="18" fill="#f5a21b"/>
-  <text x="69" y="47" fill="#292929" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="-.8">Klabin</text>
+  <rect width="559" height="314" fill="#fff"/>
+  <path fill="#00a65a" d="M100 201 171 130v71H100ZM198 101l61-60h178L278 200l-40-40 40-40h-40v81h-40V101Z"/>
+  <text x="279.5" y="276" text-anchor="middle" fill="#202020" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" letter-spacing="-1.5">Klabin</text>
 </svg>
