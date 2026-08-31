@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" role="img" aria-labelledby="title">
+  <title id="title">Klabin</title>
+  <rect width="240" height="100" rx="8" fill="#fff"/>
+  <g transform="translate(61 3) scale(.35)">
+    <path fill="#00a65a" d="M0 160 71 89v71H0ZM98 60l61-60h178L178 159l-40-40 40-40h-40v81H98V60Z"/>
+  </g>
+  <text x="120" y="91" text-anchor="middle" fill="#202020" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="-.7">Klabin</text>
+</svg>
