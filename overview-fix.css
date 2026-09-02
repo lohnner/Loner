@@ -1273,7 +1273,7 @@ html {
 .contract-rest-days label{cursor:pointer}.contract-rest-days input{position:absolute;opacity:0;pointer-events:none}
 .contract-rest-days label>span,.contract-rest-days label>small{display:block;padding:8px;text-align:center;border:1px solid #314137;background:#121b15}
 .contract-rest-days label>span{padding-bottom:2px;border-bottom:0;color:#dce6de;font-size:.55rem;font-weight:800}.contract-rest-days label>small{padding-top:2px;border-top:0;color:#68756c;font-size:.37rem}
-.contract-rest-days input:checked+span{border-color:var(--green);background:#263519;color:var(--green)}.contract-rest-days input:checked+span+small{border-color:var(--green);background:#263519;color:#dce6de}
+.contract-rest-days input:checked+span{border-color:var(--green);background:#263519;color:var(--green)}.contract-rest-days input:checked+span+small{border-color:var(--green);background:#263519;color:#dce6de}.contract-rest-days input:disabled+span,.contract-rest-days input:disabled+span+small{opacity:.35;cursor:not-allowed}
 .contract-agreement{display:flex;align-items:center;gap:9px;color:#a7b2aa;font-size:.48rem;cursor:pointer}.contract-agreement input{accent-color:#c5f24a}
 #contract-form>button,.contract-job button{min-height:44px;border:0;background:var(--green);color:#10160e;font-size:.5rem;font-weight:800;cursor:pointer}
 #contract-form>button:disabled,.contract-job button:disabled{background:#303b32;color:#78837a;cursor:not-allowed}
