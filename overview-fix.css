@@ -1132,6 +1132,7 @@ html {
 /* O cartão do motorista já reúne os dados; oculta o marcador duplicado da viagem. */
 .truck-marker{display:none}
 .live-player em{display:block;max-width:150px;margin-top:3px;overflow:hidden;color:#64c8ff;font-size:.46rem;font-style:normal;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.live-player .driver-speed{display:block;margin-top:3px;color:#c5f24a;font-size:.48rem;font-weight:800;letter-spacing:.02em}
 @media(max-width:620px){.live-player em{max-width:125px;font-size:.42rem}}
 
 /* Missões e rankings por categoria */
