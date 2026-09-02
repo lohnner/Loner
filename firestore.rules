@@ -115,10 +115,16 @@ service cloud.firestore {
         && request.resource.data.recipientId in request.resource.data.participantIds
         && request.resource.data.body is string
         && request.resource.data.body.size() > 0
-        && request.resource.data.body.size() <= 500;
+        && request.resource.data.body.size() <= 500
+        && request.resource.data.readBy is map
+        && request.resource.data.readBy.keys().hasOnly([request.auth.uid])
+        && request.resource.data.readBy[request.auth.uid] == true;
       allow update: if signedIn()
         && request.auth.uid in resource.data.participantIds
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        && request.resource.data.readBy is map
+        && request.resource.data.readBy.diff(resource.data.readBy).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.readBy[request.auth.uid] == true;
       allow delete: if false;
     }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
