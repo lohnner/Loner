@@ -10,6 +10,32 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function validOfferGenerations(g) {
+      return g is map
+        && g.keys().hasOnly(['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11'])
+        && g.s0 is int && g.s0 >= 0 && g.s1 is int && g.s1 >= 0
+        && g.s2 is int && g.s2 >= 0 && g.s3 is int && g.s3 >= 0
+        && g.s4 is int && g.s4 >= 0 && g.s5 is int && g.s5 >= 0
+        && g.s6 is int && g.s6 >= 0 && g.s7 is int && g.s7 >= 0
+        && g.s8 is int && g.s8 >= 0 && g.s9 is int && g.s9 >= 0
+        && g.s10 is int && g.s10 >= 0 && g.s11 is int && g.s11 >= 0;
+    }
+
+    function advancesOneOffer(before, after) {
+      return (after.diff(before).affectedKeys().hasOnly(['s0']) && after.s0 == before.s0 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s1']) && after.s1 == before.s1 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s2']) && after.s2 == before.s2 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s3']) && after.s3 == before.s3 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s4']) && after.s4 == before.s4 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s5']) && after.s5 == before.s5 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s6']) && after.s6 == before.s6 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s7']) && after.s7 == before.s7 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s8']) && after.s8 == before.s8 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s9']) && after.s9 == before.s9 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s10']) && after.s10 == before.s10 + 1)
+        || (after.diff(before).affectedKeys().hasOnly(['s11']) && after.s11 == before.s11 + 1);
+    }
+
     // Informações públicas necessárias para ranking, cidades e mapa multiplayer.
     // Somente o próprio jogador pode criar ou atualizar sua presença.
     match /players/{userId} {
@@ -51,30 +77,26 @@ service cloud.firestore {
         && request.resource.data.selections is map;
       allow delete: if false;
     }
-    // Estoque diário global. Cada escrita só pode consumir uma opção válida
-    // ou abrir a rodada seguinte depois que a última opção for consumida.
+    // Estoque diário global com 12 vagas fixas. Cada reserva avança somente
+    // a geração da vaga escolhida e a substitui por outra da mesma distância.
     match /dailyOffers/{offerId} {
       allow read: if signedIn();
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'remaining', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'generations', 'updatedAt'])
         && request.resource.data.day is string
         && request.resource.data.city is string
-        && request.resource.data.round == 0
-        && request.resource.data.remaining is list
-        && request.resource.data.remaining.size() == 2
-        && request.resource.data.remaining.hasOnly([0, 1, 2]);
+        && request.resource.data.round == 1
+        && validOfferGenerations(request.resource.data.generations);
       allow update: if signedIn()
-        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'remaining', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['day', 'city', 'round', 'generations', 'updatedAt'])
         && request.resource.data.day == resource.data.day
         && request.resource.data.city == resource.data.city
-        && request.resource.data.remaining is list
-        && request.resource.data.remaining.hasOnly([0, 1, 2])
-        && ((request.resource.data.round == resource.data.round
-          && request.resource.data.remaining.size() == resource.data.remaining.size() - 1
-          && request.resource.data.remaining.hasOnly(resource.data.remaining))
-        || (resource.data.remaining.size() == 1
-          && request.resource.data.round == resource.data.round + 1
-          && request.resource.data.remaining == [0, 1, 2]));
+        && request.resource.data.round == resource.data.round + 1
+        && validOfferGenerations(request.resource.data.generations)
+        && ((resource.data.keys().hasAny(['generations'])
+          && validOfferGenerations(resource.data.generations)
+          && advancesOneOffer(resource.data.generations, request.resource.data.generations))
+        || !resource.data.keys().hasAny(['generations']));
       allow delete: if false;
     }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
