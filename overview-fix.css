@@ -1310,3 +1310,50 @@ html {
 .contract-active>footer{padding:18px 24px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px}.contract-active>footer p{margin:0;color:#7d8980;font-size:.48rem}.contract-active>footer p b{color:#dbe5dd}.contract-active>footer button.danger{padding:11px 14px;border:1px solid #9b4d3d;background:#261712;color:#ff9a7a;font-size:.45rem;font-weight:800;cursor:pointer}
 @media(max-width:850px){.contract-rules{grid-template-columns:1fr 1fr}.contract-rest-days,.contract-week{grid-template-columns:repeat(4,1fr)}.contract-active>header{grid-template-columns:90px 1fr}.contract-active>header>b{grid-column:1/-1}.contract-active-stats{grid-template-columns:1fr}.contract-active-stats article{border-right:0;border-bottom:1px solid var(--line)}.contract-job,.contract-active>footer{align-items:stretch;flex-direction:column}.contract-job button{min-width:0;width:100%}}
 @media(max-width:520px){.contract-signup>header{align-items:flex-start;flex-direction:column}.contract-rules{grid-template-columns:1fr;padding:16px}.contract-rules article{min-height:0}#contract-form{margin:0 16px 16px;padding:16px}.contract-rest-days,.contract-week{grid-template-columns:1fr 1fr}.contract-active>header{grid-template-columns:1fr}.contract-active>header .factory-brand{width:100%;height:58px}.contract-week{padding:14px}.contract-job{margin:0 14px 14px}.contract-active>footer{padding:16px}}
+/* Página de empresa em largura total e ofertas por proximidade */
+.company-detail{display:block!important}
+.company-detail>.company-reputation{margin:24px}
+.company-jobs-head{padding:22px 24px!important;display:flex;align-items:end;justify-content:space-between;gap:20px;border-top:1px solid var(--line)}
+.company-jobs-head h2{margin:0 0 5px;font:700 1.35rem Barlow Condensed}
+.company-jobs-head span{color:#78847b;font-size:.46rem;letter-spacing:.08em}
+.company-jobs-head>b{color:var(--green);font:700 .8rem Barlow Condensed}
+.company-job-list{padding:0 24px 24px!important;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.company-job-list .company-job-card{padding:0;border:1px solid #334139;background:linear-gradient(145deg,#121b14,#0d140f);display:flex;flex-direction:column;min-width:0}
+.company-job-card.pickup-here{border-color:var(--green);box-shadow:inset 0 0 0 1px #c5f24a22}
+.company-job-card>header{padding:18px 18px 12px;display:flex;justify-content:space-between;gap:16px;align-items:start;border-bottom:1px solid #29342c}
+.company-job-card>header span{color:var(--green);font-size:.43rem;font-weight:800;letter-spacing:.09em}
+.company-job-card>header h3{margin:7px 0 5px;font:700 1.15rem Barlow Condensed;text-transform:uppercase}
+.company-job-card>header p{margin:0;color:#78847b;font-size:.52rem}
+.company-job-card>header strong{flex:0 0 auto;padding:7px 9px;border:1px solid #405047;color:#fff;background:#18231a;font-size:.45rem;letter-spacing:.06em}
+.company-job-card>.delivery-product-visual.compact{margin:16px 18px;min-height:128px;padding:12px;border-color:#405147;background:#0b130d;display:grid;grid-template-columns:150px 1fr;align-items:center}
+.company-job-card>.delivery-product-visual.compact img{width:142px;height:110px;object-fit:contain}
+.company-job-card>.delivery-product-visual.compact b{font-size:.75rem}
+.company-job-card>footer{margin-top:auto;padding:14px 18px;border-top:1px solid #29342c;display:grid;grid-template-columns:repeat(3,1fr) auto;align-items:end;gap:12px}
+.company-job-card>footer div small,.company-job-card>footer div b{display:block}
+.company-job-card>footer div small{color:#667269;font-size:.4rem;font-weight:700;letter-spacing:.08em}
+.company-job-card>footer div b{margin-top:4px;color:#fff;font:.78rem Barlow Condensed}
+.company-job-card>footer div:first-child b{color:var(--green);font-size:1rem}
+.company-job-card>footer button{min-height:38px;padding:0 13px;border:1px solid var(--green);background:var(--green);color:#10150f;font-size:.45rem;font-weight:800;cursor:pointer}
+/* Central de mensagens */
+.message-unread{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:grid;place-items:center;background:#ff4b50;color:#fff;font-size:.42rem}
+.message-unread[hidden],[data-message-panel][hidden]{display:none!important}
+.messages-shell{border:1px solid var(--line);display:grid;grid-template-columns:310px 1fr;min-height:560px;background:#0f1611}
+.message-compose{padding:24px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:#111a13}
+.message-compose>span{margin-bottom:20px;color:var(--green);font-size:.48rem;font-weight:800;letter-spacing:.11em}
+.message-compose label{margin:13px 0 7px;color:#78847b;font-size:.43rem;font-weight:800;letter-spacing:.09em}
+.message-compose select,.message-compose textarea{width:100%;border:1px solid #3b493f;background:#0a110c;color:#fff;font:600 .58rem Inter;outline:none}
+.message-compose select{height:45px;padding:0 11px}.message-compose textarea{height:170px;padding:13px;resize:vertical;line-height:1.55}
+.message-compose select:focus,.message-compose textarea:focus{border-color:var(--green)}
+.message-compose small{margin-top:7px;color:#657168;font-size:.42rem}
+.message-compose button{margin-top:16px;min-height:43px;border:0;background:var(--green);color:#10150f;font-size:.48rem;font-weight:800;cursor:pointer}.message-compose button:disabled{opacity:.35;cursor:not-allowed}
+.message-conversation{min-width:0;display:flex;flex-direction:column}
+.message-conversation>header{padding:17px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.message-conversation>header img{width:45px;height:45px;border-radius:50%;object-fit:cover}
+.message-conversation>header span{color:var(--green);font-size:.4rem;font-weight:800;letter-spacing:.1em}.message-conversation>header h2{margin:3px 0;font:700 1.05rem Barlow Condensed}.message-conversation>header small{color:#748078;font-size:.44rem}
+.message-thread{padding:22px;display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:570px}
+.message-thread article{max-width:76%;padding:12px 14px;border:1px solid #344138;background:#151e17}.message-thread article.sent{align-self:flex-end;border-color:#678131;background:#1a2718}.message-thread article.received{align-self:flex-start}
+.message-thread article span{color:var(--green);font-size:.4rem;font-weight:800}.message-thread article p{margin:7px 0;color:#eef3ef;font-size:.58rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.message-thread article small{color:#6c786f;font-size:.4rem}
+.message-empty{margin:auto;padding:40px;color:#738078;text-align:center;font-size:.56rem}
+.system-inbox{border:1px solid var(--line);background:#0f1611}.system-inbox article{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:start}.system-inbox article:last-child{border:0}.system-inbox article>i{width:35px;height:35px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:#10150f;font-style:normal;font-weight:900}.system-inbox span{color:var(--green);font-size:.4rem;font-weight:800;letter-spacing:.1em}.system-inbox h3{margin:5px 0;font:700 .9rem Barlow Condensed;text-transform:uppercase}.system-inbox p{margin:0 0 6px;color:#8b978e;font-size:.53rem}.system-inbox small{color:#667269;font-size:.4rem}
+@media(max-width:900px){.company-job-list{grid-template-columns:1fr}.messages-shell{grid-template-columns:1fr}.message-compose{border-right:0;border-bottom:1px solid var(--line)}}
+@media(max-width:620px){.company-jobs-head{align-items:start;flex-direction:column}.company-job-list{padding:0 12px 12px!important}.company-job-card>header{flex-direction:column}.company-job-card>.delivery-product-visual.compact{grid-template-columns:100px 1fr}.company-job-card>.delivery-product-visual.compact img{width:95px;height:85px}.company-job-card>footer{grid-template-columns:repeat(3,1fr)}.company-job-card>footer button{grid-column:1/-1}.message-thread article{max-width:92%}}
