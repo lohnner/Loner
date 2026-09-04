@@ -1408,3 +1408,24 @@ html {
 .truck-train-popup button:hover:not(:disabled){background:#61c7ff;color:#071015}
 .truck-train-popup button:disabled{opacity:.35;cursor:not-allowed}
 .truck-train-popup small{display:block;margin-top:9px;color:#71848b;font-size:.43rem;line-height:1.45}
+
+.sidebar-newspaper{margin-top:auto;padding:11px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;color:#dce5dd;text-decoration:none;background:#111914}
+.sidebar-newspaper:hover,.sidebar-newspaper.active{border-color:var(--green);background:#192319;color:var(--green)}
+.sidebar-newspaper>i{width:28px;height:28px;display:grid;place-items:center;border:1px solid #52604f;color:var(--green);font-style:normal}
+.sidebar-newspaper span{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.sidebar-newspaper small{display:block;margin-top:3px;color:#6e7a70;font-size:.39rem;font-weight:600;text-transform:none;letter-spacing:0}
+.sidebar-newspaper.active small,.sidebar-newspaper:hover small{color:#a8b3aa}
+.sidebar-newspaper+.sidebar-version{margin-top:8px}
+.newspaper-page{max-width:1120px;margin:0 auto;border:1px solid var(--line);background:#101712}
+.newspaper-page>header{padding:25px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:25px;border-bottom:1px solid var(--line);background:linear-gradient(125deg,#1b261c,#101712)}
+.newspaper-page>header span{color:var(--green);font-size:.45rem;font-weight:800;letter-spacing:.14em}
+.newspaper-page>header h2{margin:7px 0 6px;font:700 1.75rem Barlow Condensed;text-transform:uppercase}
+.newspaper-page>header p{max-width:720px;margin:0;color:#829087;font-size:.55rem;line-height:1.55}
+.newspaper-page>header>b{padding:8px 11px;border:1px solid #c5f24a66;color:var(--green);font:700 1rem Barlow Condensed;white-space:nowrap}
+.newspaper-sheet{display:block;padding:22px;background:#090d0a;cursor:zoom-in}
+.newspaper-sheet img{display:block;width:100%;height:auto;border:1px solid #4b5047;box-shadow:0 16px 38px #000b}
+.newspaper-page>footer{padding:15px 22px;display:flex;justify-content:space-between;align-items:center;gap:15px;border-top:1px solid var(--line)}
+.newspaper-page>footer span{color:#657269;font-size:.42rem;font-weight:800;letter-spacing:.1em}
+.newspaper-page>footer a{padding:10px 13px;border:1px solid var(--green);color:var(--green);font-size:.47rem;font-weight:800;text-decoration:none}
+.newspaper-page>footer a:hover{background:var(--green);color:#11170f}
+@media(max-width:620px){.newspaper-page>header,.newspaper-page>footer{flex-direction:column}.newspaper-sheet{padding:8px}.newspaper-page>footer a{width:100%;text-align:center}}
