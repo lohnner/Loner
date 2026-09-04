@@ -1395,19 +1395,19 @@ html {
 .tree-skill-node:not(.unlocked) .tree-node-image img{filter:grayscale(1) saturate(0)}.tree-skill-node.unlocked .tree-node-image img{filter:none}.pasta-marker-wrap{background:transparent!important;border:0!important}.pasta-map-marker{width:100px;height:48px;border:0;background:transparent;color:#ffad55;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.5rem;font-weight:700;text-shadow:0 1px 4px #000;cursor:pointer}.pasta-map-marker i{width:11px;height:11px;border:2px solid #ff9b38;border-radius:50%;background:#46270d;box-shadow:0 0 0 4px #0d130faa}.pasta-map-marker.is-owned i{background:#ff8d22;box-shadow:0 0 0 5px #ff8d2233,0 0 16px #ff8d22}
 
 .truck-train-marker-wrap{background:transparent!important;border:0!important}
-.truck-train-marker{width:110px;height:50px;border:0;background:transparent;color:#8edcff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.5rem;font-weight:800;text-shadow:0 1px 4px #000;cursor:pointer}
-.truck-train-marker i{width:13px;height:13px;border:2px solid #61c7ff;border-radius:50%;background:#123443;box-shadow:0 0 0 4px #071015cc,0 0 13px #61c7ff66}
-.truck-train-marker:hover i{background:#61c7ff;box-shadow:0 0 0 5px #61c7ff33,0 0 18px #61c7ff}
-.map-legend .rail-dot{border-color:#61c7ff;background:#123443}
-.truck-train-leaflet-popup .leaflet-popup-content-wrapper,.truck-train-leaflet-popup .leaflet-popup-tip{border:1px solid #4aaed8;background:#101a1e;color:#fff}
+.truck-train-marker{width:110px;height:50px;border:0;background:transparent;color:#d6a16f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.5rem;font-weight:800;text-shadow:0 1px 4px #000;cursor:pointer}
+.truck-train-marker i{width:13px;height:13px;border:2px solid #9b633c;border-radius:50%;background:#3a2518;box-shadow:0 0 0 4px #21150ecc,0 0 13px #9b633c66}
+.truck-train-marker:hover i{background:#9b633c;box-shadow:0 0 0 5px #9b633c33,0 0 18px #9b633c}
+.map-legend .rail-dot{border-color:#9b633c;background:#3a2518}
+.truck-train-leaflet-popup .leaflet-popup-content-wrapper,.truck-train-leaflet-popup .leaflet-popup-tip{border:1px solid #855536;background:#1d1712;color:#fff}
 .truck-train-leaflet-popup .leaflet-popup-content{min-width:265px;margin:15px}
-.truck-train-popup>span{color:#61c7ff;font-size:.43rem;font-weight:800;letter-spacing:.12em}
+.truck-train-popup>span{color:#9b633c;font-size:.43rem;font-weight:800;letter-spacing:.12em}
 .truck-train-popup h3{margin:5px 0;font:700 1.35rem Barlow Condensed;text-transform:uppercase}
-.truck-train-popup p{margin:0 0 12px;color:#91a3aa;font-size:.5rem;line-height:1.55}
-.truck-train-popup button{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #61c7ff;background:#112832;color:#9be2ff;font-size:.48rem;font-weight:800;text-align:left;cursor:pointer}
-.truck-train-popup button:hover:not(:disabled){background:#61c7ff;color:#071015}
+.truck-train-popup p{margin:0 0 12px;color:#aa9685;font-size:.5rem;line-height:1.55}
+.truck-train-popup button{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #9b633c;background:#302117;color:#e1b484;font-size:.48rem;font-weight:800;text-align:left;cursor:pointer}
+.truck-train-popup button:hover:not(:disabled){background:#9b633c;color:#21150e}
 .truck-train-popup button:disabled{opacity:.35;cursor:not-allowed}
-.truck-train-popup small{display:block;margin-top:9px;color:#71848b;font-size:.43rem;line-height:1.45}
+.truck-train-popup small{display:block;margin-top:9px;color:#907b69;font-size:.43rem;line-height:1.45}
 
 .sidebar-newspaper{margin-top:auto;padding:11px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;color:#dce5dd;text-decoration:none;background:#111914}
 .sidebar-newspaper:hover,.sidebar-newspaper.active{border-color:var(--green);background:#192319;color:var(--green)}
