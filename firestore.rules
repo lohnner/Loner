@@ -127,6 +127,65 @@ service cloud.firestore {
         && request.resource.data.readBy[request.auth.uid] == true;
       allow delete: if false;
     }
+
+    // Global production board: immutable cargo, single courier and final delivery.
+    match /playerCalls/{callId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.id == callId
+        && request.resource.data.status == 'available'
+        && request.resource.data.keys().hasOnly(['id','status','ownerId','ownerName','ownerCompany','origin','destination','km','ferry','product','gross','createdAt','createdAtMs'])
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerCompany is string
+        && request.resource.data.origin is string
+        && request.resource.data.destination is string
+        && request.resource.data.origin != request.resource.data.destination
+        && request.resource.data.km is number && request.resource.data.km > 0
+        && ((request.resource.data.product == 'pasta' && request.resource.data.gross == 1500)
+          || (request.resource.data.product == 'wine' && request.resource.data.gross == 3500)
+          || (request.resource.data.product == 'paracetamol' && request.resource.data.gross == 4000)
+          || (request.resource.data.product == 'player-rice' && request.resource.data.gross == 2500));
+      allow update: if signedIn() && (
+        (resource.data.status == 'available'
+          && request.resource.data.status == 'claimed'
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.claimedByName is string
+          && request.resource.data.claimedAtMs is number
+          && request.resource.data.fuelAllowance is number && request.resource.data.fuelAllowance >= 0
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','claimedBy','claimedByName','claimedAt','claimedAtMs','fuelAllowance']))
+        || (resource.data.status == 'claimed'
+          && resource.data.claimedBy == request.auth.uid
+          && request.resource.data.status == 'delivered'
+          && request.resource.data.deliveredBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','deliveredBy','deliveredByName','deliveredAt','deliveredAtMs'])));
+      allow delete: if false;
+    }
+    match /farmEarnings/{earningId} {
+      function deliveredCall() {
+        return getAfter(/databases/$(database)/documents/playerCalls/$(request.resource.data.callId)).data;
+      }
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['id','ownerId','courierId','callId','amount','courierName','destination','product','claimed','createdAt','createdAtMs'])
+        && request.resource.data.id == earningId
+        && earningId == request.resource.data.callId + '-' + request.resource.data.ownerId
+        && request.resource.data.courierId == request.auth.uid
+        && request.resource.data.ownerId != request.auth.uid
+        && request.resource.data.claimed == false
+        && deliveredCall().status == 'delivered'
+        && deliveredCall().claimedBy == request.auth.uid
+        && deliveredCall().deliveredBy == request.auth.uid
+        && deliveredCall().ownerId == request.resource.data.ownerId
+        && deliveredCall().destination == request.resource.data.destination
+        && deliveredCall().product == request.resource.data.product
+        && request.resource.data.amount == (deliveredCall().gross - 500 - deliveredCall().fuelAllowance > 0 ? deliveredCall().gross - 500 - deliveredCall().fuelAllowance : 0);
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid
+        && resource.data.claimed == false && request.resource.data.claimed == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed','claimedAt']);
+      allow delete: if false;
+    }
+
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;

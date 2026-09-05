@@ -9,7 +9,9 @@
       "firebase.json",
       "firestore.rules",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "tests/**",
+      "*.md"
     ],
     "cleanUrls": true
   }
