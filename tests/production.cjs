@@ -20,6 +20,16 @@ function game(){
  g.run('state.pastaFactory.startedAt=0;state.pastaFactory.readyAt=0;now+=1000;advancePastaFactory()');assert.ok(g.run('state.pastaFactory.startedAt>0'),'Legacy full stock resumes production');
  g.run(`ensureAgricultureState=()=>({farms:{}});ensurePharmaceuticalState=()=>({factories:{}});ensureWineState=()=>({});playerCalls=[];let oldId=state.pastaFactory.stock[0].id;reconcileOwnFarmCalls()`);assert.equal(g.run('state.pastaFactory.stock[0].id'),g.run('oldId'),'Missing publication does not erase stock');
  assert.equal(g.run("atProductionSite('pasta','Campinas')"),false);g.run("state.facility={product:'pasta',city:'Campinas'}");assert.equal(g.run("atProductionSite('pasta','Campinas')"),true);
+ assert.equal(g.run("parkedPlayerPosition({city:'Campinas',facility:state.facility})[0]"),g.run('PASTA_FACTORY_SITE.lat'));
+ assert.equal(g.run("parkedPlayerPosition({city:'Campinas',facility:state.facility})[1]"),g.run('PASTA_FACTORY_SITE.lng'));
+ g.run("onlinePlayers=[{uid:user.uid,city:'Campinas',facility:null}]");assert.equal(g.run('mapPlayers()[0].facility.product'),'pasta','Local yard position wins over stale presence');
+ assert.equal(g.run('availableProductionCalls().length'),1,'Owner sees stock even before global publication');
+ assert.equal(g.run('availableProductionCalls()[0].origin'),'Campinas');
+ assert.equal(g.run('availableProductionCalls()[0].destination'),g.run('state.pastaFactory.stock[0].destination'));
+ g.run("playerCalls=[{...availableProductionCalls()[0],status:'claimed'}]");assert.equal(g.run('availableProductionCalls().length'),0,'Claimed calls cannot be resurrected by local stock');
+ g.run('playerCalls=[]');
+ assert.ok(g.run("palletInventoryHTML([{product:'pasta',contract:{destination:'São Paulo'}}],1)").includes('PALETE DE MASSAS'));
+ assert.ok(g.run("palletInventoryHTML([{product:'pasta',contract:{destination:'São Paulo'}}],1)").includes('São Paulo'));
  // Only purchasable sites start a dedicated access trip; ordinary offers keep their city entry.
  assert.ok(!source.includes('drawCompanyRoads')&&!source.includes('drawProductionRoads'),'No permanent factory road overlays');
  assert.ok(!source.includes('loner-company-map'),'Ordinary companies do not redirect to map');
