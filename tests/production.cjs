@@ -20,6 +20,23 @@ function game(){
  g.run('state.pastaFactory.startedAt=0;state.pastaFactory.readyAt=0;now+=1000;advancePastaFactory()');assert.ok(g.run('state.pastaFactory.startedAt>0'),'Legacy full stock resumes production');
  g.run(`ensureAgricultureState=()=>({farms:{}});ensurePharmaceuticalState=()=>({factories:{}});ensureWineState=()=>({});playerCalls=[];let oldId=state.pastaFactory.stock[0].id;reconcileOwnFarmCalls()`);assert.equal(g.run('state.pastaFactory.stock[0].id'),g.run('oldId'),'Missing publication does not erase stock');
  assert.equal(g.run("atProductionSite('pasta','Campinas')"),false);g.run("state.facility={product:'pasta',city:'Campinas'}");assert.equal(g.run("atProductionSite('pasta','Campinas')"),true);
+ // Only purchasable sites start a dedicated access trip; ordinary offers keep their city entry.
+ assert.ok(!source.includes('drawCompanyRoads')&&!source.includes('drawProductionRoads'),'No permanent factory road overlays');
+ assert.ok(!source.includes('loner-company-map'),'Ordinary companies do not redirect to map');
+ assert.ok(source.includes('>VER EMPRESA</button>'),'City offers retain the original company button');
+ assert.ok(source.includes("button.onclick=()=>location.hash='empresa/'+button.dataset.dailyCompany"));
+ const access=game();access.context.fetch=async()=>{throw Error('Routing offline')};
+ access.run("user={uid:'driver',displayName:'Motorista'};state=fresh();save=()=>{};tireCondition=()=>100;fuelLevel=()=>100;fuelLitersFor=()=>1;travelMinutes=()=>2;toast=()=>{}");
+ for(const product of ['pasta','player-rice','paracetamol','wine']){
+  access.context.testProduct=product;
+  access.run("state.trip=null;state.facility=null;var testSite=productionSites().find(site=>site.product===testProduct);state.city=testSite.city");
+  await access.run("startProductionAccess(testProduct,state.city,{disabled:false})");
+  assert.equal(access.run('state.trip.facilityArrival.product'),product);
+  assert.equal(access.run('state.trip.path.length'),3,'Fallback route exists only as the active trip path');
+  assert.equal(access.run('state.trip.path.at(-1)[0]'),access.run('productionSite(testProduct,state.city).point.lat'));
+  assert.equal(access.run('state.trip.path.at(-1)[1]'),access.run('productionSite(testProduct,state.city).point.lng'));
+  assert.equal(access.run('location.hash'),'mapa');
+ }
  // Mock Firestore with atomic commits; failed commits discard every write.
  g.run(`let records=new Map(),failCommit=false;const db={};doc=(_,collection,id)=>({id,key:collection+'/'+id});serverTimestamp=()=>now;syncProgress=async()=>{};chrome=()=>{};syncPresence=()=>{};toast=()=>{};cityPage=()=>{};key=()=> 'test';fuelCostFor=()=>50;runTransaction=async(_,work)=>{const writes=[];const result=await work({get:async ref=>({exists:()=>records.has(ref.key),data:()=>structuredClone(records.get(ref.key))}),update:(ref,value)=>writes.push(()=>records.set(ref.key,{...records.get(ref.key),...value})),set:(ref,value)=>writes.push(()=>records.set(ref.key,value))});if(failCommit)throw Error('offline');writes.forEach(write=>write());return result};`);
  g.context.structuredClone=structuredClone;

@@ -1,6 +1,7 @@
 # Produção e transporte de paletes
 
-- As empresas possuem caminhos no mapa. O atalho da cidade aponta para o acesso no mapa; as fábricas dos jogadores exigem chegar ao pátio para comprar ou retirar.
+- Somente as propriedades compráveis de massas, agricultura, farmacêutico e vinícola possuem acesso próprio. O trajeto aparece durante a viagem até o pátio, como nas viagens entre cidades; não há linhas permanentes para todas as fábricas.
+- As demais empresas continuam no mercado aleatório de fretes dentro das cidades, com o botão **VER EMPRESA** e sem novos pontos ou caminhos no mapa.
 - A fábrica de massas inicia outro ciclo de seis horas ao colocar o palete no estoque. Um segundo palete pode terminar e aguardar espaço, sem acumular produção ilimitada.
 - O estoque gera chamadas públicas com empresa, proprietário, destino e pagamento. Publicações são idempotentes e falhas de publicação não apagam paletes.
 - Retirada reserva a chamada e carrega o caminhão na mesma transação. Paletes contratados permanecem no caminhão até a entrega.
