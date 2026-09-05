@@ -8,7 +8,7 @@ function game(){
  const context=vm.createContext({console,Date,Math,JSON,Map,Set,Promise,Number,String,Boolean,Array,Object,Infinity,crypto:require('node:crypto').webcrypto,window:{},document:{querySelector:()=>({}),querySelectorAll:()=>[]},location:{hash:''},localStorage:{setItem(){}},setInterval:()=>1,clearInterval(){},setTimeout(){},addEventListener(){},sessionStorage:{},AbortSignal});
  vm.runInContext(code,context);return{context,run:code=>vm.runInContext(code,context)};
 }
-(async()=>{
+if(require.main===module)(async()=>{
  const g=game();
  g.run(`user={uid:'owner',displayName:'Dona Maria'};state=fresh();state.city='Campinas';let now=1000000;Date.now=()=>now;save=()=>{};publishPastaCall=p=>published.push(p);let published=[];`);
  g.run(`state.pastaFactory={owned:true,stock:[],startedAt:now,readyAt:now+PASTA_GROW_MS};now+=PASTA_GROW_MS;advancePastaFactory()`);
@@ -22,7 +22,7 @@ function game(){
  assert.equal(g.run("atProductionSite('pasta','Campinas')"),false);g.run("state.facility={product:'pasta',city:'Campinas'}");assert.equal(g.run("atProductionSite('pasta','Campinas')"),true);
  assert.equal(g.run("parkedPlayerPosition({city:'Campinas',facility:state.facility})[0]"),g.run('PASTA_FACTORY_SITE.lat'));
  assert.equal(g.run("parkedPlayerPosition({city:'Campinas',facility:state.facility})[1]"),g.run('PASTA_FACTORY_SITE.lng'));
- g.run("onlinePlayers=[{uid:user.uid,city:'Campinas',facility:null}]");assert.equal(g.run('mapPlayers()[0].facility.product'),'pasta','Local yard position wins over stale presence');
+ g.run("state.lastActionAt=Date.now();onlinePlayers=[{uid:user.uid,city:'Campinas',facility:null}]");assert.equal(g.run('mapPlayers()[0].facility.product'),'pasta','Local yard position wins over stale presence');
  assert.equal(g.run('availableProductionCalls().length'),1,'Owner sees stock even before global publication');
  assert.equal(g.run('availableProductionCalls()[0].origin'),'Campinas');
  assert.equal(g.run('availableProductionCalls()[0].destination'),g.run('state.pastaFactory.stock[0].destination'));
@@ -60,3 +60,5 @@ function game(){
  assert.ok(!source.includes('const productionReward=completeProductionContracts()'),'Arrival does not automatically deliver');
  console.log('PASS: continuous production, full-stock waiting, migration, stock reconciliation, facility access, single pickup, atomic failure, delivery and payouts.');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+module.exports={game};
