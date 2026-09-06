@@ -44,6 +44,8 @@ const {game}=require('./production.cjs');
  assert.equal(g.run('TRUCK_ON_TRAIN_SPEED'),200);
  assert.ok(g.run("truckOnTrainDestinations('Piracicaba').includes('Itapetininga')"));
  assert.ok(g.run("truckOnTrainDestinations('Itapetininga').includes('Piracicaba')"));
+ assert.ok(g.run("truckOnTrainDestinations('Campinas').includes('São José dos Campos')"));
+ assert.ok(g.run("truckOnTrainDestinations('São José dos Campos').includes('Campinas')"));
  const segments=JSON.parse(g.run('JSON.stringify(TRUCK_ON_TRAIN_SEGMENTS)'));
  for(const segment of segments){
   for(const [from,to] of [[segment.from,segment.to],[segment.to,segment.from]]){
