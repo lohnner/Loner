@@ -387,6 +387,26 @@ function gameBasemapStyle(style){
  return {...style,layers:style.layers.map(layer=>layer.type==='symbol'&&layer['source-layer']==='place'&&layer.layout?.['text-field']?
   {...layer,filter:['all',...(layer.filter?[layer.filter]:[]),['!',registeredCity]]}:layer)};
 }
+async function addStateBoundaries(map,signal){
+ try{
+  const response=await fetch('assets/maps/brazil-states.geojson',{signal});
+  if(!response.ok)throw new Error('State boundaries unavailable');
+  const data=await response.json();
+  if(signal.aborted)return;
+  // Above the basemap, below routes and markers; the halo keeps river borders readable.
+  const pane=map.getPane('state-boundaries')||map.createPane('state-boundaries');
+  pane.style.zIndex='390';pane.style.pointerEvents='none';
+  const options={pane:'state-boundaries',interactive:false,fill:false,smoothFactor:0,lineCap:'round',lineJoin:'round'};
+  const halo=L.geoJSON(data,{...options,style:{color:'#fffdf7',weight:4.8,opacity:.95}}).addTo(map);
+  const outline=L.geoJSON(data,{...options,style:{color:'#596273',weight:1.8,opacity:1}}).addTo(map);
+  const resize=()=>{
+   const zoom=map.getZoom(),weight=zoom<5?1.2:zoom<8?1.8:zoom<11?2.2:2.6;
+   halo.setStyle({weight:weight+3});outline.setStyle({weight});
+  };
+  resize();map.on('zoomend',resize);
+  map.once('unload',()=>map.off('zoomend',resize));
+ }catch(error){if(!signal.aborted)console.warn('Divisas estaduais indisponíveis:',error.message)}
+}
 async function addGameBasemap(map){
  let disposed=false,vector=null,fallback=null;
  const abort=new AbortController();
@@ -397,6 +417,7 @@ async function addGameBasemap(map){
   toast('Mapa simplificado: não foi possível ocultar os nomes duplicados neste dispositivo agora.');
  };
  map.once('unload',()=>{disposed=true;abort.abort()});
+ void addStateBoundaries(map,abort.signal);
  try{
   if(!L.maplibreGL||!window.maplibregl)throw new Error('Vector map unavailable');
   const response=await fetch('assets/maps/liberty.json',{signal:abort.signal});
