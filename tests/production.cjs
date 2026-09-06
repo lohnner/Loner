@@ -36,7 +36,7 @@ if(require.main===module)(async()=>{
  assert.ok(source.includes('>VER EMPRESA</button>'),'City offers retain the original company button');
  assert.ok(source.includes("button.onclick=()=>location.hash='empresa/'+button.dataset.dailyCompany"));
  const access=game();access.context.fetch=async()=>{throw Error('Routing offline')};
- access.run("user={uid:'driver',displayName:'Motorista'};state=fresh();save=()=>{};tireCondition=()=>100;fuelLevel=()=>100;fuelLitersFor=()=>1;travelMinutes=()=>2;toast=()=>{}");
+ access.run("user={uid:'driver',displayName:'Motorista'};state=fresh();save=()=>{};tireCondition=()=>100;fuelLevel=()=>100;fuelLitersFor=()=>1;travelMinutes=()=>2;toast=()=>{};route=()=>{}");
  for(const product of ['pasta','player-rice','paracetamol','wine']){
   access.context.testProduct=product;
   access.run("state.trip=null;state.facility=null;var testSite=productionSites().find(site=>site.product===testProduct);state.city=testSite.city");
