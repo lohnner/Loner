@@ -29,3 +29,11 @@ Em 05/09/2026, a tentativa de validação da publicação compilou as regras, ma
 - A chegada acontece no terminal de destino. Use **IR ATÉ O CENTRO DA CIDADE** para continuar por estrada. A Visão Geral mostra a estação enquanto o caminhão está nela.
 - Todas as linhas operam a 200 km/h. Trechos nos dois sentidos incluem São José dos Campos ↔ Guaratinguetá e Piracicaba ↔ Itapetininga (160 km aproximados no jogo).
 - Verifique o fluxo com `node tests/truck-on-train.cjs`, incluindo bloqueio do embarque na cidade, consumo rodoviário, tarifa, carga e chegada.
+
+## Nomes no mapa
+
+- A aba Mapa usa o estilo Liberty do OpenFreeMap (https://openfreemap.org/quick_start/), salvo em `assets/maps/liberty.json`, com MapLibre integrado ao Leaflet.
+- Apenas rótulos de cidades cadastradas são filtrados, por nome e proximidade das coordenadas do cadastro. As bolinhas e os nomes do jogo permanecem. Estados, bairros, vias e cidades não cadastradas conservam seus rótulos.
+- Novas cidades do cadastro entram automaticamente no filtro. A prévia de rotas mantém sua camada original.
+- Se o mapa vetorial não puder carregar, o mapa original aparece com um aviso de que os nomes duplicados não puderam ser ocultados.
+- Verifique com `node tests/map-labels.cjs`. O resultado também foi conferido no Edge com os nomes de São Paulo, Santo André e Mauá removidos do fundo e Cubatão preservado.
