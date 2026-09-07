@@ -35,4 +35,11 @@ assert.ok(!evaluate(predicate,{name:'Bauru',class:'city'},[-49.06,-22.31]));
 assert.ok(!evaluate(predicate,{name:'São Paulo',class:'state'},[-46.6333,-23.5505]));
 assert.ok(!evaluate(predicate,{name:'Santo André',class:'city'},[-36.62,-7.22]),'Homonym outside the registered location');
 assert.ok(!evaluate(predicate,{name:'Mauá',class:'suburb'},[-46.46,-23.66]),'Neighborhood names are retained');
+const morro=cities['Morro do Índio'];
+for(const name of ['Morro do Índio','Morro do índio','Morro do Indio','Morro do indio']){
+ for(const kind of ['village','suburb','neighbourhood'])
+  assert.ok(evaluate(predicate,{name,class:kind},[morro.lng,morro.lat]),name+' '+kind);
+ assert.ok(!evaluate(predicate,{name,class:'village'},[-46,-22]),'Distant homonyms remain visible');
+}
+assert.ok(!evaluate(predicate,{name:'Jardim Ângela',class:'suburb'},[morro.lng,morro.lat]),'Other neighborhoods remain visible');
 console.log('PASS: registered city names hidden by name AND location; other cities, states, neighborhoods and road labels preserved.');

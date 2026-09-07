@@ -403,10 +403,14 @@ function truckOnTrainPopup(city){
 function startTruckOnTrain(from,to){if(state.trip)return;if(!atTrainStation(from)){toast('Dirija até a estação de '+from+' antes de embarcar.');return}const segment=truckOnTrainSegment(from,to);if(!segment){toast('Trecho ferroviário indisponível.');return}if(state.balance<TRUCK_ON_TRAIN_FEE){toast('Saldo insuficiente para pagar a taxa de '+money(TRUCK_ON_TRAIN_FEE)+'.');return}const at=Date.now(),duration=Math.max(1,Math.round(segment.km/TRUCK_ON_TRAIN_SPEED*60));state.balance-=TRUCK_ON_TRAIN_FEE;addLedger('debit',TRUCK_ON_TRAIN_FEE,'Transporte Truck-on-Train',from+' → '+to+' · caminhão embarcado no trem',at,'truck-on-train-'+at);state.facility=null;state.trip={freeTrip:true,truckOnTrain:true,facilityArrival:{product:'truck-on-train',city:to},truckId:state.truck,fuelStart:fuelLevel(),fuelPlanned:0,fuelUsed:0,tireCondition:tireCondition(),from,to,company:'Truck-on-Train',cargo:truckPalletCount()?truckPalletCount()+' palete'+(truckPalletCount()>1?'s':'')+' no caminhão':'Caminhão sem carga',totalKm:segment.km,path:segment.path,start:at,end:at+duration*60000,durationMs:duration*60000,pay:0,xp:0,railSpeed:TRUCK_ON_TRAIN_SPEED,transportFee:TRUCK_ON_TRAIN_FEE};save();toast('Caminhão embarcado no trem para '+to+'. Velocidade: '+TRUCK_ON_TRAIN_SPEED+' km/h.');location.hash='mapa';route()}
 // Vector labels can be hidden individually; raster tiles have their text baked in.
 function gameCityLabelMatch(){
- return ['all',['in',['get','class'],['literal',['city','town','village']]],['any',...Object.entries(cities).map(([name,city])=>['all',
-  ['any',...['name','name:latin','name_en','name:pt'].map(field=>['==',['get',field],name])],
-  ['within',{type:'Polygon',coordinates:[[[city.lng-.15,city.lat-.15],[city.lng+.15,city.lat-.15],[city.lng+.15,city.lat+.15],[city.lng-.15,city.lat+.15],[city.lng-.15,city.lat-.15]]]}]
- ])]];
+ return ['any',...Object.entries(cities).map(([name,city])=>{
+  const isMorroDoIndio=name==='Morro do Índio',names=isMorroDoIndio?[name,'Morro do índio','Morro do Indio','Morro do indio']: [name];
+  const classes=isMorroDoIndio?['city','town','village','hamlet','suburb','quarter','neighbourhood','neighborhood']:['city','town','village'];
+  return ['all',['in',['get','class'],['literal',classes]],
+   ['any',...['name','name:latin','name_en','name:pt'].flatMap(field=>names.map(label=>['==',['get',field],label]))],
+   ['within',{type:'Polygon',coordinates:[[[city.lng-.15,city.lat-.15],[city.lng+.15,city.lat-.15],[city.lng+.15,city.lat+.15],[city.lng-.15,city.lat+.15],[city.lng-.15,city.lat-.15]]]}]
+  ];
+ })];
 }
 function gameBasemapStyle(style){
  const registeredCity=gameCityLabelMatch();
