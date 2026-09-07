@@ -6,19 +6,19 @@ g.run("unlockSkill('pastaFactory')");assert.equal(g.run('state.missionPoints'),5
 g.run("state.city='Campinas';state.facility={product:'pasta',city:'Campinas'};state.balance=10000;pastaFactoryPage=()=>{};buyPastaFactory('Campinas')");
 assert.equal(g.run('state.pastaFactory.readyAt-now'),21600000);
 g.run("now+=600000;unlockSkill('fasterPastaProduction')");
-assert.equal(g.run('state.missionPoints'),25);assert.equal(g.run('state.pastaFactory.readyAt-now'),1200000);
+assert.equal(g.run('state.missionPoints'),25);assert.equal(g.run('state.pastaFactory.readyAt-now'),19200000);
 g.run("unlockSkill('pastaPalletSpace');unlockSkill('pastaPalletSpace')");
 assert.equal(g.run('state.missionPoints'),0);assert.equal(g.run('pastaStockCapacity()'),2);
-g.run("now+=7200000;advancePastaFactory()");
+g.run("now+=43200000;advancePastaFactory()");
 assert.equal(g.run('state.pastaFactory.stock.length'),2);
 assert.notEqual(g.run('state.pastaFactory.stock[0].id'),g.run('state.pastaFactory.stock[1].id'));
-g.run("ensurePastaFactoryState();now+=7200000;advancePastaFactory()");
+g.run("ensurePastaFactoryState();now+=43200000;advancePastaFactory()");
 assert.equal(g.run('state.pastaFactory.stock.length'),2);
 g.run("state.pastaFactory.stock.shift();state.pastaFactory.slotFreedAt=now;advancePastaFactory()");
-assert.equal(g.run('state.pastaFactory.stock.length'),2);assert.equal(g.run('state.pastaFactory.readyAt-now'),1800000);
+assert.equal(g.run('state.pastaFactory.stock.length'),2);assert.equal(g.run('state.pastaFactory.readyAt-now'),19800000);
 g.run("state.city='Mauá';state.facility={product:'pasta',city:'Mauá'};state.balance=10000;buyPastaFactory('Mauá')");
-assert.equal(g.run("ensurePastaFactoryState('Mauá').readyAt-now"),1800000);
-g.run("now+=3600000;advancePastaFactory()");
+assert.equal(g.run("ensurePastaFactoryState('Mauá').readyAt-now"),19800000);
+g.run("now+=39600000;advancePastaFactory()");
 assert.equal(g.run("ensurePastaFactoryState('Mauá').stock.length"),2);
 for(const slug of ['pasta-pallet-space','faster-pasta-production']){const p=fs.readFileSync('assets/skills/'+slug+'.png');assert.equal(p.readUInt32BE(16),512);assert.equal(p.readUInt32BE(20),512)}
 // Insufficient points cannot buy an upgrade.

@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),{game}=require('./production.cjs');
+const g=game(),slots=['first','second'].map(id=>({dataset:{palletId:id},append(button){this.button=button}}));
+const panel={querySelector:()=>({}),querySelectorAll:()=>[]};
+g.context.slots=slots;
+g.context.document={createElement:tag=>tag==='section'?panel:{},querySelector:()=>({append(){}}),querySelectorAll:()=>slots};
+g.run("user={uid:'owner'};state=fresh();state.city='Campinas';state.facility={product:'pasta',city:'Campinas'};state.skills={pastaFactory:true,pastaPalletSpace:true,fasterPastaProduction:true};let selected='';claimPlayerCall=id=>{selected=id};availableProductionCalls=()=>['second','first'].map(id=>({id,product:'pasta',origin:'Campinas',destination:'Santos',ownerId:'owner',ownerName:'Owner',gross:1500}));renderProductionAccess('pasta','Campinas')");
+assert.equal(slots[1].button.disabled,false);slots[1].button.onclick();assert.equal(g.run('selected'),'second');
+slots[0].button.onclick();assert.equal(g.run('selected'),'first');
+g.run("state.pastaFactory={owned:true,stock:[{id:'kept'}],startedAt:100000000,readyAt:101800000};ensurePastaFactoryState()");
+assert.equal(g.run('state.pastaFactory.readyAt-state.pastaFactory.startedAt'),19800000);
+assert.equal(g.run('state.pastaFactory.stock[0].id'),'kept');
+assert.equal(g.run('pastaProductionTime()'),'5 horas e 30 minutos');
+console.log('PASS: either pallet selected by ID despite reversed calls; legacy timer corrected and stock preserved.');
