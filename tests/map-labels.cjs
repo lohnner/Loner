@@ -43,3 +43,11 @@ for(const name of ['Morro do Índio','Morro do índio','Morro do Indio','Morro d
 }
 assert.ok(!evaluate(predicate,{name:'Jardim Ângela',class:'suburb'},[morro.lng,morro.lat]),'Other neighborhoods remain visible');
 console.log('PASS: registered city names hidden by name AND location; other cities, states, neighborhoods and road labels preserved.');
+
+for(const name of ['Jardim Copacabana','Jardim Idemori','Jardim idemori']){
+ for(const kind of ['village','suburb','quarter','neighbourhood'])
+  assert.ok(evaluate(predicate,{name,class:kind},[-46.79567,-23.70385]),name+' '+kind);
+ assert.ok(!evaluate(predicate,{name,class:'quarter'},[-46,-22]),'Distant neighborhood homonyms remain visible');
+}
+const ipava=cities['Cidade Ipava'];
+for(const kind of ['village','suburb','quarter'])assert.ok(evaluate(predicate,{name:'Cidade Ipava',class:kind},[ipava.lng,ipava.lat]));
