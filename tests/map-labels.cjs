@@ -31,7 +31,7 @@ function evaluate(expr,properties,point){
 }
 const cities=JSON.parse(g.run('JSON.stringify(cities)'));
 for(const [name,city] of Object.entries(cities))assert.ok(evaluate(predicate,{name,class:'city'},[city.lng,city.lat]),name);
-assert.ok(!evaluate(predicate,{name:'Bauru',class:'city'},[-49.06,-22.31]));
+assert.ok(!evaluate(predicate,{name:'Araraquara',class:'city'},[-48.18,-21.79]));
 assert.ok(!evaluate(predicate,{name:'São Paulo',class:'state'},[-46.6333,-23.5505]));
 assert.ok(!evaluate(predicate,{name:'Santo André',class:'city'},[-36.62,-7.22]),'Homonym outside the registered location');
 assert.ok(!evaluate(predicate,{name:'Mauá',class:'suburb'},[-46.46,-23.66]),'Neighborhood names are retained');
@@ -51,3 +51,9 @@ for(const name of ['Jardim Copacabana','Jardim Idemori','Jardim idemori']){
 }
 const ipava=cities['Cidade Ipava'];
 for(const kind of ['village','suburb','quarter'])assert.ok(evaluate(predicate,{name:'Cidade Ipava',class:kind},[ipava.lng,ipava.lat]));
+
+for(const name of ['Betel','Nova Aparecida','Arcadas','Três Pontes']){
+ const city=cities[name];
+ for(const kind of ['village','suburb','quarter'])assert.ok(evaluate(predicate,{name,class:kind},[city.lng,city.lat]));
+ assert.ok(!evaluate(predicate,{name,class:'village'},[-40,-10]),'Distant homonym preserved');
+}

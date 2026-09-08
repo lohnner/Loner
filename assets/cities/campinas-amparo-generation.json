@@ -1,0 +1,10 @@
+{
+  "tool": "imagegen (built-in)",
+  "resolution": "1672x941",
+  "prompts": {
+    "Betel": "Photorealistic Brazilian trucking game city card of Betel, São Paulo: district of Paulínia, modern industrial warehouses, red tile homes, broad roads and green surroundings. Wide elevated drone panorama, small delivery trucks, bright sunny blue sky, realistic detailed regional scenery. No text, no borders. Landscape 1672x941 pixels.",
+    "Nova Aparecida": "Photorealistic Brazilian trucking game city card of Nova Aparecida, São Paulo: district of Campinas, low-rise residential neighborhoods, regional distribution sheds, leafy streets and highway access. Wide elevated drone panorama, small delivery trucks, bright sunny blue sky, realistic detailed regional scenery. No text, no borders. Landscape 1672x941 pixels.",
+    "Arcadas": "Photorealistic Brazilian trucking game city card of Arcadas, São Paulo: district of Amparo, small red tile houses, old railway station, green rolling hills and local workshops. Wide elevated drone panorama, small delivery trucks, bright sunny blue sky, realistic detailed regional scenery. No text, no borders. Landscape 1672x941 pixels.",
+    "Três Pontes": "Photorealistic Brazilian trucking game city card of Três Pontes, São Paulo: district of Amparo, modest village in green hilly valley, river and small bridge, red tile homes and local agricultural warehouses. Wide elevated drone panorama, small delivery trucks, bright sunny blue sky, realistic detailed regional scenery. No text, no borders. Landscape 1672x941 pixels."
+  }
+}
