@@ -24,7 +24,10 @@ const section={outerHTML:'',querySelectorAll:selector=>selector==='[data-city-de
 g.context.document.querySelector=()=>section;
 g.run("bindCityDeliveryTabs('Cajamar')");tabs[0].onclick();
 assert.ok(section.outerHTML.includes('Carga curta'));
+assert.ok(g.run("cityDailySection('Cajamar')").includes('Carga curta'),'Automatic city refresh preserves arrivals');
+assert.ok(!g.run("cityDailySection('Santos')").includes('Outro destino'),'Other cities keep their own tab selection');
 tabs[1].onclick();assert.ok(!section.outerHTML.includes('Carga curta'));
+assert.ok(!g.run("cityDailySection('Cajamar')").includes('Carga curta'),'Explicit return to departures is preserved');
 g.run("state.city='São Paulo'");pickup.onclick();assert.equal(g.context.location.hash,'cidade/Jundia%C3%AD');
 g.run("state.city='Jundiaí'");pickup.onclick();assert.equal(g.context.location.hash,'entregas');
 console.log('PASS: arrivals for every city, destination filtering, distance order, empty state, tab switching and pickup navigation.');

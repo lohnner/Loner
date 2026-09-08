@@ -393,7 +393,8 @@ function bindTradeCityActions(city){document.querySelector('[data-buy-warehouse]
 function cityArrivalOffers(name){
  return Object.keys(cities).flatMap(city=>availableOffersForCity(city).filter(offer=>offer.to===name).map(offer=>({...offer,city}))).sort((a,b)=>a.km-b.km||a.city.localeCompare(b.city,'pt-BR')||a.index-b.index);
 }
-function cityDailySection(name,tab='departures'){
+const cityDeliveryTabs=new Map();
+function cityDailySection(name,tab=cityDeliveryTabs.get(name)||'departures'){
  const departures=availableOffersForCity(name),arrivals=cityArrivalOffers(name),incoming=tab==='arrivals',offers=incoming?arrivals:departures;
  return '<section class="city-factories daily-city-jobs"><div class="section-head"><div class="city-delivery-tabs" aria-label="Entregas da cidade"><button class="'+(!incoming?'active':'')+'" aria-pressed="'+!incoming+'" data-city-delivery-tab="departures">'+departures.length+' '+(departures.length===1?'ENTREGA DISPONÍVEL':'ENTREGAS DISPONÍVEIS')+'</button><button class="'+(incoming?'active':'')+'" aria-pressed="'+incoming+'" data-city-delivery-tab="arrivals">'+arrivals.length+' '+(arrivals.length===1?'ENTREGA DE CHEGADA':'ENTREGAS DE CHEGADA')+'</button></div><span>'+(incoming?'DESTINO: '+escapeHTML(name.toUpperCase())+' · MENOR PARA MAIOR DISTÂNCIA':'ESTOQUE GLOBAL · IGUAIS PARA TODOS · RENOVAÇÃO À MEIA-NOITE')+'</span></div><div class="factory-grid">'+(offers.length?offers.map(offer=>{const rw=marketReward(offer.km,offer.company.code);return'<article class="factory-card daily-delivery-card"><div class="factory-top">'+companyLogo(offer.company)+'<span>ÍNDICE '+formatMarketIndex(rw.factor)+'</span></div><h3>'+escapeHTML(offer.cargo)+'</h3>'+deliveryCargoVisual(offer.company.code,true)+'<p><b>'+escapeHTML(offer.company.name)+'</b><br>'+escapeHTML(offer.city||name)+' → '+escapeHTML(offer.to)+'</p><small>'+(offer.ferry?'BALSA · ':'')+offer.km+' KM · '+travelTime(offer.km).toUpperCase()+' · '+money(rw.pay)+' + '+money(fuelCostFor(offer.km))+' combustível · +'+rw.xp+' XP</small><button data-daily-company="'+offer.company.code+'">VER EMPRESA</button>'+(incoming?'<button data-arrival-pickup="'+escapeHTML(offer.city)+'">VER CIDADE DE COLETA</button>':'')+'</article>'}).join(''):'<p class="ranking-empty">'+(incoming?'Nenhuma entrega disponível com destino a '+escapeHTML(name)+' no momento.':'Nenhuma entrega disponível nesta cidade no momento.')+'</p>')+'</div></section>';
 }
@@ -401,7 +402,8 @@ function bindCityDeliveryTabs(name){
  const section=document.querySelector('.daily-city-jobs');
  if(!section)return;
  section.querySelectorAll('[data-city-delivery-tab]').forEach(button=>button.onclick=()=>{
-  section.outerHTML=cityDailySection(name,button.dataset.cityDeliveryTab);
+  cityDeliveryTabs.set(name,button.dataset.cityDeliveryTab);
+  section.outerHTML=cityDailySection(name);
   bindCityDeliveryTabs(name);
  });
  section.querySelectorAll('[data-daily-company]').forEach(button=>button.onclick=()=>location.hash='empresa/'+button.dataset.dailyCompany);
