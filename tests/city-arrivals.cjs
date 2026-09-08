@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict');
+const {game}=require('./production.cjs');
+const g=game();
+g.run("state=fresh();user={uid:'test'}");
+const data=JSON.parse(g.run(`JSON.stringify(Object.fromEntries(Object.keys(cities).map(name=>[name,availableOffersForCity(name)])))`));
+for(const destination of Object.keys(data)){
+ g.context.destination=destination;
+ const actual=JSON.parse(g.run('JSON.stringify(cityArrivalOffers(destination))'));
+ const expected=Object.entries(data).flatMap(([city,offers])=>offers.filter(o=>o.to===destination).map(o=>({...o,city}))).sort((a,b)=>a.km-b.km||a.city.localeCompare(b.city,'pt-BR')||a.index-b.index);
+ assert.deepEqual(actual,expected,destination);
+}
+g.run(`availableOffersForCity=city=>city==='São Paulo'?[{to:'Cajamar',km:40,index:0,company:{code:'TEST',name:'Empresa'},cargo:'Carga longa'},{to:'Santos',km:10,index:1,company:{code:'TEST',name:'Empresa'},cargo:'Outro destino'}]:city==='Jundiaí'?[{to:'Cajamar',km:20,index:0,company:{code:'TEST',name:'Empresa'},cargo:'Carga curta'}]:[];marketReward=()=>({factor:1,pay:100,xp:5});companyLogo=()=>'';deliveryCargoVisual=()=>'';fuelCostFor=()=>10;`);
+let html=g.run("cityDailySection('Cajamar','arrivals')");
+assert.ok(html.includes('2 ENTREGAS DE CHEGADA'));
+assert.ok(html.indexOf('Carga curta')<html.indexOf('Carga longa'));
+assert.ok(!html.includes('Outro destino'));
+assert.ok(html.includes('Jundiaí → Cajamar'));
+assert.ok(html.includes('data-arrival-pickup="Jundiaí"'));
+assert.ok(g.run("cityDailySection('Santos','arrivals')").includes('1 ENTREGA DE CHEGADA'));
+assert.ok(g.run("cityDailySection('Cidade Ipava','arrivals')").includes('Nenhuma entrega disponível com destino a Cidade Ipava'));
+const tabs=[{dataset:{cityDeliveryTab:'arrivals'}},{dataset:{cityDeliveryTab:'departures'}}];
+const pickup={dataset:{arrivalPickup:'Jundiaí'}};
+const section={outerHTML:'',querySelectorAll:selector=>selector==='[data-city-delivery-tab]'?tabs:selector==='[data-arrival-pickup]'?[pickup]:[]};
+g.context.document.querySelector=()=>section;
+g.run("bindCityDeliveryTabs('Cajamar')");tabs[0].onclick();
+assert.ok(section.outerHTML.includes('Carga curta'));
+tabs[1].onclick();assert.ok(!section.outerHTML.includes('Carga curta'));
+g.run("state.city='São Paulo'");pickup.onclick();assert.equal(g.context.location.hash,'cidade/Jundia%C3%AD');
+g.run("state.city='Jundiaí'");pickup.onclick();assert.equal(g.context.location.hash,'entregas');
+console.log('PASS: arrivals for every city, destination filtering, distance order, empty state, tab switching and pickup navigation.');
