@@ -1429,3 +1429,4 @@ html {
 .newspaper-page>footer a{padding:10px 13px;border:1px solid var(--green);color:var(--green);font-size:.47rem;font-weight:800;text-decoration:none}
 .newspaper-page>footer a:hover{background:var(--green);color:#11170f}
 @media(max-width:620px){.newspaper-page>header,.newspaper-page>footer{flex-direction:column}.newspaper-sheet{padding:8px}.newspaper-page>footer a{width:100%;text-align:center}}
+.local-brand.brand-srv{background:#ffdd00!important}
