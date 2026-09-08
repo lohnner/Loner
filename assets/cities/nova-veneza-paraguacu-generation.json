@@ -1,0 +1,11 @@
+{
+  "tool": "imagegen (built-in)",
+  "resolution": "1672x941",
+  "prompts": {
+    "Nova Veneza": "Photorealistic Brazilian trucking game city card of Nova Veneza, São Paulo. district of Sumaré, low-rise Brazilian neighborhoods, warehouses and leafy streets. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels.",
+    "Nova Odessa": "Photorealistic Brazilian trucking game city card of Nova Odessa, São Paulo. industrial town, tree-lined streets, textile warehouses, red tile houses. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels.",
+    "Santa Bárbara d'Oeste": "Photorealistic Brazilian trucking game city card of Santa Bárbara d'Oeste, São Paulo. regional industrial city, red tile homes, leafy central square and modern factory sheds. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels.",
+    "Saltinho": "Photorealistic Brazilian trucking game city card of Saltinho, São Paulo. small agricultural town near Piracicaba, leafy central square, red tile houses and sugarcane fields. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels.",
+    "Paraguaçu Paulista": "Photorealistic Brazilian trucking game city card of Paraguaçu Paulista, São Paulo. regional agricultural town in western São Paulo, tree-lined avenues, old railway heritage, red tile roofs and grain storage. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+  }
+}
