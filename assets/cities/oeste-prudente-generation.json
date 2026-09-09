@@ -1,0 +1,34 @@
+{
+  "tool": "Built-in image_gen",
+  "resolution": {
+    "width": 1672,
+    "height": 941
+  },
+  "images": [
+    {
+      "city": "Agissê",
+      "path": "assets/cities/agisse.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Agissê, São Paulo. small rural district of Rancharia, modest red tile houses, fields, central square and agricultural warehouse. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Iepê",
+      "path": "assets/cities/iepe.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Iepê, São Paulo. small western São Paulo town, leafy streets, low-rise houses, central square and agricultural landscape. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Nantes",
+      "path": "assets/cities/nantes.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Nantes, São Paulo. small agricultural town in western São Paulo, neat low-rise homes, green fields, grain silos and local roads. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Taciba",
+      "path": "assets/cities/taciba.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Taciba, São Paulo. small agricultural town, low red tile houses, leafy square, rolling green farmland and grain warehouses. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Presidente Prudente",
+      "path": "assets/cities/presidente-prudente.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Presidente Prudente, São Paulo. large regional city of western São Paulo, midrise skyline, broad leafy avenues, red tile neighborhoods, industrial distribution warehouses. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    }
+  ]
+}
