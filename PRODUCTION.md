@@ -22,13 +22,6 @@ As regras de chamadas e retiradas já foram publicadas em 05/09/2026. Para futur
 
 Em 05/09/2026, a tentativa de validação da publicação compilou as regras, mas o Firebase Hosting respondeu HTTP 429 por cota de armazenamento esgotada. É necessário liberar armazenamento ou ampliar a cota antes de publicar esta versão. O envio ao GitHub não atualiza, por si só, o Firebase Hosting.
 
-## Truck-on-Train
-
-- Use **IR ATÉ A ESTAÇÃO** para percorrer o acesso rodoviário. O embarque só é liberado após a chegada ao terminal.
-- O acesso consome diesel e pneus; o trem custa R$ 50 por trecho e preserva os paletes no caminhão.
-- A chegada acontece no terminal de destino. Use **IR ATÉ O CENTRO DA CIDADE** para continuar por estrada. A Visão Geral mostra a estação enquanto o caminhão está nela.
-- Todas as linhas operam a 200 km/h. Trechos nos dois sentidos incluem São José dos Campos ↔ Guaratinguetá e Piracicaba ↔ Itapetininga (160 km aproximados no jogo).
-- Verifique o fluxo com `node tests/truck-on-train.cjs`, incluindo bloqueio do embarque na cidade, consumo rodoviário, tarifa, carga e chegada.
 
 ## Nomes no mapa
 

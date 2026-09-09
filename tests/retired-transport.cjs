@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const {game}=require('./production.cjs');const g=game();
+g.run("user={uid:'test'};state=fresh();state.city='Campinas';state.balance=450;state.truckPallets=[{id:'cargo',contract:{destination:'Santos'}}];state.trip={truckOnTrain:true,from:'Campinas',to:'São José dos Campos',transportFee:50};migrateRetiredTransport()");
+assert.equal(g.run('state.city'),'São José dos Campos');assert.equal(g.run('state.trip'),null);assert.equal(g.run('state.balance'),450);assert.equal(g.run('state.truckPallets[0].id'),'cargo');
+const snapshot=g.run('JSON.stringify(state)');g.run('migrateRetiredTransport()');assert.equal(g.run('JSON.stringify(state)'),snapshot,'Migration is idempotent');
+g.run("state.city='Campinas';state.facility={product:'truck-on-train',city:'Campinas'};migrateRetiredTransport()");assert.equal(g.run('state.facility'),null);assert.equal(g.run('state.city'),'Campinas');
+g.run("state.trip={localAccess:true,from:'Campinas',to:'Campinas',facilityArrival:{product:'truck-on-train',city:'Campinas'}};migrateRetiredTransport()");assert.equal(g.run('state.trip'),null);
+g.run("state.trip={from:'Campinas',to:'São Paulo'};state.facility={product:'pasta',city:'Campinas'}");const road=g.run('JSON.stringify(state)');g.run('migrateRetiredTransport()');assert.equal(g.run('JSON.stringify(state)'),road,'Road trips and production sites are preserved');
+assert.equal(g.run('typeof startTruckOnTrain'),'undefined');assert.equal(g.run('typeof TRUCK_ON_TRAIN_SEGMENTS'),'undefined');
+console.log('PASS: retired transport saves preserve cargo, balance and normal road trips.');

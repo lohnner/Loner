@@ -1,0 +1,34 @@
+{
+  "tool": "Built-in image_gen",
+  "resolution": {
+    "width": 1672,
+    "height": 941
+  },
+  "images": [
+    {
+      "city": "Rosana",
+      "path": "assets/cities/rosana.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Rosana, São Paulo. broad Paraná river in the distance, leafy low rise town, red tiled houses and riverside greenery. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Euclides da Cunha Paulista",
+      "path": "assets/cities/euclides-da-cunha-paulista.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Euclides da Cunha Paulista, São Paulo. small agricultural town in Pontal do Paranapanema, red tile houses, broad rural roads and green farmland. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Teodoro Sampaio",
+      "path": "assets/cities/teodoro-sampaio.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Teodoro Sampaio, São Paulo. regional agricultural town, low rise center, grain warehouses and expansive green countryside. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Estrela do Norte",
+      "path": "assets/cities/estrela-do-norte.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Estrela do Norte, São Paulo. small rural western São Paulo town, leafy central square, red tiled houses and cattle pasture. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    },
+    {
+      "city": "Pirapozinho",
+      "path": "assets/cities/pirapozinho.png",
+      "prompt": "Photorealistic Brazilian trucking game city card of Pirapozinho, São Paulo. regional city with red tile neighborhoods, small industrial warehouses and rolling green agricultural landscape. Wide elevated drone panorama, delivery trucks, sunny blue sky, realistic regional scenery. No text, no borders. Landscape exactly 1672x941 pixels."
+    }
+  ]
+}
