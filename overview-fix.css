@@ -1430,3 +1430,5 @@ html {
 .newspaper-page>footer a:hover{background:var(--green);color:#11170f}
 @media(max-width:620px){.newspaper-page>header,.newspaper-page>footer{flex-direction:column}.newspaper-sheet{padding:8px}.newspaper-page>footer a{width:100%;text-align:center}}
 .local-brand.brand-srv{background:#ffdd00!important}
+
+.production-delivery-priority{margin:0 0 24px;padding:24px;border:2px solid #e9b949;border-radius:12px;background:linear-gradient(120deg,#283323,#172323);box-shadow:0 4px 18px #0003}.production-delivery-priority h2{color:#fff;margin:8px 0}.production-delivery-priority p{color:#e0e7db}.production-delivery-priority .eyebrow{color:#f4cb65}.production-delivery-priority button{width:100%;min-height:52px;margin-top:12px;background:#f4c45e;color:#172019;font-weight:800;font-size:15px}.production-delivery-priority button:disabled{opacity:.5}
