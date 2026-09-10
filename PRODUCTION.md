@@ -2,7 +2,7 @@
 
 - Somente as propriedades compráveis de massas, agricultura, farmacêutico e vinícola possuem acesso próprio. O trajeto aparece durante a viagem até o pátio, como nas viagens entre cidades; não há linhas permanentes para todas as fábricas.
 - As demais empresas continuam no mercado aleatório de fretes dentro das cidades, com o botão **VER EMPRESA** e sem novos pontos ou caminhos no mapa.
-- Há unidades de massas em Campinas, Paraibuna e Mauá, cada uma com compra, estoque e produção independentes. A unidade antiga de Campinas é preservada.
+- Há apenas a fábrica de massas de Campinas. As antigas unidades de Mauá e Paraibuna foram retiradas; seus dados ficam arquivados no progresso, sem compra ou produção. Entregas já iniciadas continuam válidas. A página Chamadas dos Jogadores foi removida.
 - No pátio de uma fábrica de massas, a Visão Geral mostra a fábrica e a retirada dos paletes.
 - O mapa agrupa dois ou mais jogadores parados no mesmo local em um contador clicável, com lista, seleção e perfil. Cidade e pátio são locais distintos.
 - Jogadores somem após 48 horas sem ação real. Atualizações automáticas e login sem ação não renovam a presença; ações autenticadas restauram a exibição. Perfis antigos usam a última presença conhecida até registrarem a primeira ação na nova versão.

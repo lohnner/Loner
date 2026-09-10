@@ -17,11 +17,11 @@ assert.equal(g.run('state.pastaFactory.stock.length'),2);
 g.run("state.pastaFactory.stock.shift();state.pastaFactory.slotFreedAt=now;advancePastaFactory()");
 assert.equal(g.run('state.pastaFactory.stock.length'),2);assert.equal(g.run('state.pastaFactory.readyAt-now'),19800000);
 g.run("state.city='Mauá';state.facility={product:'pasta',city:'Mauá'};state.balance=10000;buyPastaFactory('Mauá')");
-assert.equal(g.run("ensurePastaFactoryState('Mauá').readyAt-now"),19800000);
+assert.equal(g.run('state.balance'),10000);assert.equal(g.run("ensurePastaFactoryState('Mauá').owned"),false);
 g.run("now+=39600000;advancePastaFactory()");
-assert.equal(g.run("ensurePastaFactoryState('Mauá').stock.length"),2);
+assert.equal(g.run("ensurePastaFactoryState('Mauá').stock.length"),0);
 for(const slug of ['pasta-pallet-space','faster-pasta-production']){const p=fs.readFileSync('assets/skills/'+slug+'.png');assert.equal(p.readUInt32BE(16),512);assert.equal(p.readUInt32BE(20),512)}
 // Insufficient points cannot buy an upgrade.
 const h=game();h.run("state=fresh();state.skills.pastaFactory=true;state.missionPoints=24;toast=()=>{};unlockSkill('pastaPalletSpace')");
 assert.equal(h.run("hasSkill('pastaPalletSpace')"),false);assert.equal(h.run('state.missionPoints'),24);
-console.log('PASS: prerequisites, 15/25/25 costs, duplicate purchase, active timer, offline production, two slots, restocking and all factories.');
+console.log('PASS: prerequisites, 15/25/25 costs, duplicate purchase, active timer, offline production, two slots, restocking and retired factory purchase rejection.');
