@@ -883,7 +883,7 @@ const NPC_SPEED_KMH=60,NPC_PRODUCTION_PAY={pasta:1000,'player-rice':1666.67,wine
 let npcRetryAt=0;
 function npcOwnerPay(product){return NPC_PRODUCTION_PAY[product]||0}
 function npcTripForCall(call){const trip=tripFromCloud(call.npcTrip);if(!trip)return null;const stamp=call.npcStartedAt,start=typeof stamp?.toMillis==='function'?stamp.toMillis():stamp?.seconds?stamp.seconds*1000:trip.start;return{...trip,start,end:start+trip.durationMs}}
-function npcMapPlayers(){return playerCalls.filter(call=>call.status==='npc_transit'&&npcTripForCall(call)?.end>Date.now()).map(call=>({uid:'npc:'+call.id,npc:true,name:'NPC · '+call.ownerName,photo:'assets/trucks/agrale-8500.jpg',city:call.origin,trip:npcTripForCall(call),ownerId:call.ownerId}))}
+function npcMapPlayers(){return playerCalls.filter(call=>call.status==='npc_transit'&&npcTripForCall(call)?.end>Date.now()).map(call=>({uid:'npc:'+call.id,npc:true,name:'NPC · '+call.ownerName,photo:'assets/npcs/delivery-driver.png',city:call.origin,trip:npcTripForCall(call),ownerId:call.ownerId}))}
 function npcStockFactory(saved,product,city){if(product==='pasta')return city==='Campinas'?saved.pastaFactory:saved.pastaFactories?.[city];if(product==='player-rice')return saved.agriculture?.farms?.[city];if(product==='paracetamol')return saved.pharmaceutical?.factories?.[city];if(product==='wine')return saved.wineries?.[city];return null}
 async function npcRoadTrip(call){
  const start=productionSite(call.product,call.origin).point,end=cities[call.destination];if(!start||!end)throw Error('npc-route');

@@ -1,0 +1,10 @@
+{
+  "mode": "built-in image_gen",
+  "prompt": "Create a single square 500x500 pixel PNG avatar portrait for the NPC delivery truck driver in the Brazilian trucking game Loner. A fictional friendly professional Brazilian adult male truck driver around 40, warm medium brown skin, short dark hair, subtle neatly trimmed beard, wearing a plain dark green baseball cap and a simple charcoal work shirt. Head and shoulders centered, facing the camera, confident calm expression. Photorealistic polished game portrait, natural soft light, restrained muted dark green background. Clearly readable at tiny map avatar size. Keep the whole face and cap within the central 75 percent so circular cropping preserves them. No text, no letters, no logos, no watermark, no borders. Exact image size 500 by 500 pixels.",
+  "file": "assets/npcs/delivery-driver.png",
+  "resolution": [
+    500,
+    500
+  ],
+  "display": "Recorte circular pela classe .live-player img, compartilhada com jogadores."
+}
