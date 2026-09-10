@@ -1,0 +1,40 @@
+{
+  "mode": "built-in image_gen",
+  "resolution": [
+    1672,
+    941
+  ],
+  "type": "Ilustrações geradas para o jogo, não fotografias documentais.",
+  "commonPrompt": "Create one landscape game city background, target resolution 1672 x 941 pixels, 16:9. Photorealistic cinematic aerial drone view in warm late afternoon light, finely detailed realistic Brazilian architecture, natural greenery, expansive depth.",
+  "scenes": [
+    [
+      "votorantim",
+      "Votorantim, São Paulo: medium industrial Brazilian city near Sorocaba, rolling green hills, dense red tile residential roofs, tree lined avenues, modest urban buildings, distant cement industrial structures."
+    ],
+    [
+      "porto",
+      "Porto district south of Capela do Alto, São Paulo: small quiet rural village, low red tiled houses clustered around a simple modest church and green square, country roads and cultivated rolling fields, no harbor or ocean."
+    ],
+    [
+      "morro-do-alto",
+      "Morro do Alto district of Itapetininga, São Paulo: small rural settlement on gentle hills, modest church and central square, red tiled houses and remnants of a countryside railway corridor, farms and green fields."
+    ],
+    [
+      "panorama",
+      "Panorama, São Paulo: small Brazilian town beside the very wide Paraná River reservoir, riverfront beach park and palms, blue water stretching toward horizon, red roof low rise urban blocks, warm western São Paulo landscape."
+    ],
+    [
+      "campinal",
+      "Campinal district of Presidente Epitácio, São Paulo: small agricultural village in western São Paulo, straight streets, red tile houses and tiny central plaza, pasture and crop fields stretching to horizon, distant river reservoir."
+    ]
+  ],
+  "sources": [
+    "https://wiki.openstreetmap.org/wiki/Votorantim",
+    "https://geoftp.ibge.gov.br/cartas_e_mapas/mapas_para_fins_de_levantamentos_estatisticos/censo_demografico_2022/mapas_urbanos_estatisticos/SP/capela_do_alto_3510302/351030220/capela_do_alto_351030220_porto_20_mue_a0.pdf",
+    "https://mapcarta.com/19259074",
+    "https://pt.wikipedia.org/wiki/Panorama_(São_Paulo)",
+    "https://pt.wikipedia.org/wiki/Campinal"
+  ],
+  "notes": "Coordenadas de Porto aproximadas ao sul de Capela do Alto. Distâncias de jogo aproximadas. Empresas locais fictícias seguindo o catálogo existente.",
+  "suffixPrompt": "Match a consistent city selection game asset series. Evocative illustration of the locality, not a surveyed documentary photo. No text, labels, watermarks, borders or collage. Save a separate PNG asset."
+}
