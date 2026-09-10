@@ -1,0 +1,46 @@
+{
+  "mode": "built-in image_gen",
+  "resolution": [
+    1672,
+    941
+  ],
+  "type": "Reconstruções visuais geradas a partir de características geográficas e urbanas pesquisadas; não são fotografias nem reproduções exatas de ruas e fachadas.",
+  "common": "Create one photorealistic landscape PNG city background, exactly 1672 x 941 pixels. Brazilian trucking game city illustration, aerial oblique drone view, natural late afternoon daylight, realistic restrained colors, true contemporary Brazilian streets and modest architecture. Closely respect the real locality's scale, geography and urban morphology described below. Do not invent monumental churches, castles, tropical waterfronts or alpine mountains. No text, labels, branding, border or collage. This is a realistic reconstruction, not an exact documentary photograph. ",
+  "scenes": [
+    [
+      "oscar-bressane",
+      "Oscar Bressane, São Paulo, small town about 2500 people in Marília region. Compact regular grid of a few dozen blocks of mostly single-story tile-roof homes, broad paved streets, a leafy central square near Nossa Senhora do Carmo church (keep church small and distant rather than invent architectural details), agricultural countryside gently rolling with pasture and crop fields, modest commerce, no high-rise skyline."
+    ],
+    [
+      "avencas",
+      "Avencas rural district west-southwest of Marília, São Paulo, urban village of around 700 people. A tiny sparse grid of low single-story homes with mixed tile and metal roofs along quiet paved roads, mature trees, a modest leafy village square. Serra de Avencas surroundings: soft sandstone plateau escarpments and green valleys, rural watermelon and manioc fields and pasture. Keep buildings simple and contemporary, no grand cathedral, no dense city, no water reservoir."
+    ],
+    [
+      "amadeu-amaral",
+      "Amadeu Amaral rural district southwest of Marília, São Paulo: extremely small hamlet with around 150 urban inhabitants, only a few dozen humble single-story Brazilian masonry homes and a small plain chapel, widely spaced houses and large yards. Reddish unpaved rural access road Sebastião Rodrigues Tristão through pasture, cultivated fields, trees, subtle rolling terrain in Rio do Peixe basin. Vast countryside occupies most of view. No large station, no ornate church, no urban skyline."
+    ],
+    [
+      "marilia",
+      "Marília, São Paulo, Brazil: regional city with roughly 240000 inhabitants built on a flat-topped sandstone plateau with green steep-edged valleys (itambés). Realistic dense central skyline of many modern mid- and high-rise apartment and office towers above a broad gridded fabric of red-tiled single-story houses and commercial blocks. Broad paved avenues, modest industrial sheds of food industry farther out. Wide aerial view showing both city and characteristic plateau edge. No river through downtown, no gigantic colonial church dominating skyline."
+    ],
+    [
+      "vera-cruz",
+      "Vera Cruz, São Paulo, east of Marília (not Bahia), small municipality around 10000 inhabitants nicknamed Cidade Joia. Compact orderly grid of predominantly one-story red-tiled houses, a leafy central square and local commerce, discreet Sagrado Coração de Jesus sanctuary kept mid-distance without invented architectural detail, old railway corridor along the town, low gently rolling coffee/agricultural countryside on the Marília plateau, only occasional small low-rise buildings, no major high-rise skyline, no coast."
+    ]
+  ],
+  "files": [
+    "assets/cities/oscar-bressane.png",
+    "assets/cities/avencas.png",
+    "assets/cities/amadeu-amaral.png",
+    "assets/cities/marilia.png",
+    "assets/cities/vera-cruz.png"
+  ],
+  "sources": [
+    "https://pt.wikipedia.org/wiki/Avencas_(Mar%C3%ADlia)",
+    "https://pt.wikipedia.org/wiki/Amadeu_Amaral_(Mar%C3%ADlia)",
+    "https://www.veracruz.sp.gov.br/portal/servicos/47/historia/",
+    "https://pt.wikipedia.org/wiki/Mar%C3%ADlia",
+    "https://www.oscarbressane.sp.gov.br/financeiro/arquivos/financeiro/2974/VALOR%20TERRA%20NUA%20-%20VTN%20-%20ITR%202023%20-%20OSCAR%20BRESSANE.pdf"
+  ],
+  "notes": "Coordenadas aproximadas do centro de cada localidade. Distâncias rodoviárias aproximadas para o jogo. Empresas locais fictícias no padrão do catálogo."
+}
