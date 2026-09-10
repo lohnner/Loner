@@ -1434,3 +1434,6 @@ html {
 .mission-card .mission-visuals+h3{margin-top:16px}
 .special-mission-message>div{min-width:0}
 @media(max-width:480px){.mission-city-visuals{grid-template-columns:1fr}.mission-city-visuals img{height:170px}.mission-company-visual .factory-brand{flex-basis:80px;width:80px}}
+
+.top-tires{flex-shrink:0;margin-left:12px;color:#dce6de;font-size:.65rem;font-weight:800;font-variant-numeric:tabular-nums;cursor:help}.top-tires:focus-visible{outline:1px solid var(--green);outline-offset:5px}
+@media(max-width:620px){.topbar .top-fuel{display:flex;width:76px;flex-shrink:0}.top-tires{margin-left:8px;font-size:.58rem}.topbar .location{display:none}.topbar .top-message-shortcut{margin-left:10px}.topbar .top-fuel small{font-size:.38rem}}
