@@ -1418,3 +1418,19 @@ html {
 .local-brand.brand-srv{background:#ffdd00!important}
 
 .production-delivery-priority{margin:0 0 24px;padding:24px;border:2px solid #e9b949;border-radius:12px;background:linear-gradient(120deg,#283323,#172323);box-shadow:0 4px 18px #0003}.production-delivery-priority h2{color:#fff;margin:8px 0}.production-delivery-priority p{color:#e0e7db}.production-delivery-priority .eyebrow{color:#f4cb65}.production-delivery-priority button{width:100%;min-height:52px;margin-top:12px;background:#f4c45e;color:#172019;font-weight:800;font-size:15px}.production-delivery-priority button:disabled{opacity:.5}
+
+/* Mission imagery shared by daily, weekly and special objectives. */
+.mission-visuals{display:grid;gap:12px;margin:18px 0;min-width:0}
+.mission-company-visual{display:flex;align-items:center;gap:14px;padding:16px;background:#f5f5ef;border-radius:6px;min-height:112px;color:#1a241d}
+.mission-company-visual .factory-brand{flex:0 0 100px;width:100px;height:72px;margin:0}
+.mission-company-visual .factory-brand img{width:100%;height:100%;object-fit:contain}
+.mission-company-visual>span{font:700 1rem 'Barlow Condensed',sans-serif;overflow-wrap:anywhere}
+.mission-city-visuals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;min-width:0}
+.mission-city-visuals figure{position:relative;min-width:0;margin:0;overflow:hidden;border-radius:6px;background:#18251b}
+.mission-city-visuals img{display:block;width:100%;height:150px;object-fit:cover}
+.mission-city-visuals figcaption{padding:10px 12px;color:#fff}
+.mission-city-visuals figcaption small{display:block;color:#9da99e;font-size:.5rem;letter-spacing:.08em}
+.mission-city-visuals figcaption b{display:block;margin-top:4px;font:700 1rem 'Barlow Condensed',sans-serif;overflow-wrap:anywhere}
+.mission-card .mission-visuals+h3{margin-top:16px}
+.special-mission-message>div{min-width:0}
+@media(max-width:480px){.mission-city-visuals{grid-template-columns:1fr}.mission-city-visuals img{height:170px}.mission-company-visual .factory-brand{flex-basis:80px;width:80px}}
