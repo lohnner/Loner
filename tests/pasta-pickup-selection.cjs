@@ -1,11 +1,12 @@
 const assert=require('node:assert/strict'),{game}=require('./production.cjs');
-const g=game(),slots=['first','second'].map(id=>({dataset:{palletId:id},append(button){this.button=button}}));
-const panel={querySelector:()=>({}),querySelectorAll:()=>[]};
+const g=game(),slots=['first','second'].map(id=>({dataset:{palletId:id},append(element){if(element.tag==='button')this.button=element;else this.npc=element.querySelector('button')}}));
+const panel={querySelector:()=>({}),querySelectorAll:()=>[],insertAdjacentHTML(){}};
 g.context.slots=slots;
-g.context.document={createElement:tag=>tag==='section'?panel:{},querySelector:()=>({append(){}}),querySelectorAll:()=>slots};
-g.run("user={uid:'owner'};state=fresh();state.city='Campinas';state.facility={product:'pasta',city:'Campinas'};state.skills={pastaFactory:true,pastaPalletSpace:true,fasterPastaProduction:true};let selected='';claimPlayerCall=id=>{selected=id};availableProductionCalls=()=>['second','first'].map(id=>({id,product:'pasta',origin:'Campinas',destination:'Santos',ownerId:'owner',ownerName:'Owner',gross:1500}));renderProductionAccess('pasta','Campinas')");
+g.context.document={createElement:tag=>tag==='section'?panel:{tag,button:{},querySelector(){return this.button}},querySelector:()=>({append(){}}),querySelectorAll:selector=>selector==='.pallet-slot.occupied'?slots:[]};
+g.run("user={uid:'owner'};state=fresh();state.city='Campinas';state.facility={product:'pasta',city:'Campinas'};state.skills={pastaFactory:true,pastaPalletSpace:true,fasterPastaProduction:true};let selected='',npcSelected='';claimPlayerCall=id=>{selected=id};dispatchNpcDelivery=id=>{npcSelected=id};availableProductionCalls=()=>['second','first'].map(id=>({id,product:'pasta',origin:'Campinas',destination:'Santos',ownerId:'owner',ownerName:'Owner',gross:1500}));renderProductionAccess('pasta','Campinas')");
 assert.equal(slots[1].button.disabled,false);slots[1].button.onclick();assert.equal(g.run('selected'),'second');
 slots[0].button.onclick();assert.equal(g.run('selected'),'first');
+slots[1].npc.onclick({currentTarget:slots[1].npc});assert.equal(g.run('npcSelected'),'second');slots[0].npc.onclick({currentTarget:slots[0].npc});assert.equal(g.run('npcSelected'),'first');
 g.run("state.pastaFactory={owned:true,stock:[{id:'kept'}],startedAt:100000000,readyAt:101800000};ensurePastaFactoryState()");
 assert.equal(g.run('state.pastaFactory.readyAt-state.pastaFactory.startedAt'),19800000);
 assert.equal(g.run('state.pastaFactory.stock[0].id'),'kept');
