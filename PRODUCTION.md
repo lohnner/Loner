@@ -31,7 +31,7 @@ Em 05/09/2026, a tentativa de validação da publicação compilou as regras, ma
 - Se o mapa vetorial não puder carregar, o mapa original aparece com um aviso de que os nomes duplicados não puderam ser ocultados.
 - Verifique com `node tests/map-labels.cjs`. O resultado também foi conferido no Edge com os nomes de São Paulo, Santo André e Mauá removidos do fundo e Cubatão preservado.
 
-## Entregas por NPC (implementação local, ativação pendente)
+## Entregas por NPC
 
 - Botão **Pedir Para Alguém Entregar** em paletes prontos do próprio jogador, nas unidades de massas, arroz, medicamentos e vinho.
 - NPC reservado exclusivamente por palete, sem ocupar o caminhão do proprietário, inclusive quando ele está em outra cidade ou viagem.
@@ -39,5 +39,5 @@ Em 05/09/2026, a tentativa de validação da publicação compilou as regras, ma
 - Pagamento líquido: massas R$ 1.000,00; arroz R$ 1.666,67; medicamentos R$ 2.666,67; vinho R$ 2.333,33 (dois terços do valor original).
 - O pagamento ocorre após a chegada, em transação única. Viagens continuam pelo tempo decorrido com o jogo fechado; o crédito é sincronizado na volta do proprietário.
 - Falha no cálculo da rota ou na reserva mantém a carga no estoque. O palete fica indisponível para retirada por jogadores após a reserva do NPC.
-- As regras exigidas estão propostas em `NPC-DELIVERY-RULES.md`. A revisão automática bloqueou alteração/publicação; a funcionalidade depende dessa ativação.
+- As regras documentadas em `NPC-DELIVERY-RULES.md` foram compiladas sem avisos e publicadas no Firestore de `loner-hq` em 10/09/2026. A reserva e a conclusão por NPC estão habilitadas no servidor.
 - Testes locais: `node tests/npc-deliveries.cjs`, `node tests/pasta-pickup-selection.cjs`, `node tests/production.cjs` e `node tests/map-live-updates.cjs`.

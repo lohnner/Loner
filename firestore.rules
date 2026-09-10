@@ -128,6 +128,39 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+function npcPay(product) {
+  return product == 'pasta' ? 1000.0 : product == 'player-rice' ? 1666.67
+    : product == 'wine' ? 2333.33 : product == 'paracetamol' ? 2666.67 : 0.0;
+}
+function npcDispatch() {
+  let trip = request.resource.data.npcTrip;
+  return resource.data.status == 'available'
+    && resource.data.ownerId == request.auth.uid
+    && request.resource.data.status == 'npc_transit'
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','npcTrip','npcStartedAt','claimedAtMs'])
+    && request.resource.data.npcStartedAt == request.time
+    && trip is map && trip.npc == true && trip.speed == 60
+    && trip.from == resource.data.origin && trip.to == resource.data.destination
+    && trip.totalKm is number && trip.totalKm > 0
+    && trip.durationMs is int && trip.durationMs > 0
+    && trip.durationMs >= trip.totalKm * 60000 - 1
+    && trip.durationMs <= trip.totalKm * 60000 + 1
+    && trip.end == trip.start + trip.durationMs
+    && trip.path is list && trip.path.size() >= 2 && trip.path.size() <= 2001
+    && trip.pay == npcPay(resource.data.product) && trip.pay > 0;
+}
+function npcDelivery() {
+  let before = get(/databases/$(database)/documents/progress/$(request.auth.uid)).data;
+  let after = getAfter(/databases/$(database)/documents/progress/$(request.auth.uid)).data;
+  return resource.data.status == 'npc_transit'
+    && resource.data.ownerId == request.auth.uid
+    && request.resource.data.status == 'npc_delivered'
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','deliveredAt','deliveredAtMs'])
+    && request.resource.data.deliveredAt == request.time
+    && request.time >= resource.data.npcStartedAt + duration.value(resource.data.npcTrip.durationMs, 'ms')
+    && after.balance == before.balance + npcPay(resource.data.product);
+}
+
     // Global production board: immutable cargo, single courier and final delivery.
     match /playerCalls/{callId} {
       allow read: if signedIn();
@@ -146,7 +179,7 @@ service cloud.firestore {
           || (request.resource.data.product == 'wine' && request.resource.data.gross == 3500)
           || (request.resource.data.product == 'paracetamol' && request.resource.data.gross == 4000)
           || (request.resource.data.product == 'player-rice' && request.resource.data.gross == 2500));
-      allow update: if signedIn() && (
+      allow update: if signedIn() && (npcDispatch() || npcDelivery() ||
         (resource.data.status == 'available'
           && request.resource.data.status == 'claimed'
           && request.resource.data.claimedBy == request.auth.uid

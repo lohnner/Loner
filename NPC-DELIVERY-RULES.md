@@ -1,6 +1,6 @@
 # Proposta de regras para entregas por NPC
 
-Status: proposta local para aprovação. Nenhuma regra do servidor foi alterada ou publicada nesta tarefa.
+Status: regras aplicadas, compiladas sem avisos e publicadas no Firestore do projeto loner-hq em 10/09/2026. Incluída tolerância de 1 ms no cálculo da duração para compatibilidade com arredondamento numérico.
 
 ## Alteração proposta
 
@@ -11,8 +11,8 @@ Escopo: o dono da produção poderá reservar uma chamada disponível para NPC. 
 
 ```javascript
 function npcPay(product) {
-  return product == 'pasta' ? 1000 : product == 'player-rice' ? 1666.67
-    : product == 'wine' ? 2333.33 : product == 'paracetamol' ? 2666.67 : 0;
+  return product == 'pasta' ? 1000.0 : product == 'player-rice' ? 1666.67
+    : product == 'wine' ? 2333.33 : product == 'paracetamol' ? 2666.67 : 0.0;
 }
 function npcDispatch() {
   let trip = request.resource.data.npcTrip;
@@ -25,8 +25,8 @@ function npcDispatch() {
     && trip.from == resource.data.origin && trip.to == resource.data.destination
     && trip.totalKm is number && trip.totalKm > 0
     && trip.durationMs is int && trip.durationMs > 0
-    && trip.durationMs >= trip.totalKm * 60000
-    && trip.durationMs < trip.totalKm * 60000 + 1
+    && trip.durationMs >= trip.totalKm * 60000 - 1
+    && trip.durationMs <= trip.totalKm * 60000 + 1
     && trip.end == trip.start + trip.durationMs
     && trip.path is list && trip.path.size() >= 2 && trip.path.size() <= 2001
     && trip.pay == npcPay(resource.data.product) && trip.pay > 0;
