@@ -61,6 +61,8 @@ function kill(m){
     const n = m.elite ? 4 : 1;
     for(let i = 0; i < n; i++) coins.push({x:m.x + rnd(-14,14), y:m.y + rnd(-14,14), v:Math.ceil(v/n), t:rnd(0,.2)});
   }
+  // Orbes: chance própria em qualquer criatura
+  for(const k in ORBS) if(Math.random() < ORBS[k].chance){ drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), orb:k, t:0, gone:false}); log(`${ORBS[k].n} caiu!`, ORBS[k].c); ring(m.x, m.y, 50, ORBS[k].c, .6, 3); }
   if(Math.random() < (m.elite ? .75 : .12)) dropItem(m);
   if(m.elite && Math.random() < .35) dropItem(m);
 }
@@ -159,7 +161,7 @@ function bestCluster(list){
   for(const m of list){ let n = 0; for(const o of mons) if(!o.dead && D(o, m) < 85) n++; if(n > best.n) best = {m, n}; }
   return best;
 }
-const BURST_R = 300, RUPT_R = 140, CLEAVE_REACH = 170, CHARGE_LEN = 260, INFERNO_R = 260, WAVE_LEN = 190, WAVE_SPREAD = 1.05;
+const BURST_R = 170, RUPT_R = 140, CLEAVE_REACH = 170, CHARGE_LEN = 260, INFERNO_R = 260, WAVE_LEN = 190, WAVE_SPREAD = 1.05;
 const meteorR = () => 75 + 4*ST.rk('meteor');
 const whirlR = () => 80 + 3*ST.rk('whirl');
 // Usar habilidade (botão, tecla ou mira). aimAt = ponto mirado {x,y} ou alvo {tgt}.
@@ -171,7 +173,7 @@ function manualCast(id, aimAt){
   if(aimAt && AIMABLE[id] && aimAt.x !== undefined) return cast(id, {x:aimAt.x, y:aimAt.y});
   const live = mons.filter(m => !m.dead), byDist = (a, b) => D(a, hero) - D(b, hero);
   // Alvo único (Flecha Venenosa / Golpe Dilacerante): alvo clicado, alvo sob o mouse ou o melhor perto
-  if(id === 'arrow' || id === 'cleave' || id === 'firebolt'){
+  if(id === 'arrow' || id === 'cleave' || id === 'firebolt' || id === 'burst'){
     const reach = id === 'cleave' ? CLEAVE_REACH : ARROW_REACH;
     const f = aimAt && aimAt.tgt && !aimAt.tgt.dead ? aimAt.tgt : getFocus();
     if(f){ if(D(f, hero) > reach){ log('Alvo fora de alcance'); return; } return cast(id, {tgt:f}); }
@@ -179,11 +181,11 @@ function manualCast(id, aimAt){
     if(!near.length){ log('Nenhum inimigo ao alcance'); return; }
     let t = near[0];
     if(id === 'arrow') for(const m of near){ if(m.hp - poisonLeft(m) > t.hp - poisonLeft(t)) t = m; }
-    if(id === 'firebolt') t = bestCluster(near).m; // a Bola de Fogo explode: mira onde tem mais gente
+    if(id === 'firebolt' || id === 'burst') t = bestCluster(near).m; // explodem no alvo: mira onde tem mais gente
     return cast(id, {tgt:t});
   }
-  if(id === 'burst' || id === 'inferno'){
-    if(!live.some(m => D(m, hero) < (id === 'burst' ? BURST_R : INFERNO_R))){ log('Nenhum inimigo por perto'); return; }
+  if(id === 'inferno'){
+    if(!live.some(m => D(m, hero) < INFERNO_R)){ log('Nenhum inimigo por perto'); return; }
     return cast(id, {});
   }
   if(id === 'rupture'){
@@ -228,20 +230,11 @@ function doSkill(c){
     const x = c.data.x, y = c.data.y, rad = 70 + 5*r, dps = a*(.6 + .15*r)*ST.pois;
     later.push({t:.4, fn:() => { clouds.push({x, y, r:rad, t:0, dur:4, tick:0, dps}); ring(x, y, rad, '#9bd84a', .5, 3); }});
   } else if(c.id === 'burst'){
-    // Ultimate do Arqueiro: onda de praga que envenena todos em volta e detona o veneno que já existia
-    const list = mons.filter(m => !m.dead && D(m, hero) < BURST_R);
-    const rems = list.map(m => poisonLeft(m));
-    ring(hero.x, hero.y, BURST_R, '#9bd84a', .7, 6); ring(hero.x, hero.y, BURST_R*.6, '#d8f07a', .5, 3);
-    for(let i = 0; i < 40; i++){ const an = Math.random()*TAU, sp = rnd(180, 420); part({x:hero.x, y:hero.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.7, size:rnd(2,4), c:i % 3 ? '#9bd84a' : '#d8f07a'}); }
-    list.forEach((m, i) => {
-      const rem = rems[i];
-      if(rem > 0){
-        for(const o of mons) if(o !== m && !o.dead && D(o, m) < 110) poison(o, rem*.5, 3*ST.pdur);
-        ring(m.x, m.y, 46, '#c8f080', .45, 3);
-        dealHit(m, rem*(1 + .15*r), false, '#c8f080');
-      }
-      poison(m, a*(3 + .5*r)*ST.pois, 4*ST.pdur);
-    });
+    // Ultimate do Arqueiro: flecha de praga que explode na criatura atingida (ou no fim do voo)
+    let t = c.data.tgt; if(!t || t.dead) t = nearestMon(hero, ARROW_REACH); if(!t) return;
+    const ang = Math.atan2(t.y - hero.y, t.x - hero.x);
+    shoot(ang, {kind:'plague', dmg:0, spd:620, life:.85, boom:{fn:(x, y) => plagueBurst(x, y, r)}});
+    for(let i = 0; i < 10; i++) part({x:hero.x + Math.cos(ang)*16, y:hero.y + Math.sin(ang)*16, vx:Math.cos(ang + rnd(-.6,.6))*rnd(60,160), vy:Math.sin(ang + rnd(-.6,.6))*rnd(60,160), life:.4, size:3, c:'#d8f07a'});
   } else if(c.id === 'cleave'){
     let t = c.data.tgt; if(!t || t.dead) t = nearestMon(hero, CLEAVE_REACH); if(!t) return;
     // Avança até encostar no alvo
@@ -253,7 +246,7 @@ function doSkill(c){
   } else if(c.id === 'charge'){
     const an = Math.atan2(c.data.y - hero.y, c.data.x - hero.x), len = Math.min(CHARGE_LEN, Math.max(60, D(c.data, hero)));
     hero.face = an;
-    hero.dash = {x0:hero.x, y0:hero.y, x1:clamp(hero.x + Math.cos(an)*len, 20, WORLD.w - 20), y1:clamp(hero.y + Math.sin(an)*len, 20, WORLD.h - 20), t:0, dur:.24, hit:new Set(), mult:1.1 + .12*r, dot:a*(.8 + .2*r)*ST.pois};
+    hero.dash = {x0:hero.x, y0:hero.y, x1:clamp(hero.x + Math.cos(an)*len, 20, WORLD.w - 20), y1:clamp(hero.y + Math.sin(an)*len, 20, WORLD.h - 20), t:0, dur:.24, hit:new Set(), mult:1.1 + .12*r, dot:a*(.8 + .2*r)*ST.pois, endMult:.8 + .08*r};
   } else if(c.id === 'whirl'){
     hero.whirl = {t:0, dur:2, tick:0, ang:0, mult:.25 + .025*r, dot:a*(.17 + .04*r)*ST.pois};
   } else if(c.id === 'rupture'){
@@ -311,9 +304,26 @@ function spellHit(m, mult, burnTotal, dur){
   return dmg;
 }
 // Bola de Fogo: explode ao acertar ou no fim do voo
+// Explosão de Praga: em volta do ponto de impacto envenena todos, detona o veneno que já existia e espalha metade
+function plagueBurst(x, y, r){
+  const a = ST.avg, at = {x, y};
+  const list = mons.filter(m => !m.dead && D(m, at) < BURST_R + m.r*.5), rems = list.map(m => poisonLeft(m));
+  ring(x, y, BURST_R, '#9bd84a', .7, 6); ring(x, y, BURST_R*.55, '#d8f07a', .5, 3);
+  for(let i = 0; i < 40; i++){ const an = Math.random()*TAU, sp = rnd(120, 320); part({x, y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.6, size:rnd(2,4), c:i % 3 ? '#9bd84a' : '#d8f07a'}); }
+  list.forEach((m, i) => {
+    const rem = rems[i];
+    if(rem > 0){
+      for(const o of mons) if(o !== m && !o.dead && D(o, m) < 110) poison(o, rem*.5, 3*ST.pdur);
+      ring(m.x, m.y, 46, '#c8f080', .45, 3);
+      dealHit(m, rem*(1 + .15*r), false, '#c8f080');
+    }
+    poison(m, a*(3 + .5*r)*ST.pois, 4*ST.pdur);
+  });
+}
 function explode(p){
   if(!p.boom || p.boomed) return; p.boomed = true; p.life = 0;
   const b = p.boom;
+  if(b.fn) return b.fn(p.x, p.y);
   ring(p.x, p.y, b.r, '#ff8a2b', .35, 4);
   for(let i = 0; i < 16; i++){ const an = Math.random()*TAU, sp = rnd(60, 200); part({x:p.x, y:p.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.4, size:rnd(2,4.5), c:pick(['#ff8a2b','#ffd24a','#ff5a1f'])}); }
   for(const m of mons) if(!m.dead && Math.hypot(m.x - p.x, m.y - p.y) < b.r + m.r*.5) spellHit(m, b.mult, b.burn, 3);

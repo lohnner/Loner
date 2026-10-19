@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Caçada da Víbora</title>
+<title>Loner</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -8,12 +8,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/estilo.css">
+<link rel="stylesheet" href="css/estilo.css?v=2">
 
 <div id="app">
   <header class="hud gut">
     <div class="hud-top">
-      <span class="hero-id" id="heroName">Víbora</span><span class="lvl" id="lvText">Nv 1</span>
+      <span class="hero-id" id="heroName">Herói</span><span class="lvl" id="lvText">Nv 1</span>
       <span class="gold"><i></i><span id="goldText">0</span></span>
       <button class="speed" id="speedBtn" data-act="speed" aria-label="Velocidade do jogo">x1</button>
     </div>
@@ -29,6 +29,7 @@
       <div class="tc-actions">
         <button class="btn gold" id="tcSell" data-act="sellR" data-v="0">Vender comuns</button>
         <button class="btn gold" id="tcShop" data-act="tab" data-v="shop">Mercador</button>
+        <button class="btn" id="tcStash" data-act="tab" data-v="stash">Armazém</button>
         <button class="btn primary" id="tcGo" data-act="go">Partir</button>
       </div>
     </div>
@@ -57,13 +58,13 @@
   <div class="dcard" id="dcard"></div>
 </div>
 
-<script src="js/01-base.js"></script>
-<script src="js/02-modelos.js"></script>
-<script src="js/03-mapa.js"></script>
-<script src="js/04-batalha.js"></script>
-<script src="js/05-habilidades.js"></script>
-<script src="js/06-cena.js"></script>
-<script src="js/07-animacoes.js"></script>
-<script src="js/08-hud.js"></script>
-<script src="js/09-conta.js"></script>
-<script src="js/10-inicio.js"></script>
+<script src="js/01-base.js?v=2"></script>
+<script src="js/02-modelos.js?v=2"></script>
+<script src="js/03-mapa.js?v=2"></script>
+<script src="js/04-batalha.js?v=2"></script>
+<script src="js/05-habilidades.js?v=2"></script>
+<script src="js/06-cena.js?v=2"></script>
+<script src="js/07-animacoes.js?v=2"></script>
+<script src="js/08-hud.js?v=2"></script>
+<script src="js/09-conta.js?v=2"></script>
+<script src="js/10-inicio.js?v=2"></script>

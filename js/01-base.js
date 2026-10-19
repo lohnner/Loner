@@ -19,9 +19,13 @@ const RAR = [{n:'Comum',c:'#d9d4c7'},{n:'Mágico',c:'#6f9cff'},{n:'Raro',c:'#f0d
 const MAPS = [
   {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['rato','espantalho','zumbi'],desc:'Plantação abandonada perto da vila. Bom lugar para a primeira caçada.'},
   {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','aranha','ent'],desc:'Lobos em bando e aranhas que cospem teia de longe.'},
-  {id:'pantano',name:'Pântano Pútrido',lv:[11,18],req:10,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa'],desc:'Sanguessugas roubam vida a cada mordida. Bruxas atacam de longe.'},
-  {id:'catacumbas',name:'Catacumbas',lv:[18,27],req:17,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical'],desc:'Corredores de pedra cheios de mortos-vivos e arqueiros de osso.'},
-  {id:'abismo',name:'Abismo Ardente',lv:[27,40],req:26,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['diabrete','brutamonte','cao'],desc:'Fendas de lava e demônios. Os melhores itens caem aqui.'},
+  {id:'pantano',name:'Pântano Pútrido',lv:[12,16],req:11,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa'],desc:'Sanguessugas roubam vida a cada mordida. Bruxas atacam de longe.'},
+  {id:'mina',name:'Mina Abandonada',lv:[16,20],req:15,seed:43,ground:['#2e2620','#3a3028','#221c17'],decor:'mine',tuft:'#4a3e30',mons:['goblin','aranhacav','golem'],desc:'Túneis escuros onde goblins mineradores cavam. Golens de pedra aguentam muito dano.'},
+  {id:'catacumbas',name:'Catacumbas',lv:[20,24],req:19,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical'],desc:'Corredores de pedra cheios de mortos-vivos e arqueiros de osso.'},
+  {id:'picos',name:'Picos Gélidos',lv:[24,28],req:23,seed:61,ground:['#a9b6c2','#c3ced8','#8e9caa'],decor:'ice',tuft:'#d8e4ee',mons:['lobogelo','yeti','espirito'],desc:'Neve e vento cortante. Espíritos de gelo atacam de longe e yetis batem forte.'},
+  {id:'deserto',name:'Deserto de Cinzas',lv:[28,32],req:27,seed:67,ground:['#5a4a38','#6b5842','#47392a'],decor:'desert',tuft:'#8a7452',mons:['escorpiao','mumia','cultista'],desc:'Dunas cinzentas e ruínas. Cultistas lançam magias de longe, escorpiões são rápidos.'},
+  {id:'cidadela',name:'Cidadela Profana',lv:[32,36],req:31,seed:71,ground:['#2a2233','#352b40','#1e1826'],decor:'citadel',tuft:'#4a3e58',mons:['cavaleiro','gargula','feiticeiro'],desc:'Fortaleza tomada pelas trevas. Cavaleiros negros resistem a tudo e gárgulas voam rápido.'},
+  {id:'abismo',name:'Abismo Ardente',lv:[36,40],req:35,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['diabrete','brutamonte','cao'],desc:'Fendas de lava e demônios. Os melhores itens caem aqui.'},
 ];
 const MONS = {
   rato:{n:'Rato Gigante',kind:'quad',c1:'#6e5238',c2:'#a07e62',r:10,hp:.7,dmg:.7,spd:95,range:20,acd:1.0,tail:1},
@@ -39,6 +43,22 @@ const MONS = {
   diabrete:{n:'Diabrete',kind:'biped',c1:'#9a3520',c2:'#e07040',r:10,hp:.7,dmg:1,spd:110,range:180,acd:1.5,ranged:'#ff9a3a',eye:'#ffe24a'},
   brutamonte:{n:'Brutamonte Infernal',kind:'biped',c1:'#561d16',c2:'#b5462c',r:20,hp:2.6,dmg:1.6,spd:42,range:30,acd:2.0,eye:'#ffcc33'},
   cao:{n:'Cão Infernal',kind:'quad',c1:'#38130f',c2:'#d0502a',r:13,hp:1,dmg:1.1,spd:140,range:22,acd:.9,tail:1,eye:'#ffcc33'},
+  // Mina Abandonada
+  goblin:{n:'Goblin Minerador',kind:'biped',c1:'#4f6b3a',c2:'#8fa860',r:10,hp:.75,dmg:.9,spd:105,range:20,acd:.9,eye:'#ffe14a'},
+  aranhacav:{n:'Aranha das Cavernas',kind:'spider',c1:'#3a2f28',c2:'#8a6a4a',r:13,hp:1,dmg:1,spd:90,range:22,acd:1.1,eye:'#ff9a3a'},
+  golem:{n:'Golem de Pedra',kind:'biped',c1:'#5e5a54',c2:'#8c877e',r:19,hp:2.6,dmg:1.5,spd:36,range:30,acd:2.1,eye:'#7fd8ff'},
+  // Picos Gélidos
+  lobogelo:{n:'Lobo do Gelo',kind:'quad',c1:'#a8bccb',c2:'#e8f1f7',r:12,hp:.9,dmg:1,spd:135,range:22,acd:.9,tail:1,eye:'#5ab8ff'},
+  yeti:{n:'Yeti',kind:'biped',c1:'#d6dde3',c2:'#f5f8fa',r:19,hp:2.4,dmg:1.6,spd:48,range:30,acd:1.9,eye:'#3a6ad8'},
+  espirito:{n:'Espírito Gélido',kind:'blob',c1:'#6aa8d8',c2:'#cfeaff',r:11,hp:.8,dmg:1.15,spd:70,range:190,acd:1.8,ranged:'#bfe6ff',eye:'#ffffff'},
+  // Deserto de Cinzas
+  escorpiao:{n:'Escorpião Gigante',kind:'spider',c1:'#6a4a24',c2:'#c49a52',r:13,hp:1.1,dmg:1.15,spd:115,range:24,acd:1,eye:'#ff4a2a'},
+  mumia:{n:'Múmia',kind:'biped',c1:'#a8987a',c2:'#d8cba8',r:14,hp:1.7,dmg:1.25,spd:42,range:26,acd:1.5,eye:'#7cff9a'},
+  cultista:{n:'Cultista das Cinzas',kind:'biped',c1:'#4a2a20',c2:'#a0603a',r:12,hp:.85,dmg:1.25,spd:58,range:200,acd:1.9,ranged:'#ffb050',eye:'#ffd24a'},
+  // Cidadela Profana
+  cavaleiro:{n:'Cavaleiro Negro',kind:'biped',c1:'#2a2833',c2:'#5a5868',r:16,hp:2.3,dmg:1.5,spd:52,range:28,acd:1.6,eye:'#d24aff'},
+  gargula:{n:'Gárgula',kind:'quad',c1:'#4a4652',c2:'#7a7684',r:13,hp:1.1,dmg:1.15,spd:145,range:22,acd:.95,tail:1,eye:'#ff5a5a'},
+  feiticeiro:{n:'Feiticeiro Sombrio',kind:'biped',c1:'#2a1f3a',c2:'#7a5aa8',r:12,hp:.9,dmg:1.35,spd:55,range:210,acd:1.9,ranged:'#c08aff',eye:'#e0b0ff'},
 };
 const ELITE_TAG = ['Voraz','Colossal','Implacável','Feroz','Imortal'];
 
@@ -75,6 +95,15 @@ const SKD = {
   combust:{n:'Combustão',act:0,req:12,max:5},
 };
 // Cada classe tem 4 ativas (teclas 1–4) e 5 passivas. ACTIVE/PASSIVE mudam com setClass() ao entrar com um personagem.
+// Rank máximo das habilidades: 7 (as de máximo 5 continuam 5)
+const SK_MAX = 7;
+for(const id in SKD) SKD[id].max = Math.min(SKD[id].max, SK_MAX);
+// Orbes de melhoria: caem de qualquer criatura e ficam empilhados num espaço da mochila
+const ORBS = {
+  desp:{n:'Orbe do Despertar', from:0, to:1, chance:.05, c:'#6f9cff', d:'Desperta a magia de um item Comum: ele vira Mágico e ganha 1 ou 2 atributos.'},
+  asc:{n:'Orbe da Ascensão', from:1, to:2, chance:.02, c:'#f0d34f', d:'Eleva um item Mágico a Raro: ganha novos atributos (até 3 ou 4), base melhor e nome novo.'},
+};
+const STASH_MAX = 10; // armazém da vila (só usa na vila), dividido entre os personagens da conta
 const CLASS_KIT = {
   arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
   guerreiro:{active:['cleave','charge','whirl','rupture'], passive:['serrated','brutality','fury','iron','bloodlust']},
@@ -92,6 +121,10 @@ const dotT = () => DOT_INFO[clsOf()].t;
 const dotDe = () => DOT_INFO[clsOf()].de;
 
 const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
+// Espaços usados na mochila: itens + uma pilha por tipo de orbe
+const orbStacks = () => Object.keys(ORBS).filter(k => (S.orbs && S.orbs[k]) > 0).length;
+const invUsed = () => S.inv.length + orbStacks();
+const invFull = () => invUsed() >= INV_MAX;
 // O espaço da arma se chama 'bow' por compatibilidade com saves antigos; o nome muda com a classe
 const WEAPON_N = {arqueiro:'Arco', guerreiro:'Arma', mago:'Cajado'};
 const SLOT_N = {get bow(){ return WEAPON_N[clsOf()]; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
@@ -137,7 +170,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:2,shop:[]};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:2,shop:[]};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
@@ -145,6 +178,8 @@ function normalize(s){
   Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})}});
   // Saves antigos sem limite de nível: o que passou de 40 vira Paragon
   if(d.lv > MAX_LV){ d.par += d.lv - MAX_LV; d.lv = MAX_LV; d.xp = 0; }
+  d.orbs = {...defaults(cls).orbs, ...(s.orbs || {})};
+  for(const id in d.sk) if(SKD[id]) d.sk[id] = Math.min(d.sk[id], SKD[id].max); // rank acima do novo máximo vira ponto livre
   if(Object.values(d.sk).reduce((a, v) => a + v, 0) > d.lv) d.sk = defaults(cls).sk;
   if(!d.eq) d.eq = {};
   if(!Array.isArray(d.inv)) d.inv = [];
@@ -158,7 +193,7 @@ function readLocal(key){
   try{ const raw = localStorage.getItem(key); if(raw) return JSON.parse(raw); }catch(e){}
   return null;
 }
-const heroName = () => S.char ? S.char.name : 'Víbora';
+const heroName = () => S.char ? S.char.name : 'Herói';
 const CLOAKS = [{n:'Musgo',a:'#2b4d30',b:'#3f6b3b',h:'#1f3a25'},{n:'Couro',a:'#5a3f26',b:'#7a5a38',h:'#3e2a19'},{n:'Noite',a:'#28344f',b:'#3c4c70',h:'#1b2438'},{n:'Sangue',a:'#5a2224',b:'#7d3336',h:'#3d1618'}];
 const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Corpo a corpo com lâminas',ok:1},{id:'mago',n:'Mago',d:'Magias de fogo à distância',ok:1}];
 // Builds liberadas por classe (cls); as sem cls ainda não existem

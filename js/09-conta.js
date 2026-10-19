@@ -51,7 +51,7 @@ function renderLogin(){
   else if(loginState === 'wait') body = `<p class="note">Conectando…</p>`;
   else if(loginState === 'loading') body = `<p class="note">Carregando seus personagens…</p>`;
   else body = `<button class="btn primary" data-act="login" style="padding:14px;font-size:17px">Entrar com Google</button>`;
-  $('#loginBody').innerHTML = `<h1>Caçada da Víbora</h1>
+  $('#loginBody').innerHTML = `<h1>Loner</h1>
     <p class="lead">Entre com sua conta Google. Seus personagens ficam salvos na conta, continuam em qualquer aparelho e aparecem no ranking.</p>
     ${body}${loginErr ? `<p class="note" style="color:#ff8c80">${esc(loginErr)}</p>` : ''}
     <p class="note">Para os outros jogadores só aparece o nome do herói. Seu nome e seu e-mail do Google ficam privados.</p>`;
@@ -114,7 +114,7 @@ const parseJSON = txt => { try{ return JSON.parse(txt); }catch(e){ return null; 
 // Aceita o formato novo {chars:[...]} e o antigo (um personagem só, sem lista)
 function toAcct(o){
   if(!o) return null;
-  if(Array.isArray(o.chars)) return {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), savedAt: o.savedAt || 0};
+  if(Array.isArray(o.chars)) return {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), stash: Array.isArray(o.stash) ? o.stash : [], savedAt: o.savedAt || 0};
   if(typeof o.lv === 'number' && o.char) return {chars: [o], savedAt: o.savedAt || 0};
   return null;
 }
@@ -157,6 +157,9 @@ function accountStore(){
   if(i >= 0) acct.chars[i] = S; else acct.chars.push(S);
   acct.savedAt = Date.now(); storeLocal(); cloudDirty = true;
 }
+// Armazém da conta: itens guardados na vila, visíveis para todos os personagens. Ids únicos para não colidir com os de cada personagem.
+const stash = () => acct ? (acct.stash || (acct.stash = [])) : [];
+const stashId = () => Date.now()*1000 + Math.floor(Math.random()*1000);
 function storeLocal(){ try{ localStorage.setItem(KEY + ':' + fbUser.uid, JSON.stringify(acct)); }catch(e){} }
 function cloudFlush(){
   if(!fb || !fbUser || !acct || cloudBusy || !cloudDirty) return Promise.resolve();

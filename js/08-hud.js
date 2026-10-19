@@ -91,7 +91,7 @@ function updateHud(){
   }
   const free = Math.max(0, ptsFree()) + (S.lv >= MAX_LV ? parFree() : 0);
   const pb = $('#ptsBadge'); pb.hidden = free <= 0; pb.textContent = free;
-  const bb = $('#bagBadge'); bb.hidden = S.inv.length === 0; bb.textContent = S.inv.length; bb.style.background = S.inv.length >= INV_MAX ? 'var(--blood)' : '';
+  const bb = $('#bagBadge'); bb.hidden = invUsed() === 0; bb.textContent = invUsed(); bb.style.background = invFull() ? 'var(--blood)' : '';
   $('#townBtn').hidden = !(scene === 'map' && mode === 'hunt');
   const tc = $('#townCard'); tc.hidden = !inTown() || mode === 'townLeave';
   if(!tc.hidden){
@@ -99,6 +99,7 @@ function updateHud(){
     $('#tcSell').disabled = !commons.length;
     $('#tcSell').innerHTML = `Vender comuns<small>${commons.length} itens · ${fmt(commons.reduce((s, i) => s + sellPrice(i), 0))} ouro</small>`;
     $('#tcShop').innerHTML = `Mercador<small>${S.shop.length} ${S.shop.length === 1 ? 'oferta' : 'ofertas'}</small>`;
+    $('#tcStash').innerHTML = `Armazém<small>${stash().length}/${STASH_MAX}</small>`;
     $('#tcGo').innerHTML = `Partir<small>${mapDef.name}</small>`;
     let info = '';
     if(hero.hp < ST.life) info = `Curando ${pct}%`;
@@ -113,7 +114,7 @@ function updateHud(){
 
 function openTab(t){
   tab = t; $('#sheet').hidden = false;
-  $('#sheet').classList.toggle('center', t === 'bag'); // a mochila abre no meio da tela
+  $('#sheet').classList.toggle('center', t === 'bag' || t === 'stash'); // mochila e armazém abrem no meio da tela
   $('#sheet').classList.toggle('full', t === 'rank'); // o ranking ocupa a tela toda
   if(t === 'rank') loadRank();
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === t));
@@ -122,9 +123,9 @@ function openTab(t){
 function closeSheet(){ $('#sheet').hidden = true; tab = null; document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on')); }
 function renderPanel(top){
   const body = $('#sheetBody'), sc = body.scrollTop;
-  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking'};
+  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', stash:'Armazém'};
   $('#sheetTitle').textContent = T2[tab];
-  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank})[tab]();
+  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, stash:panelStash})[tab]();
   body.scrollTop = top ? 0 : sc;
 }
 function panelShop(){
@@ -136,8 +137,8 @@ function panelShop(){
     const pr = buyPrice(it), s2 = calcStats({...S.eq, [it.slot]:it});
     const dd = s2.dps - ST.dps, dl = s2.life - ST.life;
     const cmp = `<span class="${dd > .05 ? 'g-ok' : dd < -.05 ? 'g-bad' : ''}">Dano/s ${dd > 0 ? '+' : ''}${n1(dd)}</span> · <span class="${dl > .05 ? 'g-ok' : dl < -.05 ? 'g-bad' : ''}">Vida ${dl > 0 ? '+' : ''}${n1(dl)}</span>`;
-    const can = town && S.gold >= pr && S.inv.length < INV_MAX;
-    const why = !town ? 'Só na vila' : S.inv.length >= INV_MAX ? 'Mochila cheia' : S.gold < pr ? 'Ouro insuficiente' : '';
+    const can = town && S.gold >= pr && !invFull();
+    const why = !town ? 'Só na vila' : invFull() ? 'Mochila cheia' : S.gold < pr ? 'Ouro insuficiente' : '';
     return `<div class="offer">${tileHTML(it, 'shop')}<div><div class="on" style="color:${RAR[it.rar].c}">${it.name}</div>
       <div class="om">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}</div><div class="om">${cmp}</div>
       <div class="oa"><button class="btn primary" data-act="buy" data-v="${it.id}" ${can ? '' : 'disabled'}>Comprar <span class="price">${fmt(pr)}</span></button>${why ? `<span class="om">${why}</span>` : ''}</div></div></div>`;
@@ -168,10 +169,12 @@ const itemSlotN = it => it.slot === 'bow' && it.cls ? WEAPON_N[it.cls] : SLOT_N[
 function tileHTML(it, act, label){
   if(!it) return `<div class="tile empty">${ICON_ITEM[label] || ''}<span class="lbl">${SLOT_N[label] || ''}</span></div>`;
   let up = '';
-  const ok = canUse(it);
+  // Equipado já está em uso; nos outros lugares, classe errada ou nível baixo apagam o item
+  const clsOk = canUse(it), lvOk = act === 'eq' || S.lv >= reqLv(it), ok = clsOk && lvOk;
   if(ok && (act === 'inv' || act === 'shop')){ const s2 = calcStats({...S.eq, [it.slot]:it}); if(s2.dps > ST.dps*1.01 || s2.life > ST.life*1.02) up = '<span class="up">▲</span>'; }
-  const tag = ok ? '' : `<span class="cls-tag">${clsName(it.cls).slice(0, 3)}</span>`;
-  return `<button class="tile r${it.rar}${ok ? '' : ' nouse'}" style="--rc:${RAR[it.rar].c}" data-act="item" data-v="${act}:${it.id}" aria-label="${it.name}, ilvl ${it.ilvl}${ok ? '' : ', só para ' + clsName(it.cls)}">${itemIcon(it)}<span class="il">${it.ilvl}</span>${up}${tag}${label ? `<span class="lbl">${itemSlotN(it)}</span>` : ''}</button>`;
+  const tag = !clsOk ? `<span class="cls-tag">${clsName(it.cls).slice(0, 3)}</span>` : !lvOk ? `<span class="cls-tag">Nv${reqLv(it)}</span>` : '';
+  const why = !clsOk ? ', só para ' + clsName(it.cls) : !lvOk ? ', requer nível ' + reqLv(it) : '';
+  return `<button class="tile r${it.rar}${ok ? '' : ' nouse'}" style="--rc:${RAR[it.rar].c}" data-act="item" data-v="${act}:${it.id}" aria-label="${it.name}, ilvl ${it.ilvl}${why}">${itemIcon(it)}<span class="il">${it.ilvl}</span>${up}${tag}${label ? `<span class="lbl">${itemSlotN(it)}</span>` : ''}</button>`;
 }
 function panelHero(){
   const st = ST, free = ptsFree(), town = inTown(), cost = respecCost();
@@ -219,19 +222,20 @@ function panelHero(){
 }
 const respecCost = () => 25*S.lv;
 // Mochila: janela no meio da tela com INV_MAX quadrados. Itens além do limite (saves antigos) aparecem em quadrados vermelhos.
+// Pilha de orbes: um espaço da mochila com a quantidade no canto
+const ICON_ORB = SVG('<circle cx="12" cy="12" r="7" fill="currentColor" fill-opacity=".35"/><circle cx="9.5" cy="9.5" r="2" fill="currentColor"/>');
+const orbTile = k => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="orb" data-v="${k}" aria-label="${ORBS[k].n}, ${S.orbs[k]}">${ICON_ORB}<span class="qty">${S.orbs[k]}</span></button>`;
 function panelBag(){
-  const town = inTown(), n = S.inv.length, over = n > INV_MAX;
+  const town = inTown(), orbs = Object.keys(ORBS).filter(k => S.orbs[k] > 0), n = invUsed(), over = n > INV_MAX;
   const count = r => S.inv.filter(i => i.rar === r).length;
+  const cells = [...orbs.map(orbTile), ...S.inv.map(it => tileHTML(it, 'inv'))];
   const slots = [];
-  for(let i = 0; i < Math.max(INV_MAX, n); i++){
-    const it = S.inv[i];
-    slots.push(`<div class="slot${i >= INV_MAX ? ' over' : ''}">${it ? tileHTML(it, 'inv') : ''}</div>`);
-  }
+  for(let i = 0; i < Math.max(INV_MAX, n); i++) slots.push(`<div class="slot${i >= INV_MAX ? ' over' : ''}">${cells[i] || ''}</div>`);
   let h = `<div class="sec"><h3>Itens <span class="r" style="${over || n === INV_MAX ? 'color:#ff8c80' : ''}">${n}/${INV_MAX}</span></h3>
     <div class="inv-grid">${slots.join('')}</div>`;
   if(over) h += `<p class="note" style="color:#ff8c80">A mochila agora tem ${INV_MAX} espaços. Venda ou jogue fora ${n - INV_MAX} ${n - INV_MAX === 1 ? 'item' : 'itens'} para voltar a recolher do chão.</p>`;
   else if(!n) h += `<p class="note">A mochila está vazia. Os itens do chão são recolhidos sozinhos durante a caçada.</p>`;
-  h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo.</p></div>`;
+  h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo. Orbes ficam empilhados num espaço só: toque neles para usar.</p></div>`;
   h += `<div class="sec"><h3>Vender em lote</h3>${town ? '' : '<p class="note">O mercador fica na vila. Volte para vender.</p>'}<div class="bulk">
     ${[0,1,2].map(r => `<button class="btn" data-act="sellR" data-v="${r}" ${town && count(r) ? '' : 'disabled'} style="color:${RAR[r].c}">${RAR[r].n}s<small>${count(r)} itens</small></button>`).join('')}</div></div>`;
   return h;
@@ -242,7 +246,7 @@ function panelRules(){
   return `<div class="retbox"><label for="cfg-ret" style="font-size:15px">Voltar para a vila quando a vida chegar em</label>
     <div class="big" id="retVal">${c.ret}%</div>
     <input type="range" id="cfg-ret" min="10" max="90" step="5" value="${c.ret}">
-    <p class="note">A marca branca na barra de vida da Víbora mostra esse limite.</p></div>
+    <p class="note">A marca branca na barra de vida do herói mostra esse limite.</p></div>
     <div class="sec">${sw('retFull', 'Voltar quando a mochila encher', `${INV_MAX} espaços`)}
     ${sw('autoGo', 'Voltar a caçar depois de curar', 'Espera 3s na vila. Pausa enquanto um menu está aberto.')}
     ${sw('autoSell', 'Vender itens comuns ao chegar na vila')}
@@ -253,7 +257,25 @@ function panelRules(){
     <div class="sec"><h3>Registro</h3><div class="stats"><div class="stat"><span>Criaturas abatidas</span><b>${fmt(S.kills)}</b></div><div class="stat"><span>Velocidade</span><b>x${S.speed}</b></div></div></div>
     <button class="btn" data-act="switchChar">Trocar de personagem<small>Volta para a lista de personagens da conta</small></button>`;
 }
-function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
+function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'stash') return stash().find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
+// Armazém da vila: janela no meio com STASH_MAX espaços; dividido entre os personagens da conta (fica em acct.stash, 09-conta.js)
+function panelStash(){
+  const st = stash(), slots = [];
+  // Itens além do limite (armazém antigo maior) aparecem em vermelho e continuam podendo ser retirados
+  for(let i = 0; i < Math.max(STASH_MAX, st.length); i++) slots.push(`<div class="slot${i >= STASH_MAX ? ' over' : ''}">${st[i] ? tileHTML(st[i], 'stash') : ''}</div>`);
+  const bag = S.inv.map(it => `<div class="slot">${tileHTML(it, 'inv')}</div>`).join('');
+  return `<p class="note">O armazém é da conta: o que você guarda aqui aparece para todos os seus personagens. Toque num item da mochila para guardar, ou num item do armazém para retirar.</p>
+    <div class="sec"><h3>Armazém <span class="r">${st.length}/${STASH_MAX}</span></h3><div class="inv-grid">${slots.join('')}</div></div>
+    <div class="sec"><h3>Mochila <span class="r">${invUsed()}/${INV_MAX}</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nenhum item na mochila.</p>'}</div>`;
+}
+// Janela do orbe: explica e mostra os itens que ele pode melhorar
+function renderOrbDlg(k){
+  const O = ORBS[k], card = $('#dcard'); dlgItem = null; $('#dlg').hidden = false; card.style.setProperty('--rc', O.c);
+  const list = [...S.inv.map(it => ({it, w:'inv'})), ...SLOTS.filter(s => S.eq[s]).map(s => ({it:S.eq[s], w:'eq'}))].filter(x => x.it.rar === O.from);
+  card.innerHTML = `<h2 class="dname">${O.n}</h2><div class="dtype">Você tem ${S.orbs[k]}</div><p class="note" style="color:var(--fg)">${O.d}</p>
+    ${list.length ? `<div class="sec"><h3>Toque num item ${RAR[O.from].n.toLowerCase()} para melhorar</h3><div class="inv-grid">${list.map(x => `<div class="slot"><button class="tile r${x.it.rar}" style="--rc:${RAR[x.it.rar].c}" data-act="useOrb" data-v="${k}:${x.w}:${x.it.id}" aria-label="${x.it.name}">${itemIcon(x.it)}<span class="il">${x.it.ilvl}</span>${x.w === 'eq' ? '<span class="cls-tag" style="color:var(--poison)">Eq</span>' : ''}</button></div>`).join('')}</div></div>` : `<p class="note">Nenhum item ${RAR[O.from].n.toLowerCase()} na mochila ou equipado.</p>`}
+    <div class="dact"><button class="btn full" data-act="dlgClose">Fechar</button></div>`;
+}
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
 const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado'};
@@ -279,7 +301,10 @@ function itemDiff(it, cur){
 }
 function renderDlg(){
   const it = findItem(dlgItem.where, dlgItem.id); if(!it){ closeDlg(); return; }
-  const isEq = dlgItem.where === 'eq', isShop = dlgItem.where === 'shop', town = inTown(), col = RAR[it.rar].c;
+  const isEq = dlgItem.where === 'eq', isShop = dlgItem.where === 'shop', isStash = dlgItem.where === 'stash', town = inTown(), col = RAR[it.rar].c;
+  // Orbe que serve neste item (Comum → Despertar, Mágico → Ascensão)
+  const ok = Object.keys(ORBS).find(k => ORBS[k].from === it.rar);
+  const orbBtn = ok && !isShop && !isStash ? `<button class="btn full" data-act="useOrb" data-v="${ok}:${dlgItem.where}:${it.id}" ${S.orbs[ok] > 0 ? '' : 'disabled'} style="border-color:${ORBS[ok].c};color:${ORBS[ok].c}">Usar ${ORBS[ok].n}<small>Vira ${RAR[ORBS[ok].to].n} · você tem ${S.orbs[ok]}</small></button>` : '';
   const card = $('#dcard'); card.style.setProperty('--rc', col);
   let base = '';
   if(it.slot === 'bow') base = `${fmt(it.min)}–${fmt(it.max)} de dano · ${n1(it.aps)} ataques/s${it.bt >= .9 ? ' <span style="color:var(--r3)">◆</span>' : ''}`;
@@ -290,22 +315,24 @@ function renderDlg(){
   const sg = (v, lab) => `<span class="${v > .05 ? 'p' : v < -.05 ? 'n' : ''}">${lab} ${v > 0 ? '+' : ''}${n1(v)} ${v > .05 ? '▲' : v < -.05 ? '▼' : ''}</span>`;
   const cur = S.eq[it.slot];
   card.innerHTML = `<h2 class="dname">${it.name}</h2>
-    <div class="dtype">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}${isEq ? ' · equipado' : ''}${it.cls ? ` · <span style="color:${canUse(it) ? 'var(--muted)' : '#ff8c80'}">só ${clsName(it.cls)}</span>` : ''}</div>
+    <div class="dtype">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}${isEq ? ' · equipado' : ''}${it.cls ? ` · <span style="color:${canUse(it) ? 'var(--muted)' : '#ff8c80'}">só ${clsName(it.cls)}</span>` : ''} · <span style="color:${S.lv >= reqLv(it) ? 'var(--muted)' : '#ff8c80'}">requer nível ${reqLv(it)}</span></div>
     ${base ? `<div class="dbase">${base}</div>` : ''}
     ${aff ? `<ul class="daff">${aff}</ul>` : ''}
     <div class="cmp"><span style="color:var(--muted)">${isEq ? 'Este item te dá' : cur ? 'Trocando por ' + cur.name : 'Equipando'}:</span>${sg(dd, 'Dano/s')}${sg(dl, 'Vida')}</div>
     ${isEq ? '' : itemDiff(it, cur)}
-    ${isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && S.inv.length < INV_MAX ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
-      ${isEq ? `<button class="btn" data-act="unequip" ${S.inv.length < INV_MAX ? '' : 'disabled'}>Guardar na mochila</button>` : canUse(it) ? `<button class="btn primary" data-act="equip">Equipar</button>` : `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>`}
+    ${isStash ? `<div class="dact"><button class="btn primary full" data-act="stashTake" ${!invFull() ? '' : 'disabled'}>Retirar para a mochila<small>${invFull() ? 'Mochila cheia' : 'Mochila ' + invUsed() + '/' + INV_MAX}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && !invFull() ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
+      ${isEq ? `<button class="btn" data-act="unequip" ${!invFull() ? '' : 'disabled'}>Guardar na mochila</button>` : !canUse(it) ? `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>` : S.lv < reqLv(it) ? `<button class="btn" disabled>Requer nível ${reqLv(it)}</button>` : `<button class="btn primary" data-act="equip">Equipar</button>`}
       ${isEq ? '' : `<button class="btn gold" data-act="sell" ${town ? '' : 'disabled'}>${town ? 'Vender' : 'Vender na vila'}<small>${fmt(sellPrice(it))} ouro</small></button>`}
       ${isEq ? '' : `<button class="btn warn" data-act="drop">Jogar fora</button>`}
+      ${!isEq ? `<button class="btn" data-act="stashPut" ${town && stash().length < STASH_MAX ? '' : 'disabled'}>Enviar para o armazém<small>${!town ? 'Só na vila' : stash().length >= STASH_MAX ? 'Armazém cheio' : stash().length + '/' + STASH_MAX}</small></button>` : ''}
+      ${orbBtn}
       <button class="btn" data-act="dlgClose">Fechar</button>
     </div>`}`;
 }
 function closeDlg(){ $('#dlg').hidden = true; dlgItem = null; }
 let crSel = {cls:'arqueiro', build:'veneno', color:0};
 const CLS_ICON = {arqueiro:ICON_BOW, guerreiro:ICON_SWORD, mago:ICON_STAFF};
-const DEF_NAME = {arqueiro:'Víbora', guerreiro:'Carniceiro', mago:'Brasa'};
+const DEF_NAME = {arqueiro:'Sombra', guerreiro:'Carniceiro', mago:'Brasa'};
 const BLD_ICON = {veneno:ICON_SK.tip, sangramento:ICON_SK.serrated, gelo:SVG('<path d="M12 2v20M3 7l18 10M21 7L3 17"/>'), fogo:SVG('<path d="M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-4 5-4 7-1-1-2-2-2-4-2 2-3 5-3 9 0 4 3 7 7 7z"/>')};
 function showCreate(){ crSel = {cls:'arqueiro', build:'veneno', color:0}; $('#create').hidden = false; renderCreate(''); }
 function renderCreate(name){
@@ -349,7 +376,7 @@ const ACT = {
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;
-    const pr = buyPrice(it); if(S.gold < pr || S.inv.length >= INV_MAX) return;
+    const pr = buyPrice(it); if(S.gold < pr || invFull()) return;
     S.gold -= pr; S.shop = S.shop.filter(i => i !== it); S.inv.push(it);
     log(`Comprou ${it.name} por ${fmt(pr)} ouro`, RAR[it.rar].c);
     if(dlgItem && dlgItem.where === 'shop') closeDlg();
@@ -370,13 +397,37 @@ const ACT = {
     respecArm = 0; S.gold -= respecCost(); for(const k in S.sk) S.sk[k] = 0; refreshStats(); log('Pontos devolvidos. Distribua de novo.', '#e2ae4a'); dirtyPanel(); save();
   },
   item: v => openItem(v),
+  // Orbes
+  orb: v => renderOrbDlg(v),
+  useOrb: v => {
+    const [k, where, id] = v.split(':'), it = findItem(where, id); if(!it) return;
+    const from = RAR[it.rar].n;
+    if(!upgradeItem(it, k)) return;
+    refreshStats(); save(); dirtyPanel();
+    log(`${ORBS[k].n}: ${from} → ${RAR[it.rar].n} (${it.name})`, RAR[it.rar].c);
+    ring(hero.x, hero.y, 40, ORBS[k].c, .5, 3);
+    dlgItem = {where, id:it.id}; $('#dlg').hidden = false; renderDlg(); // mostra o item já melhorado
+  },
+  // Armazém (só na vila)
+  stashPut: () => {
+    if(!inTown() || !dlgItem || stash().length >= STASH_MAX) return;
+    const it = findItem('inv', dlgItem.id); if(!it) return;
+    S.inv = S.inv.filter(i => i !== it); it.id = stashId(); stash().push(it);
+    log(`Guardou ${it.name} no armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
+  },
+  stashTake: () => {
+    if(!dlgItem || invFull()) return;
+    const it = findItem('stash', dlgItem.id); if(!it) return;
+    acct.stash = stash().filter(i => i !== it); S.inv.push(it);
+    log(`Retirou ${it.name} do armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
+  },
   dlgClose: () => closeDlg(),
   equip: () => {
-    const it = findItem('inv', dlgItem.id); if(!it || !canUse(it)) return;
+    const it = findItem('inv', dlgItem.id); if(!it || !canEquip(it)) return;
     const old = S.eq[it.slot]; S.eq[it.slot] = it; S.inv = S.inv.filter(i => i !== it); if(old) S.inv.push(old);
     refreshStats(); log(`Equipou ${it.name}`, RAR[it.rar].c); closeDlg(); dirtyPanel(); save();
   },
-  unequip: () => { const it = findItem('eq', dlgItem.id); if(!it || S.inv.length >= INV_MAX) return; S.eq[it.slot] = null; S.inv.push(it); refreshStats(); closeDlg(); dirtyPanel(); save(); },
+  unequip: () => { const it = findItem('eq', dlgItem.id); if(!it || invFull()) return; S.eq[it.slot] = null; S.inv.push(it); refreshStats(); closeDlg(); dirtyPanel(); save(); },
   sell: () => { if(!inTown()) return; const id = dlgItem.id; sellWhere(i => i.id === id); closeDlg(); },
   drop: () => { const id = dlgItem.id; S.inv = S.inv.filter(i => i.id !== id); closeDlg(); dirtyPanel(); },
   sellR: v => { if(!inTown()) return; const r = +v; sellWhere(i => i.rar === r); },
@@ -407,7 +458,8 @@ document.addEventListener('keydown', e => {
   if(i >= 0){
     const id = ACTIVE[i];
     if(AIMABLE[id]){ if(e.repeat || aim) return; if(canAim(id)){ aim = {id, src:'key', key:e.key}; return; } }
-    if(id === 'arrow'){ const h = hoverMon(); if(h){ if(!e.repeat) setFocus(h); manualCast(id, {tgt:h}); return; } }
+    // Habilidades de alvo: com o mouse em cima de uma criatura, vão nela
+    if(id === 'arrow' || id === 'burst' || id === 'firebolt'){ const h = hoverMon(); if(h){ if(!e.repeat) setFocus(h); manualCast(id, {tgt:h}); return; } }
     manualCast(id);
   }
   if(e.key === 'Escape' && aim){ aim = null; return; }

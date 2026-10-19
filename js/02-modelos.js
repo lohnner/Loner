@@ -8,6 +8,9 @@ const skew = () => Math.pow(Math.random(), 2.6); // valores altos são raros
 // 1 em 4 sai para a outra classe (o Arqueiro acha espadas, o Guerreiro acha arcos) — dá para vender.
 const otherCls = () => pick(CLASSES.filter(c => c.ok && c.id !== clsOf())).id;
 const canUse = it => !it.cls || it.cls === clsOf();
+// Nível exigido a partir do ilvl: quanto mais rara, mais perto do ilvl (Comum −3, Mágico −2, Raro −1, Lendário = ilvl), até o nível máximo
+const reqLv = it => clamp(it.ilvl - [3, 2, 1, 0][it.rar], 1, MAX_LV);
+const canEquip = it => canUse(it) && S.lv >= reqLv(it);
 const clsName = id => (CLASSES.find(c => c.id === id) || CLASSES[0]).n;
 function genItem(ilvl, rar, slot, cls){
   slot = slot || (Math.random() < .22 ? 'bow' : pick(SLOTS.slice(1)));
@@ -24,17 +27,34 @@ function genItem(ilvl, rar, slot, cls){
     it.base = BASES[slot][Math.min(3, Math.floor(ilvl/10))];
     if(ARMOR_M[slot]){ const t = skew(); it.armor = Math.round((3 + ilvl*1.3) * ARMOR_M[slot] * (1 + .5*t) * rf); it.bt = t; }
   }
-  const n = [0, rint(1,2), rint(3,4), 4][rar];
-  const pool = Object.keys(AFX).filter(k => AFX[k].slots.includes(slot));
-  for(let i = 0; i < n && pool.length; i++){
-    const k = pool.splice(Math.floor(Math.random()*pool.length), 1)[0], A = AFX[k], t = skew();
-    const lo = A.lo(ilvl), hi = A.hi(ilvl) * rf;
-    let v = lo + (hi - lo) * t; v = A.dec ? Math.round(v*10)/10 : Math.max(1, Math.round(v));
-    it.affix.push({k, v, t});
-  }
+  addAffixes(it, [0, rint(1,2), rint(3,4), 4][rar]);
   if(rar === 3){ const K = CLASS_KIT[cls] || CLASS_KIT.arqueiro, s = pick([...K.active, ...K.passive]); const v = Math.random() < .12 ? 2 : 1; it.affix.push({k:'skill', s, v, t:v===2?1:.5}); }
   it.name = nameItem(it);
   return it;
+}
+// Sorteia n atributos novos (sem repetir os que o item já tem), com força pela raridade atual
+function addAffixes(it, n){
+  const rf = [1,1,1.15,1.35][it.rar], have = new Set(it.affix.map(a => a.k));
+  const pool = Object.keys(AFX).filter(k => AFX[k].slots.includes(it.slot) && !have.has(k));
+  for(let i = 0; i < n && pool.length; i++){
+    const k = pool.splice(Math.floor(Math.random()*pool.length), 1)[0], A = AFX[k], t = skew();
+    const lo = A.lo(it.ilvl), hi = A.hi(it.ilvl) * rf;
+    let v = lo + (hi - lo) * t; v = A.dec ? Math.round(v*10)/10 : Math.max(1, Math.round(v));
+    it.affix.push({k, v, t});
+  }
+}
+// Usa um orbe no item: Comum → Mágico (Despertar) ou Mágico → Raro (Ascensão). Devolve true se melhorou.
+function upgradeItem(it, k){
+  const O = ORBS[k]; if(!O || !it || it.rar !== O.from || !(S.orbs[k] > 0)) return false;
+  S.orbs[k]--; it.rar = O.to;
+  if(O.to === 2){
+    // base melhor (raro tem +15%), e completa até 3 ou 4 atributos
+    if(it.min){ it.min = Math.round(it.min*1.15); it.max = Math.round(it.max*1.15); }
+    if(it.armor) it.armor = Math.round(it.armor*1.15);
+    addAffixes(it, rint(3, 4) - it.affix.length);
+  } else addAffixes(it, rint(1, 2));
+  it.name = nameItem(it);
+  return true;
 }
 function nameItem(it){
   if(it.rar === 0) return it.base;
@@ -91,7 +111,7 @@ function calcStats(eq = S.eq){
     const r4 = rk('inferno'); if(r4) dps += 2.5*(A*(1.5+.2*r4)*critF + A*(3+.5*r4)*P) / (12*cdm);
   } else if(war){
     const r1 = rk('cleave'); if(r1) dps += (A*(1.5+.15*r1)*critF + A*(1.5+.4*r1)*P) / (4*cdm);
-    const r2 = rk('charge'); if(r2) dps += 2*(A*(1.1+.12*r2)*critF + A*(.8+.2*r2)*P) / (7*cdm);
+    const r2 = rk('charge'); if(r2) dps += (2*(A*(1.1+.12*r2)*critF + A*(.8+.2*r2)*P) + 2*(A*(.8+.08*r2)*critF + A*(.4+.1*r2)*P)) / (7*cdm);
     const r3 = rk('whirl'); if(r3) dps += 2.5*(A*(2+.2*r3)*critF + A*(1.36+.32*r3)*P) / (10*cdm);
     const r4 = rk('rupture'); if(r4) dps += 2.5*(A*(1.7+.2*r4)*critF + A*(2+.4*r4)*P) / (12*cdm);
   } else {
@@ -114,9 +134,9 @@ function skDesc(id, st){
     case 'arrow': return `Causa ${pc(1.2+.15*r)} do dano da arma e envenena: ${fmt(a*(1.5+.4*r)*p)} de dano em ${n1(4*d)}s.`;
     case 'fan': return `Dispara ${5+Math.floor(r/3)} flechas em leque. Cada uma causa ${pc(.6+.08*r)} e envenena ${fmt(a*(.6+.15*r)*p)} em ${n1(3*d)}s. Um inimigo colado em você leva todas as flechas.`;
     case 'rain': return `Nuvem ácida de raio ${70+5*r} por 4s. Quem fica dentro sofre cerca de ${fmt(a*(.6+.15*r)*p)} de veneno por segundo.`;
-    case 'burst': return `Ultimate. Onda de praga em volta de você (raio 300): envenena todos com ${fmt(a*(3+.5*r)*p)} em ${n1(4*d)}s, detona na hora ${pc(1+.15*r)} do veneno que já estava neles e espalha metade para os vizinhos.`;
+    case 'burst': return `Ultimate. Atira uma flecha de praga que explode na criatura atingida (raio 170 em volta dela): envenena todos com ${fmt(a*(3+.5*r)*p)} em ${n1(4*d)}s, detona na hora ${pc(1+.15*r)} do veneno que já estava neles e espalha metade para os vizinhos.`;
     case 'cleave': return `Avança até o alvo e causa ${pc(1.5+.15*r)} do dano da arma, abrindo um corte que sangra ${fmt(a*(1.5+.4*r)*p)} em ${n1(4*d)}s.`;
-    case 'charge': return `Corre até o ponto mirado (até 260) atropelando tudo no caminho: ${pc(1.1+.12*r)} do dano da arma e ${fmt(a*(.8+.2*r)*p)} de sangramento em cada um.`;
+    case 'charge': return `Corre até o ponto mirado (até 260) atropelando tudo no caminho: ${pc(1.1+.12*r)} do dano da arma e ${fmt(a*(.8+.2*r)*p)} de sangramento em cada um. Ao chegar, explode em volta (raio 65): ${pc(.8+.08*r)} do dano da arma e mais sangramento.`;
     case 'whirl': return `Gira por 2s acertando todos em volta (raio ${80+3*r}) 8 vezes: cada giro causa ${pc(.25+.025*r)} do dano da arma e ${fmt(a*(.17+.04*r)*p)} de sangramento. Dá para andar girando.`;
     case 'rupture': return `Ultimate. Salta e esmaga o chão (raio 140): causa ${pc(1.7+.2*r)} do dano da arma em todos, detona na hora ${pc(1+.15*r)} do sangramento que já estava neles e abre um novo de ${fmt(a*(2+.4*r)*p)} em ${n1(4*d)}s.`;
     case 'serrated': return `Ataques normais fazem sangrar ${pc(.4+.2*r)} do dano do golpe ao longo de 3s.`;

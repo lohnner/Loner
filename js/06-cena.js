@@ -14,15 +14,19 @@ function moveTo(p, dt, mul){
   const d = D(hero, p); if(d < 5){ hero.moving = false; return true; }
   hero.face = Math.atan2(p.y - hero.y, p.x - hero.x); moveDir(hero.face, dt, mul); return false;
 }
+// Dá para pegar? Orbe entra na pilha (se já existe ou se há espaço); item precisa de espaço e da raridade mínima das Regras.
+const canPick = d => d.orb ? (S.orbs[d.orb] > 0 || !invFull()) : d.it.rar >= S.cfg.minPick && !invFull();
 function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
-  if(S.cfg.retFull && S.inv.length >= INV_MAX){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
+  if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
   if(hero.cast || hero.dash){ hero.moving = false; return; }
   const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
   // Girando: anda até os inimigos sem atacar normalmente
   if(hero.whirl){ if(near && nd > 26 && nd < 400) moveDir(Math.atan2(near.y - hero.y, near.x - hero.x), dt, .75); else hero.moving = false; return; }
   if(hero.atk && !hero.atk.rel){ hero.moving = false; const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); return; }
+  // Prioridade: pegar o que caiu das criaturas (itens e orbes) antes de lutar; só um alvo clicado passa na frente
+  if(!foc){ const dr = nearestDrop(PICK_RANGE); if(dr){ moveTo(dr, dt); return; } }
   if(isWar() && near && (nd < 320 || foc)){
     // Guerreiro: vai para cima e bate de perto, sem recuar
     const ang = Math.atan2(near.y - hero.y, near.x - hero.x), reach = MELEE + near.r;
@@ -44,12 +48,24 @@ function heroAI(dt){
     hero.moving = false;
     if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:near};
   } else {
-    let dr = null, dd = 1e9;
-    if(S.inv.length < INV_MAX) for(const d of drops) if(!d.gone && d.it.rar >= S.cfg.minPick){ const x = D(d, hero); if(x < dd){ dd = x; dr = d; } }
-    if(dr && dd < 700) moveTo(dr, dt);
+    const dr = nearestDrop(700);
+    if(dr) moveTo(dr, dt);
     else if(near) moveTo(near, dt);
     else hero.moving = false;
   }
+}
+const PICK_RANGE = 500;
+function nearestDrop(maxD){
+  let dr = null, dd = maxD;
+  for(const d of drops) if(!d.gone && canPick(d)){ const x = D(d, hero); if(x < dd){ dd = x; dr = d; } }
+  return dr;
+}
+// Fim da Investida: explosão pequena em volta de onde o Guerreiro parou
+const DASH_BOOM_R = 65;
+function dashBoom(d){
+  ring(hero.x, hero.y, DASH_BOOM_R, '#ebaa78', .4, 5); ring(hero.x, hero.y, DASH_BOOM_R*.5, '#ffd0a0', .3, 2);
+  for(let i = 0; i < 18; i++){ const an = Math.random()*TAU, sp = rnd(90, 220); part({x:hero.x, y:hero.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 40, grav:260, life:.45, size:rnd(2,4), c:i % 3 ? '#8a6a4a' : '#ebaa78'}); }
+  for(const m of mons) if(!m.dead && D(m, hero) < DASH_BOOM_R + m.r*.5) meleeHit(m, d.endMult, d.dot*.5);
 }
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
@@ -60,7 +76,7 @@ function heroTimers(dt){
     hero.x = d.x0 + (d.x1 - d.x0)*k; hero.y = d.y0 + (d.y1 - d.y0)*k; hero.moving = true; hero.walkT += dt*2;
     part({x:hero.x + rnd(-6,6), y:hero.y + rnd(-6,6), life:.3, size:rnd(2,4), c:'rgba(235,190,150,.7)'});
     for(const m of mons) if(!m.dead && !d.hit.has(m) && D(m, hero) < m.r + 26){ d.hit.add(m); meleeHit(m, d.mult, d.dot); m.x += Math.cos(hero.face + Math.PI/2*(Math.random() < .5 ? 1 : -1))*14; }
-    if(k >= 1){ hero.dash = null; ring(hero.x, hero.y, 40, '#ebaa78', .35, 3); if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
+    if(k >= 1){ hero.dash = null; dashBoom(d); if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
   }
   if(hero.whirl){
     // Giro de Lâmina: 8 golpes em 2s em todos em volta
@@ -189,9 +205,10 @@ function updateField(dt){
   const due = later.filter(l => l.t <= 0); later = later.filter(l => l.t > 0); due.forEach(l => l.fn());
   for(const d of drops){
     d.t += dt;
-    if(!d.gone && D(d, hero) < 26 && d.it.rar >= S.cfg.minPick && S.inv.length < INV_MAX && mode === 'hunt'){
-      d.gone = true; S.inv.push(d.it);
-      if(d.it.rar >= 1) log(`Pegou ${d.it.name}`, RAR[d.it.rar].c);
+    if(!d.gone && D(d, hero) < 26 && canPick(d) && mode === 'hunt'){
+      d.gone = true;
+      if(d.orb){ S.orbs[d.orb]++; log(`Pegou ${ORBS[d.orb].n} (${S.orbs[d.orb]})`, ORBS[d.orb].c); }
+      else { S.inv.push(d.it); if(d.it.rar >= 1) log(`Pegou ${d.it.name}`, RAR[d.it.rar].c); }
       dirtyPanel();
     }
   }

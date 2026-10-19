@@ -6,10 +6,14 @@
 function ell(x, y, rx, ry){ ctx.beginPath(); ctx.ellipse(x, y, Math.max(.1, rx), Math.max(.1, ry), 0, 0, TAU); ctx.fill(); }
 function circ(x, y, r){ ctx.beginPath(); ctx.arc(x, y, Math.max(.1, r), 0, TAU); ctx.fill(); }
 function line(x1, y1, x2, y2){ ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+// Cor das pedras por tipo de mapa
+const ROCK_C = {hell:['#3a2420', '#4e302a'], ice:['#9aa6b2', '#d6e0e8'], desert:['#6a5640', '#8a7456'], mine:['#4a3e34', '#6a5a4a'], citadel:['#3a3344', '#554c62']};
 function drawDecor(o){
   const x = o.x, y = o.y, s = o.s;
   switch(o.t){
-    case 'rock': ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(x+3, y+4, 12*s, 6*s); ctx.fillStyle = mapDef.decor === 'hell' ? '#3a2420' : '#57564f'; ell(x, y, 11*s, 8*s); ctx.fillStyle = mapDef.decor === 'hell' ? '#4e302a' : '#727067'; ell(x - 3*s, y - 3*s, 5*s, 3*s); break;
+    case 'rock': { const rc = ROCK_C[mapDef.decor] || ['#57564f', '#727067']; ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(x+3, y+4, 12*s, 6*s); ctx.fillStyle = rc[0]; ell(x, y, 11*s, 8*s); ctx.fillStyle = rc[1]; ell(x - 3*s, y - 3*s, 5*s, 3*s); break; }
+    case 'crystal': { const cc = mapDef.decor === 'citadel' ? ['#5a2a8a', '#c08aff'] : ['#2a6a8a', '#7fd8ff']; ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(x+2, y+3, 9*s, 4*s); for(const [dx, h, w] of [[-4, 14, 3.5], [1, 20, 4.5], [6, 11, 3]]){ ctx.fillStyle = cc[0]; ctx.beginPath(); ctx.moveTo(x + dx*s - w*s, y); ctx.lineTo(x + dx*s, y - h*s); ctx.lineTo(x + dx*s + w*s, y); ctx.fill(); ctx.fillStyle = cc[1]; ctx.beginPath(); ctx.moveTo(x + dx*s - w*s*.3, y - 2); ctx.lineTo(x + dx*s, y - h*s); ctx.lineTo(x + dx*s + w*s*.6, y - 2); ctx.fill(); } ctx.globalAlpha = .18 + .1*Math.sin(T*2 + o.v*9); ctx.fillStyle = cc[1]; circ(x, y - 8*s, 16*s); ctx.globalAlpha = 1; break; }
+    case 'pine': ctx.fillStyle = 'rgba(0,0,0,.25)'; ell(x + 5, y + 6, 22*s, 9*s); ctx.fillStyle = '#4a3a2c'; ctx.fillRect(x - 2.5, y - 4, 5, 10); for(let i = 0; i < 3; i++){ const yy = y - 6*s - i*10*s, w = (18 - i*4.5)*s; ctx.fillStyle = '#2e4a3c'; ctx.beginPath(); ctx.moveTo(x - w, yy); ctx.lineTo(x, yy - 16*s); ctx.lineTo(x + w, yy); ctx.fill(); ctx.fillStyle = '#eef4f8'; ctx.beginPath(); ctx.moveTo(x - w*.55, yy - 7*s); ctx.lineTo(x, yy - 16*s); ctx.lineTo(x + w*.55, yy - 7*s); ctx.fill(); } break;
     case 'tuft': ctx.strokeStyle = mapDef.tuft; ctx.lineWidth = 1.5; ctx.beginPath(); for(let i = -2; i <= 2; i++){ ctx.moveTo(x + i*2*s, y); ctx.lineTo(x + i*3.5*s, y - 8*s); } ctx.stroke(); break;
     case 'wheat': ctx.strokeStyle = '#8f7a36'; ctx.lineWidth = 1.6; ctx.beginPath(); for(let i = 0; i < 6; i++){ const bx = x + (i - 2.5)*3.2*s; ctx.moveTo(bx, y); ctx.lineTo(bx + (i - 2.5)*1.2*s, y - 15*s); } ctx.stroke(); ctx.fillStyle = '#d2b358'; for(let i = 0; i < 6; i++) ell(x + (i - 2.5)*3.2*s + (i - 2.5)*1.2*s, y - 16*s, 1.6*s, 3.4*s); break;
     case 'fence': ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(x+20*s, y+4, 30*s, 4); ctx.strokeStyle = '#6b4e30'; ctx.lineWidth = 3; line(x - 8*s, y - 6, x + 48*s, y - 6); ctx.fillStyle = '#7d5c38'; for(let i = 0; i < 4; i++) ctx.fillRect(x - 8*s + i*18*s, y - 14, 4, 16); break;
@@ -291,7 +295,20 @@ function drawPortal(x, y, k){
   ctx.strokeStyle = '#a9c4ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, y - 22, 16*k, 28*k, 0, 0, TAU); ctx.stroke();
   for(let i = 0; i < 4; i++){ const a = T*3 + i*TAU/4; ctx.fillStyle = '#dfe8ff'; circ(x + Math.cos(a)*14*k, y - 22 + Math.sin(a)*24*k, 1.6); }
 }
+// Orbe no chão: esfera brilhante com coluna de luz e nome
+function drawOrbDrop(d){
+  const O = ORBS[d.orb], b = Math.sin(T*3 + d.x)*2, y = d.y - 8 + b;
+  const g = ctx.createLinearGradient(0, d.y - 80, 0, d.y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, O.c + '88'); ctx.fillStyle = g; ctx.fillRect(d.x - 4, d.y - 80, 8, 80);
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ell(d.x, d.y + 3, 7, 3);
+  const h = ctx.createRadialGradient(d.x, y, 1, d.x, y, 14); h.addColorStop(0, O.c + 'aa'); h.addColorStop(1, O.c + '00'); ctx.fillStyle = h; circ(d.x, y, 14);
+  sphere(d.x, y, 5.5, O.c);
+  ctx.font = '700 11px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
+  const tw = ctx.measureText(O.n).width;
+  ctx.fillStyle = 'rgba(6,8,7,.85)'; ctx.fillRect(d.x - tw/2 - 4, d.y - 32, tw + 8, 15);
+  ctx.fillStyle = O.c; ctx.fillText(O.n, d.x, d.y - 21);
+}
 function drawItemDrop(d){
+  if(d.orb) return drawOrbDrop(d);
   const it = d.it, col = RAR[it.rar].c, b = Math.sin(T*3 + d.x)*1.5;
   if(it.rar >= 2){ const g = ctx.createLinearGradient(0, d.y - 70, 0, d.y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, it.rar === 3 ? 'rgba(255,138,43,.5)' : 'rgba(240,211,79,.4)'); ctx.fillStyle = g; ctx.fillRect(d.x - 5, d.y - 70, 10, 70); }
   ctx.fillStyle = 'rgba(0,0,0,.4)'; ell(d.x, d.y + 3, 8, 3);
@@ -341,7 +358,8 @@ function render(){
     }
     const c = p.kind === 'arrow' ? '#e8e2d0' : p.kind === 'farrow' ? '#d8f07a' : '#9bd84a';
     ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
-    if(p.kind !== 'arrow'){ ctx.fillStyle = 'rgba(155,216,74,.35)'; ell(0, 0, 14, 5); }
+    if(p.kind === 'plague'){ ctx.fillStyle = `rgba(155,216,74,${.45 + .2*Math.sin(T*20)})`; ell(-2, 0, 22, 9); ctx.fillStyle = 'rgba(216,240,122,.5)'; circ(6, 0, 6); }
+    else if(p.kind !== 'arrow'){ ctx.fillStyle = 'rgba(155,216,74,.35)'; ell(0, 0, 14, 5); }
     ctx.strokeStyle = c; ctx.lineWidth = 2; line(-14, 0, 4, 0);
     ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(3, -3.5); ctx.lineTo(3, 3.5); ctx.fill();
     ctx.fillStyle = '#c94a3a'; ctx.fillRect(-15, -2.5, 4, 5);

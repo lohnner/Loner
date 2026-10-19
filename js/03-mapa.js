@@ -46,7 +46,7 @@ function makeGround(md){
   for(let i = 0; i < 80; i++) blob(R()*N, R()*N, 8 + R()*30, R() < .5 ? md.ground[1] : md.ground[2], .35);
   for(let i = 0; i < 240; i++) blob(R()*N, R()*N, .6 + R()*1.5, R() < .5 ? md.ground[1] : '#000', .45);
   g.globalAlpha = 1;
-  if(md.decor === 'crypt'){
+  if(md.decor === 'crypt' || md.decor === 'citadel'){
     g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 2;
     for(let row = 0; row < 4; row++){ const y = row*64; g.beginPath(); g.moveTo(0,y); g.lineTo(N,y); g.stroke(); for(let k = 0; k < 5; k++){ const x = (row%2)*32 + k*64; g.beginPath(); g.moveTo(x,y); g.lineTo(x,y+64); g.stroke(); } }
   } else if(md.decor === 'hell'){
@@ -65,7 +65,11 @@ function makeDecor(md){
   ({field:()=>{add('wheat',70);add('rock',22);add('tuft',80);add('fence',14);},
     forest:()=>{add('tree',60);add('bush',40);add('rock',15);add('tuft',60);},
     swamp:()=>{add('puddle',45);add('reed',60);add('deadtree',20);add('tuft',30);},
+    mine:()=>{add('rock',40);add('crystal',30);add('fence',16);add('bones',20);},
     crypt:()=>{add('pillar',34);add('tomb',36);add('bones',40);},
+    ice:()=>{add('pine',55);add('rock',30);add('tuft',40);},
+    desert:()=>{add('rock',35);add('pillar',14);add('deadtree',18);add('skull',22);add('bones',25);},
+    citadel:()=>{add('pillar',40);add('tomb',20);add('skull',26);add('crystal',14);},
     hell:()=>{add('lava',40);add('rock',30);add('skull',24);}})[md.decor]();
   out.sort((a, b) => a.y - b.y);
   return out;
