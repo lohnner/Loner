@@ -75,24 +75,27 @@ function heroTimers(dt){
   }
   if(hero.cast){
     const c = hero.cast; c.t += dt;
-    if(Math.random() < .5) { const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*18, y:hero.y + Math.sin(an)*18, vy:-30, life:.4, size:2, c:'#b8f070'}); }
+    if(Math.random() < .5) { const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*18, y:hero.y - 16 + Math.sin(an)*18, vy:-30, life:.4, size:2, c:DOT_C()}); }
     if(!c.done && c.t >= c.dur*.6){ c.done = true; doSkill(c); }
     if(c.t >= c.dur){ hero.cast = null; if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
   }
 }
 function monUpdate(m, dt){
   if(m.dead){ m.deadT += dt; return; }
-  if(m.poisons.length || m.bleeds.length){
+  if(m.poisons.length || m.bleeds.length || m.burns.length){
     let dmg = 0;
     for(const p of m.poisons){ dmg += p.dps * Math.min(dt, p.t); p.t -= dt; }
     // Sangramento dói 50% mais enquanto o inimigo anda
     const bm = m.moving ? 1.5 : 1;
     for(const p of m.bleeds){ dmg += p.dps * bm * Math.min(dt, p.t); p.t -= dt; }
-    m.poisons = m.poisons.filter(p => p.t > 0); m.bleeds = m.bleeds.filter(p => p.t > 0);
+    for(const p of m.burns){ dmg += p.dps * Math.min(dt, p.t); p.t -= dt; }
+    m.poisons = m.poisons.filter(p => p.t > 0); m.bleeds = m.bleeds.filter(p => p.t > 0); m.burns = m.burns.filter(p => p.t > 0);
     m.hp -= dmg; m.pAcc += dmg; m.pT -= dt;
-    const bl = m.bleeds.length > 0;
-    if(m.pT <= 0){ m.pT = .6; if(m.pAcc >= 1){ txt(m.x + rnd(-10,10), m.y - m.r - 4, fmt(m.pAcc), bl ? '#ff7a6a' : '#9bd84a', 12, -26); m.pAcc = 0; } }
-    if(Math.random() < dt*5) part(bl ? {x:m.x + rnd(-m.r*.7, m.r*.7), y:m.y + rnd(-m.r*.4, m.r*.2), vy:rnd(20,60), grav:200, life:.5, size:rnd(1.5,2.6), c:'#b3241c'} : {x:m.x + rnd(-m.r, m.r), y:m.y + rnd(-m.r*.5, m.r*.5), vy:rnd(-40,-20), life:.7, size:rnd(1.5,3), c:'#8fd14f', kind:'bubble'});
+    const bl = m.bleeds.length > 0, fi = m.burns.length > 0;
+    if(m.pT <= 0){ m.pT = .6; if(m.pAcc >= 1){ txt(m.x + rnd(-10,10), m.y - m.r - 4, fmt(m.pAcc), fi ? '#ffb070' : bl ? '#ff7a6a' : '#9bd84a', 12, -26); m.pAcc = 0; } }
+    if(Math.random() < dt*(fi ? 12 : 5)) part(fi ? {x:m.x + rnd(-m.r*.7, m.r*.7), y:m.y + rnd(-m.r*.6, m.r*.2), vy:rnd(-70,-30), life:.4, size:rnd(1.8,3.2), c:pick(['#ff8a2b','#ffd24a'])}
+      : bl ? {x:m.x + rnd(-m.r*.7, m.r*.7), y:m.y + rnd(-m.r*.4, m.r*.2), vy:rnd(20,60), grav:200, life:.5, size:rnd(1.5,2.6), c:'#b3241c'}
+      : {x:m.x + rnd(-m.r, m.r), y:m.y + rnd(-m.r*.5, m.r*.5), vy:rnd(-40,-20), life:.7, size:rnd(1.5,3), c:'#8fd14f', kind:'bubble'});
     if(m.hp <= 0){ kill(m); return; }
   }
   m.hit = Math.max(0, m.hit - dt); m.acd -= dt; m.anim += dt;
@@ -158,23 +161,28 @@ function updateField(dt){
     if(p.hostile){
       if(hero.scale > .6 && mode !== 'dead' && Math.hypot(p.x - hero.x, p.y - hero.y) < 14){ hurtHero(p.dmg, p.mon); p.life = 0; }
     } else {
-      if(p.kind !== 'arrow' && Math.random() < .6) part({x:p.x, y:p.y, life:.3, size:2, c:p.kind === 'farrow' ? '#d8f07a' : '#9bd84a'});
+      const fire = p.kind === 'ember' || p.kind === 'fireball';
+      if(p.kind !== 'arrow' && Math.random() < (fire ? .9 : .6)) part({x:p.x, y:p.y, vx:rnd(-20,20), vy:fire ? rnd(-50,-10) : 0, life:fire ? .35 : .3, size:fire ? rnd(2,4) : 2, c:fire ? pick(['#ff8a2b','#ffd24a']) : p.kind === 'farrow' ? '#d8f07a' : '#9bd84a'});
       for(const m of mons){
         if(m.dead) continue;
         if(Math.hypot(p.x - m.x, p.y - m.y) < m.r + 5){
+          if(p.boom){ explode(p); break; }
           dealHit(m, p.dmg, p.crit);
           if(p.pois) poison(m, p.pois, p.pdur);
-          for(let i = 0; i < 4; i++) part({x:p.x, y:p.y, vx:rnd(-60,60), vy:rnd(-60,60), life:.25, size:2, c:p.pois ? '#9bd84a' : '#f3efe2'});
+          if(p.burn) burn(m, p.burn, p.bdur);
+          for(let i = 0; i < 4; i++) part({x:p.x, y:p.y, vx:rnd(-60,60), vy:rnd(-60,60), life:.25, size:2, c:fire ? '#ff8a2b' : p.pois ? '#9bd84a' : '#f3efe2'});
           p.life = 0; break;
         }
       }
+      if(p.boom && p.life <= 0) explode(p);
     }
   }
   projs = projs.filter(p => p.life > 0);
   for(const c of clouds){
     c.t += dt; c.tick -= dt;
-    if(c.tick <= 0){ c.tick = .5; for(const m of mons) if(!m.dead && D(m, c) < c.r){ poison(m, c.dps*.5, 1*ST.pdur); m.aggro = true; } }
-    if(Math.random() < dt*30){ const an = Math.random()*TAU, rr = Math.sqrt(Math.random())*c.r; part({x:c.x + Math.cos(an)*rr, y:c.y + Math.sin(an)*rr*.8 - 60, vy:300, life:.2, size:1.5, c:'#c8f080', kind:'streak'}); }
+    if(c.tick <= 0){ c.tick = .5; for(const m of mons) if(!m.dead && D(m, c) < c.r){ (c.fire ? burn : poison)(m, c.dps*.5, 1*ST.pdur); m.aggro = true; } }
+    if(c.fire){ if(Math.random() < dt*40){ const an = Math.random()*TAU, rr = Math.sqrt(Math.random())*c.r; part({x:c.x + Math.cos(an)*rr, y:c.y + Math.sin(an)*rr*.8, vy:rnd(-70,-30), life:.45, size:rnd(2,4), c:pick(['#ff8a2b','#ffd24a','#ff5a1f'])}); } }
+    else if(Math.random() < dt*30){ const an = Math.random()*TAU, rr = Math.sqrt(Math.random())*c.r; part({x:c.x + Math.cos(an)*rr, y:c.y + Math.sin(an)*rr*.8 - 60, vy:300, life:.2, size:1.5, c:'#c8f080', kind:'streak'}); }
   }
   clouds = clouds.filter(c => c.t < c.dur);
   for(const l of later) l.t -= dt;

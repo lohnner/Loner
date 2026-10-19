@@ -52,9 +52,47 @@ function drawHero(){
   const h = hero; if(h.alpha <= 0 || h.scale <= 0) return;
   ctx.save(); ctx.translate(h.x, h.y); ctx.globalAlpha = h.alpha; ctx.scale(h.scale, h.scale);
   ctx.fillStyle = 'rgba(0,0,0,.42)'; ell(0, 3, 15, 5.5);
-  const war = isWar(), gc = war ? '224,87,74' : '155,216,74';
+  const war = isWar(), gc = war ? '224,87,74' : isMage() ? '255,150,50' : '155,216,74';
   if(h.cast){ const k = Math.sin(clamp(h.cast.t/h.cast.dur, 0, 1)*Math.PI); const g = ctx.createRadialGradient(0, -18, 4, 0, -18, 40); g.addColorStop(0, `rgba(${gc},${.45*k})`); g.addColorStop(1, `rgba(${gc},0)`); ctx.fillStyle = g; circ(0, -18, 40); }
-  if(war) drawWarrior(h); else drawArcher(h);
+  if(war) drawWarrior(h); else if(isMage()) drawMage(h); else drawArcher(h);
+  ctx.restore();
+}
+function drawMage(h){
+  const p = heroPose(h), hit = h.hit > 0, W = c => hit ? '#ffffff' : c;
+  const CL = CLOAKS[(S.char && S.char.color) || 0] || CLOAKS[0];
+  ctx.save(); ctx.scale(p.fx, 1);
+  heroLegs(p.walk*.6, W('#3a2e26'), W('#2a1f18'));
+  ctx.translate(0, -p.bob);
+  // manto longo até os pés
+  ctx.fillStyle = cyl(-12, 12, W(CL.a)); ctx.beginPath(); ctx.moveTo(-6.5, -31); ctx.lineTo(6.5, -31); ctx.lineTo(12, -1 + p.walk); ctx.quadraticCurveTo(0, 2, -12, -1 - p.walk); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = cyl(-5, 5, W(CL.b)); ctx.beginPath(); ctx.moveTo(-3.5, -30); ctx.lineTo(3.5, -30); ctx.lineTo(4.5, 0); ctx.lineTo(-4.5, 0); ctx.fill();
+  ctx.fillStyle = W('#c9a24a'); rrect(-7.5, -18, 15, 2.4, 1); sphere(0, -16.8, 1.8, W('#ff8a2b'));
+  // gola e rosto com barba
+  sphere(-.3, -30.5, 6, W(CL.h));
+  sphere(2.5, -35, 4.7, W('#d2a580'));
+  ctx.fillStyle = W('#e8e2d8'); ctx.beginPath(); ctx.moveTo(.5, -33.5); ctx.quadraticCurveTo(5.5, -33, 6.5, -31); ctx.quadraticCurveTo(4, -26, 1.5, -28.5); ctx.fill();
+  ctx.fillStyle = '#1b1410'; circ(5, -36, .9);
+  // chapéu pontudo
+  ctx.fillStyle = cyl(-11, 11, W(CL.h)); ell(0, -38.5, 10.5, 3);
+  ctx.fillStyle = cyl(-7, 7, W(CL.h)); ctx.beginPath(); ctx.moveTo(-6.5, -39); ctx.quadraticCurveTo(-2, -52, 5 - p.walk, -56); ctx.quadraticCurveTo(2, -48, 6.5, -39); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = W('#c9a24a'); rrect(-6.5, -41.5, 13, 2.2, 1);
+  // braço com cajado: ergue ao lançar
+  let raise = 0;
+  if(h.atk && !h.atk.rel) raise = .5*clamp(h.atk.t/(h.atk.dur*.55), 0, 1);
+  if(h.cast && !h.cast.done) raise = clamp(h.cast.t/(h.cast.dur*.6), 0, 1);
+  ctx.save(); ctx.translate(4, -26); ctx.rotate(p.la*.6 - .25 - raise*.9);
+  ctx.lineCap = 'round'; ctx.strokeStyle = W(shade(CL.a, -.1)); ctx.lineWidth = 4; line(0, 0, 9, 0);
+  sphere(10, 0, 2.2, W('#d2a580'));
+  ctx.rotate(-1.35);
+  const eq = S.eq.bow, wood = eq && eq.rar ? RAR[eq.rar].c : '#7a5232';
+  ctx.strokeStyle = cyl(-2, 2, '#6b4a2b'); ctx.lineWidth = 3; line(-14, 10, 22, 10);
+  ctx.strokeStyle = wood; ctx.lineWidth = 1.2; line(-12, 10, 20, 10);
+  // orbe de fogo na ponta
+  const glow = .65 + .35*Math.sin(T*6) + raise*.5, og = ctx.createRadialGradient(25, 10, 1, 25, 10, 12*glow + 4);
+  og.addColorStop(0, 'rgba(255,245,200,1)'); og.addColorStop(.35, 'rgba(255,160,50,.9)'); og.addColorStop(1, 'rgba(255,70,20,0)');
+  ctx.fillStyle = og; circ(25, 10, 12*glow + 4);
+  ctx.restore();
+  ctx.lineCap = 'butt';
   ctx.restore();
 }
 function drawArcher(h){
@@ -110,13 +148,9 @@ function drawWarrior(h){
   ctx.scale(p.fx, 1);
   heroLegs(p.walk, W('#6b737c'), W('#3a3530'));
   ctx.translate(0, -p.bob);
-  // escudo nas costas
-  ctx.save(); ctx.translate(-9, -22);
-  const sg = ctx.createRadialGradient(-3, -4, 1, 0, 0, 10); sg.addColorStop(0, shade(CL.b, .4)); sg.addColorStop(.6, CL.b); sg.addColorStop(1, shade(CL.b, -.5));
-  ctx.fillStyle = hit ? '#fff' : sg; ell(0, 0, 7, 10);
-  ctx.strokeStyle = W('#c0c7cf'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 7, 10, 0, 0, TAU); ctx.stroke();
-  sphere(0, 0, 2.2, W('#d8c27a'));
-  ctx.restore();
+  // braço livre (sem escudo): punho fechado ao lado do corpo
+  ctx.lineCap = 'round'; ctx.strokeStyle = W('#7c858f'); ctx.lineWidth = 4.4; line(-7, -27, -9 - p.walk*1.5, -17);
+  sphere(-9 - p.walk*1.5, -16, 2.6, W('#a7b0ba'));
   // tronco: couraça e tabardo
   ctx.fillStyle = cyl(-10, 10, W('#8a939d')); rrect(-9, -32, 18, 19, 5);
   ctx.fillStyle = cyl(-6, 6, W(CL.b)); ctx.beginPath(); ctx.moveTo(-5.5, -27); ctx.lineTo(5.5, -27); ctx.lineTo(6.5, -7 + p.walk*.8); ctx.lineTo(-6.5, -7 - p.walk*.8); ctx.fill();
@@ -185,6 +219,7 @@ function drawMon(m){
   ctx.lineCap = 'butt';
   if(m.poisons.length && !m.dead){ ctx.globalAlpha = .22; ctx.fillStyle = '#8fd14f'; circ(0, 0, r*1.05); }
   if(m.bleeds.length && !m.dead){ ctx.globalAlpha = .25; ctx.fillStyle = '#c0281e'; circ(0, 0, r*1.05); }
+  if(m.burns.length && !m.dead){ ctx.globalAlpha = .2 + .08*Math.sin(T*14 + m.anim); ctx.fillStyle = '#ff7a20'; circ(0, 0, r*1.1); }
   ctx.restore();
 }
 // pz = parte da vida que o veneno/sangramento ainda vai tirar (pintada na cor pzc)
@@ -200,13 +235,13 @@ function drawBars(vis){
   for(const m of mons){
     if(m.dead || !vis(m)) continue;
     const w = m.elite ? 44 : 32, y = m.y - m.r*1.3 - 12;
-    const bl = bleedLeft(m);
-    bar(m.x, y, w, 4, m.hp/m.hpMax, '#d4473b', Math.min(1, (poisonLeft(m) + bl)/m.hpMax), undefined, bl > 0 ? '#ff9a7a' : '#9bd84a');
+    const bl = bleedLeft(m), fl = burnLeft(m);
+    bar(m.x, y, w, 4, m.hp/m.hpMax, '#d4473b', Math.min(1, (poisonLeft(m) + bl + fl)/m.hpMax), undefined, fl > 0 ? '#ffb040' : bl > 0 ? '#ff9a7a' : '#9bd84a');
     if(m.elite){ ctx.fillStyle = '#9fbaff'; ctx.fillText(m.name, m.x, y - 5); }
   }
   if(hero.scale > .3 && hero.alpha > .1){
     const p = hero.hp/ST.life;
-    bar(hero.x, hero.y - 56*hero.scale, 44, 6, p, p > .5 ? '#4fbf5a' : p > .3 ? '#d9b23a' : '#d4473b', 0, scene === 'map' ? S.cfg.ret/100 : undefined);
+    bar(hero.x, hero.y - 64*hero.scale, 44, 6, p, p > .5 ? '#4fbf5a' : p > .3 ? '#d9b23a' : '#d4473b', 0, scene === 'map' ? S.cfg.ret/100 : undefined);
   }
 }
 function drawTown(){
@@ -282,9 +317,11 @@ function render(){
   else for(const o of decor) if(vis(o)) drawDecor(o);
   for(const c of clouds){
     const k = Math.min(1, c.t*3) * Math.min(1, (c.dur - c.t)*2), pul = 1 + Math.sin(T*6)*.04;
-    const g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, c.r*pul); g.addColorStop(0, `rgba(155,216,74,${.42*k})`); g.addColorStop(.7, `rgba(110,170,50,${.28*k})`); g.addColorStop(1, 'rgba(90,140,40,0)');
+    // Nuvem ácida (verde) ou chão em chamas do Meteoro (laranja)
+    const C0 = c.fire ? '255,150,50' : '155,216,74', C1 = c.fire ? '200,60,20' : '110,170,50', C2 = c.fire ? '120,30,10' : '90,140,40';
+    const g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, c.r*pul); g.addColorStop(0, `rgba(${C0},${.42*k})`); g.addColorStop(.7, `rgba(${C1},${.28*k})`); g.addColorStop(1, `rgba(${C2},0)`);
     ctx.fillStyle = g; ell(c.x, c.y, c.r*pul, c.r*.8*pul);
-    ctx.strokeStyle = `rgba(190,240,120,${.5*k})`; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = c.fire ? `rgba(255,200,120,${.5*k})` : `rgba(190,240,120,${.5*k})`; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   }
   for(const d of drops) if(vis(d)) drawItemDrop(d);
   for(const c of coins){ ctx.fillStyle = '#8a6420'; circ(c.x, c.y + 1, 3.6); ctx.fillStyle = '#e2ae4a'; circ(c.x, c.y, 3.4); ctx.fillStyle = '#ffe39a'; circ(c.x - 1, c.y - 1, 1.2); }
@@ -295,6 +332,13 @@ function render(){
   for(const e of ents) e === hero ? drawHero() : drawMon(e);
   for(const p of projs){
     if(p.hostile){ ctx.fillStyle = p.c; circ(p.x, p.y, 4.5); ctx.globalAlpha = .35; circ(p.x, p.y, 8); ctx.globalAlpha = 1; continue; }
+    if(p.kind === 'ember' || p.kind === 'fireball'){
+      // Fogo do Mago: núcleo claro com halo laranja
+      const R = p.kind === 'fireball' ? 9 : 5, g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, R*2.2);
+      g.addColorStop(0, 'rgba(255,245,200,1)'); g.addColorStop(.35, 'rgba(255,170,60,.9)'); g.addColorStop(1, 'rgba(255,80,20,0)');
+      ctx.fillStyle = g; circ(p.x, p.y, R*2.2);
+      continue;
+    }
     const c = p.kind === 'arrow' ? '#e8e2d0' : p.kind === 'farrow' ? '#d8f07a' : '#9bd84a';
     ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
     if(p.kind !== 'arrow'){ ctx.fillStyle = 'rgba(155,216,74,.35)'; ell(0, 0, 14, 5); }

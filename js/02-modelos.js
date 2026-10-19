@@ -6,7 +6,7 @@
 const skew = () => Math.pow(Math.random(), 2.6); // valores altos são raros
 // Itens de classe: armas e lendários com +habilidade são de uma classe (it.cls) e só ela equipa.
 // 1 em 4 sai para a outra classe (o Arqueiro acha espadas, o Guerreiro acha arcos) — dá para vender.
-const otherCls = () => isWar() ? 'arqueiro' : 'guerreiro';
+const otherCls = () => pick(CLASSES.filter(c => c.ok && c.id !== clsOf())).id;
 const canUse = it => !it.cls || it.cls === clsOf();
 const clsName = id => (CLASSES.find(c => c.id === id) || CLASSES[0]).n;
 function genItem(ilvl, rar, slot, cls){
@@ -16,7 +16,7 @@ function genItem(ilvl, rar, slot, cls){
   const it = {id:S.uid++, slot, rar, ilvl, affix:[]};
   if(slot === 'bow' || rar === 3) it.cls = cls;
   if(slot === 'bow'){
-    const b = (cls === 'guerreiro' ? BLADES : BOWS).slice().reverse().find(x => ilvl >= x.lv);
+    const b = weaponBases(cls).slice().reverse().find(x => ilvl >= x.lv);
     const t = skew(), base = (3 + ilvl*1.5) * b.m * (1 + .45*t) * rf;
     it.min = Math.max(1, Math.round(base)); it.max = Math.max(it.min+1, Math.round(base*rnd(1.75,2.05)));
     it.aps = b.aps; it.base = b.n; it.bt = t;
@@ -70,23 +70,28 @@ function calcStats(eq = S.eq){
   const pp = S.pp || {}, dm = (1 + L*.03) * (1 + .01*(pp.dmg || 0)), st = {rk, bonus};
   st.min = wmin*dm; st.max = wmax*dm; st.avg = (st.min + st.max)/2;
   // As passivas de cada classe ocupam o mesmo papel: Dedos Ligeiros = Fúria, Toxina Potente = Brutalidade, Couro Curtido ~ Pele de Ferro
-  st.aps = aps * (1 + a.ias/100) * (1 + .05*(rk('agility') + rk('fury'))) * (1 + .005*(pp.ias || 0));
+  st.aps = aps * (1 + a.ias/100) * (1 + .05*(rk('agility') + rk('fury') + rk('channel'))) * (1 + .005*(pp.ias || 0));
   st.crit = Math.min(75, 5 + a.crit); st.critd = 150 + a.critd;
-  st.pois = 1 + a.pois/100 + .12*(rk('potency') + rk('brutality')) + .015*(pp.pois || 0);
+  st.pois = 1 + a.pois/100 + .12*(rk('potency') + rk('brutality') + rk('pyro')) + .015*(pp.pois || 0);
   st.pdur = 1 + a.pdur/100;
-  // O Guerreiro luta colado: nasce com mais vida e armadura
-  st.life = (70 + L*14 + a.life) * (war ? 1.4 : 1) * (1 + .07*rk('hide') + .08*rk('iron')) * (1 + .01*(pp.life || 0));
-  st.armor = a.armor + 3*rk('hide') + 6*rk('iron') + (war ? 10 + L*2.2 : 0);
-  st.dr = war ? .1 : 0; // Couraça: o Guerreiro recebe 10% menos dano
+  // O Guerreiro luta colado: nasce com mais vida e armadura. O Mago é o mais frágil.
+  st.life = (70 + L*14 + a.life) * (war ? 1.4 : isMage() ? .92 : 1) * (1 + .07*(rk('hide') + rk('ward')) + .08*rk('iron')) * (1 + .01*(pp.life || 0));
+  st.armor = a.armor + 3*(rk('hide') + rk('ward')) + 6*rk('iron') + (war ? 10 + L*2.2 : 0);
+  st.dr = war ? .15 : 0; // Couraça: o Guerreiro recebe 15% menos dano
   st.ms = 125 * (1 + a.ms/100);
-  st.ls = a.ls; st.cdr = Math.min(40, a.cdr); st.gf = a.gf;
+  st.ls = a.ls + (war ? 1.5 : 0); st.cdr = Math.min(40, a.cdr); st.gf = a.gf;
   const critF = 1 + st.crit/100 * (st.critd/100 - 1), cdm = 1 - st.cdr/100, A = st.avg, P = st.pois;
   // Dano por segundo estimado (só para comparar itens): ataque normal + cada ativa dividida pela recarga; 2,5 = alvos médios em área
-  const onHit = (rk('tip') || rk('serrated')) ? (.4 + .2*(rk('tip') + rk('serrated'))) * P : 0;
+  const oh = rk('tip') + rk('serrated') + rk('kindle'), onHit = oh ? (.4 + .2*oh) * P : 0;
   let dps = A * st.aps * critF * (1 + onHit);
-  if(war){
+  if(isMage()){
+    const r1 = rk('firebolt'); if(r1) dps += 1.6*(A*(1.45+.15*r1)*critF + A*(1.15+.3*r1)*P) / (4*cdm);
+    const r2 = rk('flamewave'); if(r2) dps += 2.5*(A*(.9+.1*r2)*critF + A*(.6+.15*r2)*P) / (7*cdm);
+    const r3 = rk('meteor'); if(r3) dps += 2.5*(A*(2.2+.25*r3)*critF + 6*A*(.3+.08*r3)*P) / (10*cdm);
+    const r4 = rk('inferno'); if(r4) dps += 2.5*(A*(1.5+.2*r4)*critF + A*(3+.5*r4)*P) / (12*cdm);
+  } else if(war){
     const r1 = rk('cleave'); if(r1) dps += (A*(1.5+.15*r1)*critF + A*(1.5+.4*r1)*P) / (4*cdm);
-    const r2 = rk('charge'); if(r2) dps += 2*(A*(.7+.08*r2)*critF + A*(.55+.13*r2)*P) / (7*cdm);
+    const r2 = rk('charge'); if(r2) dps += 2*(A*(1.1+.12*r2)*critF + A*(.8+.2*r2)*P) / (7*cdm);
     const r3 = rk('whirl'); if(r3) dps += 2.5*(A*(2+.2*r3)*critF + A*(1.36+.32*r3)*P) / (10*cdm);
     const r4 = rk('rupture'); if(r4) dps += 2.5*(A*(1.7+.2*r4)*critF + A*(2+.4*r4)*P) / (12*cdm);
   } else {
@@ -111,13 +116,22 @@ function skDesc(id, st){
     case 'rain': return `Nuvem ácida de raio ${70+5*r} por 4s. Quem fica dentro sofre cerca de ${fmt(a*(.6+.15*r)*p)} de veneno por segundo.`;
     case 'burst': return `Ultimate. Onda de praga em volta de você (raio 300): envenena todos com ${fmt(a*(3+.5*r)*p)} em ${n1(4*d)}s, detona na hora ${pc(1+.15*r)} do veneno que já estava neles e espalha metade para os vizinhos.`;
     case 'cleave': return `Avança até o alvo e causa ${pc(1.5+.15*r)} do dano da arma, abrindo um corte que sangra ${fmt(a*(1.5+.4*r)*p)} em ${n1(4*d)}s.`;
-    case 'charge': return `Corre até o ponto mirado (até 260) atropelando tudo no caminho: ${pc(.7+.08*r)} do dano da arma e ${fmt(a*(.55+.13*r)*p)} de sangramento em cada um.`;
+    case 'charge': return `Corre até o ponto mirado (até 260) atropelando tudo no caminho: ${pc(1.1+.12*r)} do dano da arma e ${fmt(a*(.8+.2*r)*p)} de sangramento em cada um.`;
     case 'whirl': return `Gira por 2s acertando todos em volta (raio ${80+3*r}) 8 vezes: cada giro causa ${pc(.25+.025*r)} do dano da arma e ${fmt(a*(.17+.04*r)*p)} de sangramento. Dá para andar girando.`;
     case 'rupture': return `Ultimate. Salta e esmaga o chão (raio 140): causa ${pc(1.7+.2*r)} do dano da arma em todos, detona na hora ${pc(1+.15*r)} do sangramento que já estava neles e abre um novo de ${fmt(a*(2+.4*r)*p)} em ${n1(4*d)}s.`;
     case 'serrated': return `Ataques normais fazem sangrar ${pc(.4+.2*r)} do dano do golpe ao longo de 3s.`;
     case 'brutality': return `+${12*r}% de dano de sangramento.`;
     case 'fury': return `+${5*r}% de velocidade de ataque.`;
     case 'iron': return `+${8*r}% de vida e +${6*r} de armadura.`;
+    case 'firebolt': return `Lança uma bola de fogo que explode no alvo (raio 55): ${pc(1.45+.15*r)} do dano da arma em todos e queimadura de ${fmt(a*(1.15+.3*r)*p)} em ${n1(3*d)}s.`;
+    case 'flamewave': return `Onda de chamas em cone na direção mirada (alcance 190): ${pc(.9+.1*r)} do dano da arma e queimadura de ${fmt(a*(.6+.15*r)*p)} em cada inimigo.`;
+    case 'meteor': return `Um meteoro cai no ponto mirado (raio ${75+4*r}) depois de 0,7s: ${pc(2.2+.25*r)} do dano da arma e o chão queima por 3s (${fmt(a*(.3+.08*r)*p*2)} por segundo).`;
+    case 'inferno': return `Ultimate. Explosão de fogo em volta de você (raio 260): ${pc(1.5+.2*r)} do dano da arma em todos, detona na hora ${pc(1+.15*r)} da queimadura que já estava neles e incendeia com ${fmt(a*(3+.5*r)*p)} em ${n1(4*d)}s.`;
+    case 'kindle': return `Ataques normais queimam ${pc(.4+.2*r)} do dano do golpe ao longo de 3s.`;
+    case 'pyro': return `+${12*r}% de dano de queimadura.`;
+    case 'channel': return `+${5*r}% de velocidade de ataque.`;
+    case 'ward': return `+${7*r}% de vida e +${3*r} de armadura.`;
+    case 'combust': return `Quando um inimigo que está queimando morre, ele explode: ${pc(.4+.12*r)} da queimadura restante vira dano em quem estiver perto.`;
     case 'bloodlust': return `Quando um inimigo que está sangrando morre, você recupera ${n1(1.5+.5*r)}% da vida máxima.`;
     case 'tip': return `Ataques normais envenenam ${pc(.4+.2*r)} do dano do golpe ao longo de 3s.`;
     case 'potency': return `+${12*r}% de dano de veneno.`;

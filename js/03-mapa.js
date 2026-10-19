@@ -84,15 +84,23 @@ function makeTown(){
 function makeMon(type, x, y, ml, elite){
   const d = MONS[type], hpMax = d.hp * (14 + ml*9 + ml*ml*.7 + ml*ml*ml*.025) * (elite ? 3.2 : 1);
   return {type, d, x, y, ml, elite, hp:hpMax, hpMax, r:d.r*(elite?1.3:1), dmg:d.dmg*(3 + ml*1.5 + ml*ml*.02)*(elite?1.5:1), spd:d.spd*(elite?1.05:1),
-    acd:rnd(0,1), atkT:0, fired:false, face:rnd(0,TAU), anim:rnd(0,9), hit:0, poisons:[], bleeds:[], pAcc:0, pT:.6, aggro:false, moving:false, wx:x, wy:y, wt:0, dead:false, deadT:0,
+    acd:rnd(0,1), atkT:0, fired:false, face:rnd(0,TAU), anim:rnd(0,9), hit:0, poisons:[], bleeds:[], burns:[], pAcc:0, pT:.6, aggro:false, moving:false, wx:x, wy:y, wt:0, dead:false, deadT:0,
     name: elite ? `${d.n} ${pick(ELITE_TAG)}` : d.n};
 }
+// Primeiro mapa: criaturas sozinhas e longe umas das outras (difícil pegar duas de uma vez).
+// Demais mapas: sozinha (35%), dupla (30%) ou grupo de 3 a 5 (35%).
+const SOLO_MAP = 'campos', SOLO_GAP = 260;
+const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; const r = Math.random(); return r < .35 ? 1 : r < .65 ? 2 : rint(3, 5); };
 function spawnPack(initial){
-  let x, y, tries = 0;
-  do{ const a = Math.random()*TAU, dd = initial ? rnd(280, 800) : rnd(460, 850); x = hero.x + Math.cos(a)*dd; y = hero.y + Math.sin(a)*dd; tries++; }
-  while((x < 80 || y < 80 || x > W_MAP-80 || y > W_MAP-80) && tries < 25);
+  const solo = mapDef.id === SOLO_MAP;
+  let x, y, tries = 0, ok;
+  do{
+    const a = Math.random()*TAU, dd = initial ? rnd(280, 800) : rnd(460, 850); x = hero.x + Math.cos(a)*dd; y = hero.y + Math.sin(a)*dd; tries++;
+    ok = x >= 80 && y >= 80 && x <= W_MAP-80 && y <= W_MAP-80 && (!solo || !mons.some(m => !m.dead && D(m, {x, y}) < SOLO_GAP));
+  } while(!ok && tries < 40);
+  if(!ok && solo) return; // sem lugar longe o bastante: tenta de novo no próximo spawn
   x = clamp(x, 80, W_MAP-80); y = clamp(y, 80, W_MAP-80);
-  const n = rint(2, 5), eliteIdx = Math.random() < .1 ? 0 : -1, main = pick(mapDef.mons);
+  const n = packSize(), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
   for(let i = 0; i < n; i++){
     const t = Math.random() < .7 ? main : pick(mapDef.mons);
     mons.push(makeMon(t, x + rnd(-50,50), y + rnd(-50,50), rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx));
@@ -105,7 +113,7 @@ function enterMap(id){
   hero.x = W_MAP/2; hero.y = W_MAP/2; hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.kite = 0;
   cam.x = hero.x; cam.y = hero.y;
   groundPat = makeGround(mapDef); decor = makeDecor(mapDef);
-  for(let i = 0; i < 5; i++) spawnPack(true);
+  for(let i = 0; i < (mapDef.id === SOLO_MAP ? 9 : 7); i++) spawnPack(true);
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
   log(`Caçando em ${mapDef.name}`, '#c9e6a0');
   const xm = xpMult(mapDef); if(xm < 1) log(`Mapa abaixo do seu nível: XP reduzida em ${Math.round((1 - xm)*100)}%`, '#ff8c80');

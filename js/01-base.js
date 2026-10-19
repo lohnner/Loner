@@ -63,26 +63,43 @@ const SKD = {
   fury:{n:'Fúria',act:0,req:5,max:10},
   iron:{n:'Pele de Ferro',act:0,req:7,max:10},
   bloodlust:{n:'Sede de Sangue',act:0,req:12,max:5},
+  // Mago (fogo / queimadura)
+  firebolt:{n:'Bola de Fogo',act:1,req:1,max:10,cd:4},
+  flamewave:{n:'Onda de Chamas',act:1,req:3,max:10,cd:7},
+  meteor:{n:'Meteoro',act:1,req:6,max:10,cd:10},
+  inferno:{n:'Inferno',act:1,req:10,max:10,cd:12},
+  kindle:{n:'Brasa Viva',act:0,req:2,max:10},
+  pyro:{n:'Piromania',act:0,req:4,max:10},
+  channel:{n:'Mente Ágil',act:0,req:5,max:10},
+  ward:{n:'Escudo Arcano',act:0,req:7,max:10},
+  combust:{n:'Combustão',act:0,req:12,max:5},
 };
 // Cada classe tem 4 ativas (teclas 1–4) e 5 passivas. ACTIVE/PASSIVE mudam com setClass() ao entrar com um personagem.
 const CLASS_KIT = {
   arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
   guerreiro:{active:['cleave','charge','whirl','rupture'], passive:['serrated','brutality','fury','iron','bloodlust']},
+  mago:{active:['firebolt','flamewave','meteor','inferno'], passive:['kindle','pyro','channel','ward','combust']},
 };
 let ACTIVE = CLASS_KIT.arqueiro.active, PASSIVE = CLASS_KIT.arqueiro.passive;
 function setClass(cls){ const k = CLASS_KIT[cls] || CLASS_KIT.arqueiro; ACTIVE = k.active; PASSIVE = k.passive; }
 const clsOf = () => (S.char && S.char.cls) || 'arqueiro';
 const isWar = () => clsOf() === 'guerreiro';
-// Dano ao longo do tempo da classe: o Arqueiro envenena, o Guerreiro faz sangrar (mesmos atributos pois/pdur nos itens)
-const dotN = () => isWar() ? 'sangramento' : 'veneno';
-const dotT = () => isWar() ? 'Sangramento' : 'Veneno';
+const isMage = () => clsOf() === 'mago';
+// Dano ao longo do tempo da classe: o Arqueiro envenena, o Guerreiro faz sangrar, o Mago queima (mesmos atributos pois/pdur nos itens)
+const DOT_INFO = {arqueiro:{n:'veneno', t:'Veneno', de:'do veneno'}, guerreiro:{n:'sangramento', t:'Sangramento', de:'do sangramento'}, mago:{n:'queimadura', t:'Queimadura', de:'da queimadura'}};
+const dotN = () => DOT_INFO[clsOf()].n;
+const dotT = () => DOT_INFO[clsOf()].t;
+const dotDe = () => DOT_INFO[clsOf()].de;
 
 const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
-// O espaço da arma se chama 'bow' por compatibilidade com saves antigos; para o Guerreiro ele é uma lâmina
-const SLOT_N = {get bow(){ return isWar() ? 'Arma' : 'Arco'; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
+// O espaço da arma se chama 'bow' por compatibilidade com saves antigos; o nome muda com a classe
+const WEAPON_N = {arqueiro:'Arco', guerreiro:'Arma', mago:'Cajado'};
+const SLOT_N = {get bow(){ return WEAPON_N[clsOf()]; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
 const BOWS = [{lv:0,n:'Arco Curto',aps:1.3,m:1},{lv:8,n:'Arco de Caça',aps:1.2,m:1.12},{lv:16,n:'Arco Longo',aps:1.05,m:1.32},{lv:24,n:'Arco Composto',aps:1.15,m:1.3},{lv:32,n:'Arco de Guerra',aps:1.1,m:1.42}];
 const BLADES = [{lv:0,n:'Espada Curta',aps:1.2,m:1},{lv:8,n:'Machado de Guerra',aps:1.05,m:1.2},{lv:16,n:'Espada Longa',aps:1.1,m:1.2},{lv:24,n:'Montante',aps:.9,m:1.42},{lv:32,n:'Lâmina Rúnica',aps:1.1,m:1.3}];
-const weaponBases = () => isWar() ? BLADES : BOWS;
+const STAVES = [{lv:0,n:'Cajado de Carvalho',aps:1.2,m:1},{lv:8,n:'Varinha de Brasa',aps:1.3,m:1.05},{lv:16,n:'Cajado Rúnico',aps:1.05,m:1.3},{lv:24,n:'Cetro Ardente',aps:1.15,m:1.28},{lv:32,n:'Cajado do Abismo',aps:1.05,m:1.45}];
+const WEAPONS = {arqueiro:BOWS, guerreiro:BLADES, mago:STAVES};
+const weaponBases = cls => WEAPONS[cls || clsOf()] || BOWS;
 const BASES = {
   helm:['Capuz de Linho','Capuz de Couro','Elmo de Escamas','Capuz Sombrio'],
   chest:['Gibão Acolchoado','Couraça de Couro','Brigantina','Manto de Escamas'],
@@ -102,7 +119,7 @@ const AFX = {
   armor:{n:v=>`+${v} de armadura`,lo:l=>2+l*.6,hi:l=>6+l*2,slots:['helm','chest','gloves','boots']},
   ls:{n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow','ring','amulet']},
   cdr:{n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
-  pdur:{n:v=>`+${v}% de duração do ${dotN()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
+  pdur:{n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
   gf:{n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
 };
 const SUF = {life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
@@ -114,6 +131,8 @@ const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do P�
 const KEY = 'cacada-vibora-v1';
 const startWeapon = cls => cls === 'guerreiro'
   ? {id:0,slot:'bow',rar:0,ilvl:1,base:'Espada Enferrujada',name:'Espada Enferrujada',min:3,max:6,aps:1.15,affix:[],bt:0}
+  : cls === 'mago'
+  ? {id:0,slot:'bow',rar:0,ilvl:1,base:'Cajado de Aprendiz',name:'Cajado de Aprendiz',min:3,max:6,aps:1.15,affix:[],bt:0}
   : {id:0,slot:'bow',rar:0,ilvl:1,base:'Arco Simples',name:'Arco Simples',min:3,max:6,aps:1.2,affix:[],bt:0};
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
@@ -141,9 +160,9 @@ function readLocal(key){
 }
 const heroName = () => S.char ? S.char.name : 'Víbora';
 const CLOAKS = [{n:'Musgo',a:'#2b4d30',b:'#3f6b3b',h:'#1f3a25'},{n:'Couro',a:'#5a3f26',b:'#7a5a38',h:'#3e2a19'},{n:'Noite',a:'#28344f',b:'#3c4c70',h:'#1b2438'},{n:'Sangue',a:'#5a2224',b:'#7d3336',h:'#3d1618'}];
-const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Corpo a corpo com lâminas',ok:1},{id:'feiticeira',n:'Feiticeira',d:'Em breve'}];
+const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Corpo a corpo com lâminas',ok:1},{id:'mago',n:'Mago',d:'Magias de fogo à distância',ok:1}];
 // Builds liberadas por classe (cls); as sem cls ainda não existem
-const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1,cls:'arqueiro'},{id:'sangramento',n:'Sangramento',d:'Cortes que sangram',ok:1,cls:'guerreiro'},{id:'gelo',n:'Gelo',d:'Em breve'},{id:'fogo',n:'Fogo',d:'Em breve'}];
+const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1,cls:'arqueiro'},{id:'sangramento',n:'Sangramento',d:'Cortes que sangram',ok:1,cls:'guerreiro'},{id:'fogo',n:'Fogo',d:'Explosões e queimaduras',ok:1,cls:'mago'},{id:'gelo',n:'Gelo',d:'Em breve'}];
 const buildsFor = cls => BUILDS.filter(b => !b.cls || b.cls === cls);
 const xpMult = md => { const over = S.lv - md.lv[1]; return over > 0 ? Math.max(.05, 1 - over*.12) : 1; };
 const avgIlvl = () => Math.round(SLOTS.reduce((t, k) => t + (S.eq[k] ? S.eq[k].ilvl : 0), 0) / SLOTS.length);

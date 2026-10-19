@@ -6,8 +6,10 @@
 const SVG = (inner, fill) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 const ICON_BOW = SVG('<path d="M7 3c8 3 8 15 0 18"/><path d="M7 3v18" stroke-width="1"/><path d="M5 12h14M16 9l3 3-3 3"/>');
 const ICON_SWORD = SVG('<path d="M14.5 3H21v6.5L10 20.5 3.5 14z" fill="currentColor" fill-opacity=".25"/><path d="M8 13l3 3M4 17l3 3M6.5 15.5L3 19"/>');
+const ICON_STAFF = SVG('<path d="M5 21L15 9"/><circle cx="17.5" cy="6.5" r="3.5" fill="currentColor" fill-opacity=".35"/><path d="M17.5 1.5v1.5M22.5 6.5H21M21 3l-1 1"/>');
+const WEAPON_ICON = {arqueiro:ICON_BOW, guerreiro:ICON_SWORD, mago:ICON_STAFF};
 const ICON_ITEM = {
-  get bow(){ return isWar() ? ICON_SWORD : ICON_BOW; },
+  get bow(){ return WEAPON_ICON[clsOf()]; },
   helm: SVG('<path d="M4 20c0-9 3.5-16 8-16s8 7 8 16c-2-2.5-5-3.5-8-3.5S6 17.5 4 20z" fill="currentColor" fill-opacity=".25"/><path d="M9 13c1 1 5 1 6 0"/>'),
   chest: SVG('<path d="M8 4l4 2 4-2 4 4-2 3v9H6v-9L4 8z" fill="currentColor" fill-opacity=".25"/><path d="M12 6v14"/>'),
   gloves: SVG('<path d="M8 21v-7l-2.5-4 1.5-1 2 2V5a1 1 0 0 1 2 0v6V4a1 1 0 0 1 2 0v7V5a1 1 0 0 1 2 0v7V7a1 1 0 0 1 2 0v8l-2 6z" fill="currentColor" fill-opacity=".25"/>'),
@@ -34,6 +36,16 @@ const ICON_SK = {
   brutality: SVG('<path d="M12 3c-3 4-6 6-6 10a6 6 0 0 0 12 0c0-4-3-6-6-10z" fill="currentColor" fill-opacity=".3"/><path d="M9 14l2 2 4-4"/>'),
   fury: SVG('<path d="M13 2L5 14h6l-1 8 8-12h-6z" fill="currentColor" fill-opacity=".3"/>'),
   iron: SVG('<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="currentColor" fill-opacity=".25"/><path d="M8 10h8M8 14h8M12 6v12"/>'),
+  // Mago
+  firebolt: SVG('<path d="M4 20l7-7"/><path d="M15 3c1 3 6 3 6 8a6 6 0 0 1-12 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3 1-5 2-7z" fill="currentColor" fill-opacity=".3"/>'),
+  flamewave: SVG('<path d="M3 12l8-7v14z" fill="currentColor" fill-opacity=".2"/><path d="M13 7c2 1 2 3 0 5s-2 4 0 5M17 5c3 2 3 5 0 7s-3 5 0 7"/>'),
+  meteor: SVG('<path d="M3 3l9 9M7 3l7 7M3 7l7 7"/><circle cx="16" cy="16" r="5" fill="currentColor" fill-opacity=".35"/>'),
+  inferno: SVG('<path d="M12 22c5 0 8-3.5 8-8 0-5-4-6-5-11-2 2-3 4-3 6-1-1-2-2-2-4-3 3-6 6-6 9 0 4.5 3 8 8 8z" fill="currentColor" fill-opacity=".3"/><path d="M12 22c-2 0-3-1.5-3-3.5S12 14 12 14s3 2.5 3 4.5-1 3.5-3 3.5z" fill="currentColor"/>'),
+  kindle: SVG('<path d="M12 3c-1 4-5 6-5 10a5 5 0 0 0 10 0c0-4-4-6-5-10z"/><circle cx="12" cy="14" r="2" fill="currentColor"/>'),
+  pyro: SVG('<path d="M9 3h6M10 3v6L5 19a1.5 1.5 0 0 0 1.4 2h11.2A1.5 1.5 0 0 0 19 19l-5-10V3"/><path d="M12 13c-1 2-2 2.5-2 4a2 2 0 0 0 4 0c0-1.5-1-2-2-4z" fill="currentColor"/>'),
+  channel: SVG('<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 3"/><path d="M4 4l2 2M20 4l-2 2" />'),
+  ward: SVG('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".2"/><path d="M12 6l1.6 3.8 4 .4-3 2.7.9 4L12 14.8 8.5 16.9l.9-4-3-2.7 4-.4z"/>'),
+  combust: SVG('<circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2" stroke-width="2.2"/>'),
   bloodlust: SVG('<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z" fill="currentColor" fill-opacity=".3"/><path d="M12 9v6M9 12h6"/>'),
 };
 
@@ -151,8 +163,8 @@ function panelMaps(){
   }).join('') + `</div>`;
 }
 // Ícone e nome do espaço de um item: a arma mostra espada ou arco conforme a classe do item
-const itemIcon = it => it.slot === 'bow' && it.cls ? (it.cls === 'guerreiro' ? ICON_SWORD : ICON_BOW) : ICON_ITEM[it.slot];
-const itemSlotN = it => it.slot === 'bow' && it.cls ? (it.cls === 'guerreiro' ? 'Arma' : 'Arco') : SLOT_N[it.slot];
+const itemIcon = it => it.slot === 'bow' && it.cls ? WEAPON_ICON[it.cls] : ICON_ITEM[it.slot];
+const itemSlotN = it => it.slot === 'bow' && it.cls ? WEAPON_N[it.cls] : SLOT_N[it.slot];
 function tileHTML(it, act, label){
   if(!it) return `<div class="tile empty">${ICON_ITEM[label] || ''}<span class="lbl">${SLOT_N[label] || ''}</span></div>`;
   let up = '';
@@ -171,7 +183,7 @@ function panelHero(){
     ${stat('Vida', fmt(st.life))}${stat('Armadura', fmt(st.armor))}
     ${stat('Dano da arma', `${fmt(st.min)}–${fmt(st.max)}`)}${stat('Ataques/s', n1(st.aps))}
     ${stat('Crítico', `${n1(st.crit)}% · ${fmt(st.critd)}%`)}${stat('Dano de ' + dotN(), '+' + Math.round((st.pois - 1)*100) + '%')}
-    ${stat('Duração do ' + dotN(), '+' + Math.round((st.pdur - 1)*100) + '%')}${stat('Recarga', '-' + st.cdr + '%')}
+    ${stat('Duração ' + dotDe(), '+' + Math.round((st.pdur - 1)*100) + '%')}${stat('Recarga', '-' + st.cdr + '%')}
     ${stat('Roubo de vida', n1(st.ls) + '%')}${stat('Movimento', fmt(st.ms))}
     ${stat('ilvl médio do equipamento', avgIlvl())}${stat('Itens equipados', SLOTS.filter(k => S.eq[k]).length + '/7')}
   </div></div>`;
@@ -181,7 +193,7 @@ function panelHero(){
       <p class="note">Depois do nível ${MAX_LV}, a XP vira níveis de Paragon. Cada um dá 1 ponto para gastar aqui, em qualquer lugar. O nível de Paragon conta no ranking.</p>`;
     h += Object.keys(PARA).map(k => {
       const P = PARA[k], v = S.pp[k], can = pf > 0 && (!P.max || v < P.max);
-      const ic = isWar() ? {dmg:'cleave', pois:'brutality', life:'iron', ias:'fury'} : {dmg:'arrow', pois:'potency', life:'hide', ias:'agility'};
+      const ic = isWar() ? {dmg:'cleave', pois:'brutality', life:'iron', ias:'fury'} : isMage() ? {dmg:'firebolt', pois:'pyro', life:'ward', ias:'channel'} : {dmg:'arrow', pois:'potency', life:'hide', ias:'agility'};
       return `<div class="skill"><div class="ico" style="color:#c9a8ff">${ICON_SK[ic[k]]}</div>
         <div><div class="sn">${P.n} <em>${P.max ? `máx. ${P.max}` : 'sem limite'}</em></div><div class="sd">${P.d(v)} agora</div></div>
         <div class="ctl"><span class="rank">${v}${P.max ? '/' + P.max : ''}</span><button class="plus" data-act="parUp" data-v="${k}" ${can ? '' : 'disabled'} aria-label="Adicionar ponto de Paragon em ${P.n}">+</button></div></div>`;
@@ -244,7 +256,7 @@ function panelRules(){
 function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
-const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração do ' + dotN(); }, gf:'% de ouro encontrado'};
+const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado'};
 const DIFF_DEC = {aps:1, crit:1, ls:1};
 function itemVals(it){
   const v = {}; if(!it) return v;
@@ -292,21 +304,24 @@ function renderDlg(){
 }
 function closeDlg(){ $('#dlg').hidden = true; dlgItem = null; }
 let crSel = {cls:'arqueiro', build:'veneno', color:0};
-const CLS_ICON = {arqueiro:ICON_BOW, guerreiro:ICON_SWORD, feiticeira:SVG('<path d="M6 21L16 5"/><circle cx="17" cy="4" r="2" fill="currentColor"/><path d="M19 9l1 2M13 2l1 1"/>')};
+const CLS_ICON = {arqueiro:ICON_BOW, guerreiro:ICON_SWORD, mago:ICON_STAFF};
+const DEF_NAME = {arqueiro:'Víbora', guerreiro:'Carniceiro', mago:'Brasa'};
 const BLD_ICON = {veneno:ICON_SK.tip, sangramento:ICON_SK.serrated, gelo:SVG('<path d="M12 2v20M3 7l18 10M21 7L3 17"/>'), fogo:SVG('<path d="M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-4 5-4 7-1-1-2-2-2-4-2 2-3 5-3 9 0 4 3 7 7 7z"/>')};
 function showCreate(){ crSel = {cls:'arqueiro', build:'veneno', color:0}; $('#create').hidden = false; renderCreate(''); }
 function renderCreate(name){
   const nm = name !== undefined ? name : ($('#crName') ? $('#crName').value : '');
   const opt = (list, icons, key) => list.map(o => `<button class="opt${crSel[key] === o.id ? ' on' : ''}" data-act="crPick" data-v="${key}:${o.id}" ${o.ok ? '' : 'disabled'}>${icons[o.id]}${o.n}<small>${o.d}</small></button>`).join('');
-  const war = crSel.cls === 'guerreiro';
+  const war = crSel.cls === 'guerreiro', mage = crSel.cls === 'mago';
   const intro = war
     ? 'Começa com uma Espada Enferrujada e o Golpe Dilacerante. A Investida, o Giro de Lâmina e a Ruptura liberam com o nível. Luta colado nos inimigos, com mais vida e armadura, e faz eles sangrarem.'
+    : mage
+    ? 'Começa com um Cajado de Aprendiz e a Bola de Fogo. A Onda de Chamas, o Meteoro e o Inferno liberam com o nível. Ataca de longe com explosões que queimam em área, mas tem menos vida.'
     : 'Começa com um Arco Simples e a Flecha Venenosa. O Leque Tóxico, a Chuva Ácida e a Explosão de Praga liberam com o nível. Ataca de longe e envenena.';
-  $('#crBody').innerHTML = `<h1>Novo personagem</h1><p class="lead">Escolha quem vai caçar por você: o Arqueiro de Veneno ou o Guerreiro de Sangramento.</p>
-    <label class="field"><span>Nome</span><input class="txtin" id="crName" type="text" maxlength="14" autocomplete="off" placeholder="${war ? 'Carniceiro' : 'Víbora'}" value="${nm.replace(/"/g, '&quot;')}"></label>
+  $('#crBody').innerHTML = `<h1>Novo personagem</h1><p class="lead">Escolha quem vai caçar por você: o Arqueiro de Veneno, o Guerreiro de Sangramento ou o Mago de Fogo.</p>
+    <label class="field"><span>Nome</span><input class="txtin" id="crName" type="text" maxlength="14" autocomplete="off" placeholder="${DEF_NAME[crSel.cls]}" value="${nm.replace(/"/g, '&quot;')}"></label>
     <div class="field"><h3>Classe</h3><div class="opts">${opt(CLASSES, CLS_ICON, 'cls')}</div></div>
     <div class="field"><h3>Build</h3><div class="opts">${opt(buildsFor(crSel.cls), BLD_ICON, 'build')}</div></div>
-    <div class="field"><h3>Cor da ${war ? 'armadura' : 'capa'}</h3><div class="sw">${CLOAKS.map((c, i) => `<button class="${crSel.color === i ? 'on' : ''}" style="background:${c.b}" data-act="crColor" data-v="${i}" aria-label="Cor ${c.n}"></button>`).join('')}</div></div>
+    <div class="field"><h3>Cor da ${war ? 'armadura' : mage ? 'túnica' : 'capa'}</h3><div class="sw">${CLOAKS.map((c, i) => `<button class="${crSel.color === i ? 'on' : ''}" style="background:${c.b}" data-act="crColor" data-v="${i}" aria-label="Cor ${c.n}"></button>`).join('')}</div></div>
     <p class="note">${intro} Você usa as habilidades tocando nelas ou nas teclas 1 a 4.</p>
     <button class="btn primary" data-act="create" style="padding:14px;font-size:17px">Começar a caçada</button>
     <button class="btn" data-act="crBack">Voltar para os personagens</button>`;
@@ -368,7 +383,7 @@ const ACT = {
   crPick: v => { const [k, id] = v.split(':'); crSel[k] = id; if(k === 'cls') crSel.build = buildsFor(id).find(b => b.ok).id; renderCreate(); },
   crColor: v => { crSel.color = +v; renderCreate(); },
   create: () => {
-    const name = ($('#crName').value || '').trim().slice(0, 14) || (crSel.cls === 'guerreiro' ? 'Carniceiro' : 'Víbora');
+    const name = ($('#crName').value || '').trim().slice(0, 14) || DEF_NAME[crSel.cls];
     const s = defaults(crSel.cls); s.char = {name, cls:crSel.cls, build:crSel.build, color:crSel.color}; s.cid = newCid();
     $('#create').hidden = true; playChar(s);
     log(`${name} parte para a primeira caçada`, '#9bd84a');

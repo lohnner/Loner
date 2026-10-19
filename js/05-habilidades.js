@@ -5,7 +5,7 @@
 /* ---------- MIRA ---------- */
 // Celular: segurar o botão e arrastar como um joystick; soltar lança. Toque rápido = mira automática.
 // PC: segurar a tecla e apontar com o mouse; soltar lança. Esc ou botão direito cancela.
-const AIMABLE = {fan:1, rain:1, charge:1}, AIM_RANGE = RANGE + 40, AIM_DRAG = 70, AIM_DEAD = 14, FAN_LEN = 360, FAN_SPREAD = .95, FAN_CLOSE = 38;
+const AIMABLE = {fan:1, rain:1, charge:1, flamewave:1, meteor:1}, AIM_RANGE = RANGE + 40, AIM_DRAG = 70, AIM_DEAD = 14, FAN_LEN = 360, FAN_SPREAD = .95, FAN_CLOSE = 38;
 const fanCount = () => 5 + Math.floor(ST.rk('fan')/3);
 const fanAng = (base, i, n) => base - FAN_SPREAD/2 + FAN_SPREAD*i/(n - 1);
 // Criatura "colada" na frente do herói, que leva todas as flechas do leque
@@ -33,8 +33,9 @@ function aimPoint(){
     if(L > 1){ dx = aim.dx/L; dy = aim.dy/L; }
     k = Math.min(1, L/AIM_DRAG) * AIM_RANGE;
   }
-  if(aim.id === 'fan') k = FAN_LEN; // o Leque só usa a direção
-  const maxK = aim.id === 'fan' ? FAN_LEN : aim.id === 'charge' ? CHARGE_LEN : AIM_RANGE;
+  if(aim.id === 'fan') k = FAN_LEN; // o Leque e a Onda de Chamas só usam a direção
+  if(aim.id === 'flamewave') k = WAVE_LEN;
+  const maxK = aim.id === 'fan' ? FAN_LEN : aim.id === 'flamewave' ? WAVE_LEN : aim.id === 'charge' ? CHARGE_LEN : AIM_RANGE;
   if(aim.src === 'touch' && aim.id === 'charge') k = Math.min(1, Math.hypot(aim.dx, aim.dy)/AIM_DRAG) * CHARGE_LEN;
   k = Math.min(k, maxK);
   return {x: clamp(hero.x + dx*k, 20, WORLD.w - 20), y: clamp(hero.y + dy*k, 20, WORLD.h - 20), ang: Math.atan2(dy, dx)};
@@ -76,9 +77,22 @@ function drawFocus(){
 function drawAim(){
   if(!aim || (aim.src === 'touch' && (!aim.moved || Math.hypot(aim.dx, aim.dy) < AIM_DEAD))) return;
   const p = aimPoint(), bad = cds[aim.id] > 0;
-  const c = bad ? '255,120,100' : isWar() ? '235,170,120' : '155,216,74';
+  const c = bad ? '255,120,100' : isWar() ? '235,170,120' : isMage() ? '255,160,70' : '155,216,74';
   ctx.save();
-  if(aim.id === 'charge'){
+  if(aim.id === 'flamewave'){
+    // Cone da Onda de Chamas
+    const sp = WAVE_SPREAD/2, g = ctx.createRadialGradient(hero.x, hero.y, 10, hero.x, hero.y, WAVE_LEN);
+    g.addColorStop(0, `rgba(${c},.4)`); g.addColorStop(1, `rgba(${c},.05)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(hero.x, hero.y); ctx.arc(hero.x, hero.y, WAVE_LEN, p.ang - sp, p.ang + sp); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = `rgba(${c},.85)`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -T*40; ctx.stroke(); ctx.setLineDash([]);
+  } else if(aim.id === 'meteor'){
+    ctx.strokeStyle = `rgba(${c},.22)`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 7]);
+    ctx.beginPath(); ctx.arc(hero.x, hero.y, AIM_RANGE, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    const rad = meteorR();
+    ctx.fillStyle = `rgba(${c},.2)`; ell(p.x, p.y, rad, rad*.8);
+    ctx.strokeStyle = `rgba(${c},.9)`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(p.x, p.y, rad, rad*.8, 0, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(p.x, p.y, rad*(.5 + .5*((T*1.5) % 1)), rad*.8*(.5 + .5*((T*1.5) % 1)), 0, 0, TAU); ctx.stroke();
+  } else if(aim.id === 'charge'){
     // Caminho da Investida: faixa até o ponto de chegada
     ctx.strokeStyle = `rgba(${c},.22)`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 7]);
     ctx.beginPath(); ctx.arc(hero.x, hero.y, CHARGE_LEN, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
