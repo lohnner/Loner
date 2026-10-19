@@ -26,7 +26,7 @@ const ICON_SK = {
 };
 
 /* ---------- INTERFACE ---------- */
-let tab = null, dlgItem = null, panelDirty = false, lastScene = '', resetArm = 0, respecArm = 0;
+let tab = null, dlgItem = null, panelDirty = false, lastScene = '', respecArm = 0;
 const uiOpen = () => !$('#sheet').hidden || !$('#dlg').hidden || !$('#create').hidden || !$('#login').hidden;
 const inTown = () => scene === 'town';
 function dirtyPanel(){ panelDirty = true; }
@@ -211,7 +211,7 @@ function panelRules(){
       <div class="row"><label>${esc(fbUser ? (fbUser.email || fbUser.displayName || 'Conta Google') : 'Sem conta')}<small>${esc(heroName())} fica salvo na sua conta Google e aparece no ranking. Entre com a mesma conta em qualquer aparelho para continuar.</small></label><button class="btn" data-act="logout">Sair</button></div>
     </div>
     <div class="sec"><h3>Registro</h3><div class="stats"><div class="stat"><span>Criaturas abatidas</span><b>${fmt(S.kills)}</b></div><div class="stat"><span>Velocidade</span><b>x${S.speed}</b></div></div></div>
-    <button class="btn ${resetArm > performance.now() ? 'warn' : ''}" data-act="reset">${resetArm > performance.now() ? 'Toque de novo para apagar tudo' : 'Recomeçar do zero'}</button>`;
+    <button class="btn" data-act="switchChar">Trocar de personagem<small>Volta para a lista de personagens da conta</small></button>`;
 }
 function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
@@ -276,7 +276,8 @@ function renderCreate(name){
     <div class="field"><h3>Build</h3><div class="opts">${opt(BUILDS, BLD_ICON, 'build')}</div></div>
     <div class="field"><h3>Cor da capa</h3><div class="sw">${CLOAKS.map((c, i) => `<button class="${crSel.color === i ? 'on' : ''}" style="background:${c.b}" data-act="crColor" data-v="${i}" aria-label="Capa ${c.n}"></button>`).join('')}</div></div>
     <p class="note">Começa com um Arco Simples e a Flecha Venenosa. O Leque Tóxico, a Chuva Ácida e a Explosão de Praga liberam com o nível. Você usa as habilidades tocando nelas.</p>
-    <button class="btn primary" data-act="create" style="padding:14px;font-size:17px">Começar a caçada</button>`;
+    <button class="btn primary" data-act="create" style="padding:14px;font-size:17px">Começar a caçada</button>
+    <button class="btn" data-act="crBack">Voltar para os personagens</button>`;
 }
 function sellWhere(fn, quiet){
   const sold = S.inv.filter(fn); if(!sold.length) return;
@@ -331,19 +332,20 @@ const ACT = {
   sell: () => { if(!inTown()) return; const id = dlgItem.id; sellWhere(i => i.id === id); closeDlg(); },
   drop: () => { const id = dlgItem.id; S.inv = S.inv.filter(i => i.id !== id); closeDlg(); dirtyPanel(); },
   sellR: v => { if(!inTown()) return; const r = +v; sellWhere(i => i.rar === r); },
-  reset: () => {
-    if(resetArm < performance.now()){ resetArm = performance.now() + 3000; dirtyPanel(); setTimeout(dirtyPanel, 3050); return; }
-    resetArm = 0; S = defaults(); refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0; closeSheet(); save(); enterTown(); showCreate();
-  },
   crPick: v => { const [k, id] = v.split(':'); crSel[k] = id; renderCreate(); },
   crColor: v => { crSel.color = +v; renderCreate(); },
   create: () => {
     const name = ($('#crName').value || '').trim().slice(0, 14) || 'Víbora';
-    S = defaults(); S.char = {name, cls:crSel.cls, build:crSel.build, color:crSel.color};
-    refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0;
-    $('#create').hidden = true; enterMap('campos'); save(); rankDirty = true;
+    const s = defaults(); s.char = {name, cls:crSel.cls, build:crSel.build, color:crSel.color}; s.cid = newCid();
+    $('#create').hidden = true; playChar(s);
     log(`${name} parte para a primeira caçada`, '#9bd84a');
   },
+  // Tela de personagens (09-conta.js)
+  crBack: () => { $('#create').hidden = true; showChars(); },
+  pickChar: v => { const c = acct && acct.chars.find(x => x.cid === v); if(c) playChar(c); },
+  delChar: v => deleteChar(v),
+  newChar: () => newChar(),
+  switchChar: () => switchChar(),
 };
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if(!b || b.disabled) return; const f = ACT[b.dataset.act]; if(f) f(b.dataset.v, b); });
 document.addEventListener('change', e => {

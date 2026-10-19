@@ -103,7 +103,7 @@ function normalize(s){
   d.ver = 2;
   return d;
 }
-// Cópia local do save. Com conta Google a chave é KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.
+// Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.
 function readLocal(key){
   try{ const raw = localStorage.getItem(key); if(raw) return JSON.parse(raw); }catch(e){}
   return null;
@@ -115,11 +115,10 @@ const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1},{id:'ge
 const xpMult = md => { const over = S.lv - md.lv[1]; return over > 0 ? Math.max(.05, 1 - over*.12) : 1; };
 const avgIlvl = () => Math.round(SLOTS.reduce((t, k) => t + (S.eq[k] ? S.eq[k].ilvl : 0), 0) / SLOTS.length);
 const mapRec = md => Math.max(0, md.lv[0] - 2);
-// O estado só vale depois do login (09-conta.js troca S pelo save da conta e liga accountReady).
+// S é o personagem em jogo. Só vale depois do login e da escolha na tela de personagens (09-conta.js liga accountReady).
 let S = defaults();
 function save(){
-  if(!accountReady || !fbUser) return;
+  if(!accountReady || !fbUser || !S.char) return;
   S.savedAt = Date.now();
-  try{ localStorage.setItem(KEY + ':' + fbUser.uid, JSON.stringify(S)); }catch(e){}
-  cloudSaveSoon();
+  accountStore();
 }
