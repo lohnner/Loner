@@ -219,6 +219,19 @@ function npcDelivery() {
       allow delete: if false;
     }
 
+    // Caçada da Víbora: save do personagem. Só o dono (conta Google) lê e escreve.
+    match /viboraSaves/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.keys().hasOnly(['data', 'updated'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 300000
+        && request.resource.data.updated == request.time;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Caçada da Víbora: ranking público. Cada conta Google só escreve a própria linha.
     match /ranking/{uid} {
       allow read: if true;
