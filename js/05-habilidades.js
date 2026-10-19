@@ -5,7 +5,7 @@
 /* ---------- MIRA ---------- */
 // Celular: segurar o botão e arrastar como um joystick; soltar lança. Toque rápido = mira automática.
 // PC: segurar a tecla e apontar com o mouse; soltar lança. Esc ou botão direito cancela.
-const AIMABLE = {fan:1, rain:1}, AIM_RANGE = RANGE + 40, AIM_DRAG = 70, AIM_DEAD = 14, FAN_LEN = 360, FAN_SPREAD = .95, FAN_CLOSE = 38;
+const AIMABLE = {fan:1, rain:1, charge:1}, AIM_RANGE = RANGE + 40, AIM_DRAG = 70, AIM_DEAD = 14, FAN_LEN = 360, FAN_SPREAD = .95, FAN_CLOSE = 38;
 const fanCount = () => 5 + Math.floor(ST.rk('fan')/3);
 const fanAng = (base, i, n) => base - FAN_SPREAD/2 + FAN_SPREAD*i/(n - 1);
 // Criatura "colada" na frente do herói, que leva todas as flechas do leque
@@ -34,7 +34,9 @@ function aimPoint(){
     k = Math.min(1, L/AIM_DRAG) * AIM_RANGE;
   }
   if(aim.id === 'fan') k = FAN_LEN; // o Leque só usa a direção
-  k = Math.min(k, aim.id === 'fan' ? FAN_LEN : AIM_RANGE);
+  const maxK = aim.id === 'fan' ? FAN_LEN : aim.id === 'charge' ? CHARGE_LEN : AIM_RANGE;
+  if(aim.src === 'touch' && aim.id === 'charge') k = Math.min(1, Math.hypot(aim.dx, aim.dy)/AIM_DRAG) * CHARGE_LEN;
+  k = Math.min(k, maxK);
   return {x: clamp(hero.x + dx*k, 20, WORLD.w - 20), y: clamp(hero.y + dy*k, 20, WORLD.h - 20), ang: Math.atan2(dy, dx)};
 }
 function aimRelease(){
@@ -74,9 +76,18 @@ function drawFocus(){
 function drawAim(){
   if(!aim || (aim.src === 'touch' && (!aim.moved || Math.hypot(aim.dx, aim.dy) < AIM_DEAD))) return;
   const p = aimPoint(), bad = cds[aim.id] > 0;
-  const c = bad ? '255,120,100' : '155,216,74';
+  const c = bad ? '255,120,100' : isWar() ? '235,170,120' : '155,216,74';
   ctx.save();
-  if(aim.id === 'rain'){
+  if(aim.id === 'charge'){
+    // Caminho da Investida: faixa até o ponto de chegada
+    ctx.strokeStyle = `rgba(${c},.22)`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 7]);
+    ctx.beginPath(); ctx.arc(hero.x, hero.y, CHARGE_LEN, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    const cs = Math.cos(p.ang), sn = Math.sin(p.ang), w = 22;
+    ctx.fillStyle = `rgba(${c},.2)`; ctx.beginPath();
+    ctx.moveTo(hero.x - sn*w, hero.y + cs*w); ctx.lineTo(p.x - sn*w, p.y + cs*w); ctx.lineTo(p.x + sn*w, p.y - cs*w); ctx.lineTo(hero.x + sn*w, hero.y - cs*w); ctx.fill();
+    ctx.strokeStyle = `rgba(${c},.85)`; ctx.lineWidth = 2; ctx.setLineDash([10, 6]); ctx.lineDashOffset = -T*50; line(hero.x, hero.y, p.x, p.y); ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(${c},.9)`; ctx.beginPath(); ctx.moveTo(p.x + cs*14, p.y + sn*14); ctx.lineTo(p.x - sn*9, p.y + cs*9); ctx.lineTo(p.x + sn*9, p.y - cs*9); ctx.fill();
+  } else if(aim.id === 'rain'){
     ctx.strokeStyle = `rgba(${c},.22)`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 7]);
     ctx.beginPath(); ctx.arc(hero.x, hero.y, AIM_RANGE, 0, TAU); ctx.stroke();
     ctx.strokeStyle = `rgba(${c},.55)`; line(hero.x, hero.y, p.x, p.y); ctx.setLineDash([]);

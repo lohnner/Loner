@@ -12,7 +12,7 @@ const fmt = n => Math.round(n).toLocaleString('pt-BR');
 const n1 = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR');
 const pc = n => Math.round(n * 100) + '%';
 const TAU = Math.PI * 2;
-const W_MAP = 1800, INV_MAX = 24, RANGE = 230, MAX_LV = 40;
+const W_MAP = 1800, INV_MAX = 10, RANGE = 230, MAX_LV = 40, MELEE = 46;
 
 /* ---------- DADOS ---------- */
 const RAR = [{n:'Comum',c:'#d9d4c7'},{n:'Mágico',c:'#6f9cff'},{n:'Raro',c:'#f0d34f'},{n:'Lendário',c:'#ff8a2b'}];
@@ -43,21 +43,46 @@ const MONS = {
 const ELITE_TAG = ['Voraz','Colossal','Implacável','Feroz','Imortal'];
 
 const SKD = {
+  // Arqueiro (veneno)
   arrow:{n:'Flecha Venenosa',act:1,req:1,max:10,cd:4},
   fan:{n:'Leque Tóxico',act:1,req:3,max:10,cd:7},
   rain:{n:'Chuva Ácida',act:1,req:6,max:10,cd:10},
-  burst:{n:'Explosão de Praga',act:1,req:10,max:10,cd:14},
+  burst:{n:'Explosão de Praga',act:1,req:10,max:10,cd:12},
   tip:{n:'Ponta Envenenada',act:0,req:2,max:10},
   potency:{n:'Toxina Potente',act:0,req:4,max:10},
   agility:{n:'Dedos Ligeiros',act:0,req:5,max:10},
   hide:{n:'Couro Curtido',act:0,req:7,max:10},
   contagion:{n:'Contágio',act:0,req:12,max:5},
+  // Guerreiro (sangramento)
+  cleave:{n:'Golpe Dilacerante',act:1,req:1,max:10,cd:4},
+  charge:{n:'Investida',act:1,req:3,max:10,cd:7},
+  whirl:{n:'Giro de Lâmina',act:1,req:6,max:10,cd:10},
+  rupture:{n:'Ruptura',act:1,req:10,max:10,cd:12},
+  serrated:{n:'Lâmina Serrilhada',act:0,req:2,max:10},
+  brutality:{n:'Brutalidade',act:0,req:4,max:10},
+  fury:{n:'Fúria',act:0,req:5,max:10},
+  iron:{n:'Pele de Ferro',act:0,req:7,max:10},
+  bloodlust:{n:'Sede de Sangue',act:0,req:12,max:5},
 };
-const ACTIVE = ['arrow','fan','rain','burst'], PASSIVE = ['tip','potency','agility','hide','contagion'];
+// Cada classe tem 4 ativas (teclas 1–4) e 5 passivas. ACTIVE/PASSIVE mudam com setClass() ao entrar com um personagem.
+const CLASS_KIT = {
+  arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
+  guerreiro:{active:['cleave','charge','whirl','rupture'], passive:['serrated','brutality','fury','iron','bloodlust']},
+};
+let ACTIVE = CLASS_KIT.arqueiro.active, PASSIVE = CLASS_KIT.arqueiro.passive;
+function setClass(cls){ const k = CLASS_KIT[cls] || CLASS_KIT.arqueiro; ACTIVE = k.active; PASSIVE = k.passive; }
+const clsOf = () => (S.char && S.char.cls) || 'arqueiro';
+const isWar = () => clsOf() === 'guerreiro';
+// Dano ao longo do tempo da classe: o Arqueiro envenena, o Guerreiro faz sangrar (mesmos atributos pois/pdur nos itens)
+const dotN = () => isWar() ? 'sangramento' : 'veneno';
+const dotT = () => isWar() ? 'Sangramento' : 'Veneno';
 
 const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
-const SLOT_N = {bow:'Arco',helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
+// O espaço da arma se chama 'bow' por compatibilidade com saves antigos; para o Guerreiro ele é uma lâmina
+const SLOT_N = {get bow(){ return isWar() ? 'Arma' : 'Arco'; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
 const BOWS = [{lv:0,n:'Arco Curto',aps:1.3,m:1},{lv:8,n:'Arco de Caça',aps:1.2,m:1.12},{lv:16,n:'Arco Longo',aps:1.05,m:1.32},{lv:24,n:'Arco Composto',aps:1.15,m:1.3},{lv:32,n:'Arco de Guerra',aps:1.1,m:1.42}];
+const BLADES = [{lv:0,n:'Espada Curta',aps:1.2,m:1},{lv:8,n:'Machado de Guerra',aps:1.05,m:1.2},{lv:16,n:'Espada Longa',aps:1.1,m:1.2},{lv:24,n:'Montante',aps:.9,m:1.42},{lv:32,n:'Lâmina Rúnica',aps:1.1,m:1.3}];
+const weaponBases = () => isWar() ? BLADES : BOWS;
 const BASES = {
   helm:['Capuz de Linho','Capuz de Couro','Elmo de Escamas','Capuz Sombrio'],
   chest:['Gibão Acolchoado','Couraça de Couro','Brigantina','Manto de Escamas'],
@@ -69,7 +94,7 @@ const BASES = {
 const ARMOR_M = {helm:1,chest:1.8,gloves:.7,boots:.8};
 const AFX = {
   life:{n:v=>`+${v} de vida`,lo:l=>4+l*1.5,hi:l=>12+l*4.2,slots:SLOTS},
-  pois:{n:v=>`+${v}% de dano de veneno`,lo:()=>5,hi:l=>16+l*.9,slots:['bow','amulet','gloves','ring','helm']},
+  pois:{n:v=>`+${v}% de dano de ${dotN()}`,lo:()=>5,hi:l=>16+l*.9,slots:['bow','amulet','gloves','ring','helm']},
   ias:{n:v=>`+${v}% de velocidade de ataque`,lo:()=>3,hi:()=>15,slots:['bow','gloves','ring','amulet']},
   crit:{n:v=>`+${n1(v)}% de chance de crítico`,lo:()=>1,hi:()=>8,dec:1,slots:['gloves','ring','amulet','helm']},
   critd:{n:v=>`+${v}% de dano crítico`,lo:()=>8,hi:()=>45,slots:['bow','gloves','amulet','ring']},
@@ -77,7 +102,7 @@ const AFX = {
   armor:{n:v=>`+${v} de armadura`,lo:l=>2+l*.6,hi:l=>6+l*2,slots:['helm','chest','gloves','boots']},
   ls:{n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow','ring','amulet']},
   cdr:{n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
-  pdur:{n:v=>`+${v}% de duração do veneno`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
+  pdur:{n:v=>`+${v}% de duração do ${dotN()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
   gf:{n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
 };
 const SUF = {life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
@@ -87,15 +112,21 @@ const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do P�
 
 /* ---------- ESTADO SALVO ---------- */
 const KEY = 'cacada-vibora-v1';
-const startBow = () => ({id:0,slot:'bow',rar:0,ilvl:1,base:'Arco Simples',name:'Arco Simples',min:3,max:6,aps:1.2,affix:[],bt:0});
-const defaults = () => ({lv:1,xp:0,par:0,pxp:0,pp:{dmg:0,pois:0,life:0,ias:0},gold:0,inv:[],eq:{bow:startBow()},sk:{arrow:1,fan:0,rain:0,burst:0,tip:0,potency:0,agility:0,hide:0,contagion:0},auto:{arrow:true,fan:true,rain:true,burst:true},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:2,shop:[]});
+const startWeapon = cls => cls === 'guerreiro'
+  ? {id:0,slot:'bow',rar:0,ilvl:1,base:'Espada Enferrujada',name:'Espada Enferrujada',min:3,max:6,aps:1.15,affix:[],bt:0}
+  : {id:0,slot:'bow',rar:0,ilvl:1,base:'Arco Simples',name:'Arco Simples',min:3,max:6,aps:1.2,affix:[],bt:0};
+const defaults = cls => {
+  const sk = {}; for(const id in SKD) sk[id] = 0;
+  sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:2,shop:[]};
+};
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
-  const d = defaults();
+  const cls = (s.char && s.char.cls) || 'arqueiro', d = defaults(cls);
   Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})}});
   // Saves antigos sem limite de nível: o que passou de 40 vira Paragon
   if(d.lv > MAX_LV){ d.par += d.lv - MAX_LV; d.lv = MAX_LV; d.xp = 0; }
-  if(Object.values(d.sk).reduce((a, v) => a + v, 0) > d.lv) d.sk = defaults().sk;
+  if(Object.values(d.sk).reduce((a, v) => a + v, 0) > d.lv) d.sk = defaults(cls).sk;
   if(!d.eq) d.eq = {};
   if(!Array.isArray(d.inv)) d.inv = [];
   if(!Array.isArray(d.shop)) d.shop = [];
@@ -110,8 +141,10 @@ function readLocal(key){
 }
 const heroName = () => S.char ? S.char.name : 'Víbora';
 const CLOAKS = [{n:'Musgo',a:'#2b4d30',b:'#3f6b3b',h:'#1f3a25'},{n:'Couro',a:'#5a3f26',b:'#7a5a38',h:'#3e2a19'},{n:'Noite',a:'#28344f',b:'#3c4c70',h:'#1b2438'},{n:'Sangue',a:'#5a2224',b:'#7d3336',h:'#3d1618'}];
-const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Em breve'},{id:'feiticeira',n:'Feiticeira',d:'Em breve'}];
-const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1},{id:'gelo',n:'Gelo',d:'Em breve'},{id:'fogo',n:'Fogo',d:'Em breve'}];
+const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Corpo a corpo com lâminas',ok:1},{id:'feiticeira',n:'Feiticeira',d:'Em breve'}];
+// Builds liberadas por classe (cls); as sem cls ainda não existem
+const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1,cls:'arqueiro'},{id:'sangramento',n:'Sangramento',d:'Cortes que sangram',ok:1,cls:'guerreiro'},{id:'gelo',n:'Gelo',d:'Em breve'},{id:'fogo',n:'Fogo',d:'Em breve'}];
+const buildsFor = cls => BUILDS.filter(b => !b.cls || b.cls === cls);
 const xpMult = md => { const over = S.lv - md.lv[1]; return over > 0 ? Math.max(.05, 1 - over*.12) : 1; };
 const avgIlvl = () => Math.round(SLOTS.reduce((t, k) => t + (S.eq[k] ? S.eq[k].ilvl : 0), 0) / SLOTS.length);
 const mapRec = md => Math.max(0, md.lv[0] - 2);

@@ -18,9 +18,20 @@ function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
   if(S.cfg.retFull && S.inv.length >= INV_MAX){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
-  if(hero.cast){ hero.moving = false; return; }
+  if(hero.cast || hero.dash){ hero.moving = false; return; }
   const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
+  // Girando: anda até os inimigos sem atacar normalmente
+  if(hero.whirl){ if(near && nd > 26 && nd < 400) moveDir(Math.atan2(near.y - hero.y, near.x - hero.x), dt, .75); else hero.moving = false; return; }
   if(hero.atk && !hero.atk.rel){ hero.moving = false; const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); return; }
+  if(isWar() && near && (nd < 320 || foc)){
+    // Guerreiro: vai para cima e bate de perto, sem recuar
+    const ang = Math.atan2(near.y - hero.y, near.x - hero.x), reach = MELEE + near.r;
+    hero.face = ang;
+    if(nd > reach){ moveDir(ang, dt); return; }
+    hero.moving = false;
+    if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:near};
+    return;
+  }
   if(near && (nd < 300 || foc)){
     const ang = Math.atan2(near.y - hero.y, near.x - hero.x);
     hero.face = ang;
@@ -42,6 +53,21 @@ function heroAI(dt){
 }
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
+  hero.swing = Math.max(0, (hero.swing || 0) - dt);
+  if(hero.dash){
+    // Investida: corre em linha reta e acerta cada inimigo do caminho uma vez
+    const d = hero.dash; d.t += dt; const k = clamp(d.t/d.dur, 0, 1);
+    hero.x = d.x0 + (d.x1 - d.x0)*k; hero.y = d.y0 + (d.y1 - d.y0)*k; hero.moving = true; hero.walkT += dt*2;
+    part({x:hero.x + rnd(-6,6), y:hero.y + rnd(-6,6), life:.3, size:rnd(2,4), c:'rgba(235,190,150,.7)'});
+    for(const m of mons) if(!m.dead && !d.hit.has(m) && D(m, hero) < m.r + 26){ d.hit.add(m); meleeHit(m, d.mult, d.dot); m.x += Math.cos(hero.face + Math.PI/2*(Math.random() < .5 ? 1 : -1))*14; }
+    if(k >= 1){ hero.dash = null; ring(hero.x, hero.y, 40, '#ebaa78', .35, 3); if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
+  }
+  if(hero.whirl){
+    // Giro de Lâmina: 8 golpes em 2s em todos em volta
+    const w = hero.whirl; w.t += dt; w.tick -= dt; w.ang += dt*16;
+    if(w.tick <= 0){ w.tick = .25; const R = whirlR(); for(const m of mons) if(!m.dead && D(m, hero) < R + m.r*.5) meleeHit(m, w.mult, w.dot); ring(hero.x, hero.y, R, 'rgba(235,190,150,.8)', .22, 2); }
+    if(w.t >= w.dur) hero.whirl = null;
+  }
   if(hero.atk){
     const a = hero.atk; a.t += dt;
     if(!a.rel && a.t >= a.dur*.55){ a.rel = true; hero.kite = 0; fireBasic(a.tgt); }
@@ -56,13 +82,17 @@ function heroTimers(dt){
 }
 function monUpdate(m, dt){
   if(m.dead){ m.deadT += dt; return; }
-  if(m.poisons.length){
+  if(m.poisons.length || m.bleeds.length){
     let dmg = 0;
     for(const p of m.poisons){ dmg += p.dps * Math.min(dt, p.t); p.t -= dt; }
-    m.poisons = m.poisons.filter(p => p.t > 0);
+    // Sangramento dói 50% mais enquanto o inimigo anda
+    const bm = m.moving ? 1.5 : 1;
+    for(const p of m.bleeds){ dmg += p.dps * bm * Math.min(dt, p.t); p.t -= dt; }
+    m.poisons = m.poisons.filter(p => p.t > 0); m.bleeds = m.bleeds.filter(p => p.t > 0);
     m.hp -= dmg; m.pAcc += dmg; m.pT -= dt;
-    if(m.pT <= 0){ m.pT = .6; if(m.pAcc >= 1){ txt(m.x + rnd(-10,10), m.y - m.r - 4, fmt(m.pAcc), '#9bd84a', 12, -26); m.pAcc = 0; } }
-    if(Math.random() < dt*5) part({x:m.x + rnd(-m.r, m.r), y:m.y + rnd(-m.r*.5, m.r*.5), vy:rnd(-40,-20), life:.7, size:rnd(1.5,3), c:'#8fd14f', kind:'bubble'});
+    const bl = m.bleeds.length > 0;
+    if(m.pT <= 0){ m.pT = .6; if(m.pAcc >= 1){ txt(m.x + rnd(-10,10), m.y - m.r - 4, fmt(m.pAcc), bl ? '#ff7a6a' : '#9bd84a', 12, -26); m.pAcc = 0; } }
+    if(Math.random() < dt*5) part(bl ? {x:m.x + rnd(-m.r*.7, m.r*.7), y:m.y + rnd(-m.r*.4, m.r*.2), vy:rnd(20,60), grav:200, life:.5, size:rnd(1.5,2.6), c:'#b3241c'} : {x:m.x + rnd(-m.r, m.r), y:m.y + rnd(-m.r*.5, m.r*.5), vy:rnd(-40,-20), life:.7, size:rnd(1.5,3), c:'#8fd14f', kind:'bubble'});
     if(m.hp <= 0){ kill(m); return; }
   }
   m.hit = Math.max(0, m.hit - dt); m.acd -= dt; m.anim += dt;

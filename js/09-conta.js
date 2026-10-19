@@ -134,6 +134,7 @@ function loadAccount(cloudRaw){
 function showChars(){ loginState = 'select'; loginErr = ''; delArm = ''; accountReady = false; renderLogin(); }
 function playChar(c){
   S = normalize(c); if(!S.cid) S.cid = newCid();
+  setClass(S.char.cls); buildSkillbar(); setFocus(null); aim = null; rankCls = S.char.cls; rankList = null;
   refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0;
   accountReady = true; renderLogin();
   closeDlg(); closeSheet(); $('#create').hidden = true;
@@ -179,7 +180,7 @@ function pushRank(){
   if(!fb || !fbUser || !accountReady || !S.char || !S.cid) return;
   rankDirty = false; rankPushT = 60; lastScore = rankScore();
   fb.db.collection(RANK).doc(rankId(S.cid)).set({
-    name: heroName(), lv: S.lv, par: S.par, score: lastScore, cls: S.char.cls || 'arqueiro', kills: S.kills,
+    name: heroName(), lv: S.lv, par: S.par, score: lastScore, cls: S.char.cls || 'arqueiro', build: S.char.build || 'veneno', kills: S.kills,
     updated: firebase.firestore.FieldValue.serverTimestamp(),
   }).then(() => { if(tab === 'rank') loadRank(); })
     .catch(e => { rankErr = 'Não foi possível enviar sua pontuação (' + (e.code || 'erro') + ').'; if(tab === 'rank') dirtyPanel(); });
@@ -189,25 +190,32 @@ function rankTick(dt){
   if(rankDirty || (rankPushT <= 0 && Math.abs(rankScore() - lastScore) > 1e-4)) pushRank();
   else if(rankPushT <= 0) rankPushT = 60;
 }
+// Ranking separado por classe (abas). Busca só a classe escolhida e ordena aqui, para não precisar de índice composto no Firestore.
+let rankCls = null;
 function loadRank(){
   if(!fbInit() || rankLoading) return;
+  if(!rankCls) rankCls = clsOf();
   rankLoading = true;
-  fb.db.collection(RANK).orderBy('score', 'desc').limit(RANK_N).get()
-    .then(q => { rankList = q.docs.map(d => Object.assign({id: d.id}, d.data())); rankErr = ''; })
+  const cls = rankCls;
+  fb.db.collection(RANK).where('cls', '==', cls).limit(500).get()
+    .then(q => { if(cls !== rankCls) return; rankList = q.docs.map(d => Object.assign({id: d.id}, d.data())).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, RANK_N); rankErr = ''; })
     .catch(e => { rankErr = 'Não foi possível carregar o ranking (' + (e.code || 'erro') + ').'; })
     .finally(() => { rankLoading = false; if(tab === 'rank') dirtyPanel(); });
 }
 function panelRank(){
   let h = '';
   if(rankErr) h += `<p class="note" style="color:#ff8c80">${esc(rankErr)}</p>`;
-  h += `<div class="sec"><h3>Top ${RANK_N} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
+  const cur = rankCls || clsOf();
+  h += `<div class="rk-tabs">${CLASSES.filter(c => c.ok).map(c => `<button class="${c.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${c.id}">${CLS_ICON[c.id]}${c.n}</button>`).join('')}</div>`;
+  h += `<div class="sec"><h3>Top ${RANK_N} · ${(CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
     <p class="note">Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente. Só aparece o nome do herói.</p>`;
   const meId = fbUser && S.cid ? rankId(S.cid) : '', mine = id => fbUser && id.startsWith(fbUser.uid + '_');
   if(rankList === null){ if(!rankErr) h += `<p class="note">Carregando…</p>`; }
   else if(!rankList.length) h += `<p class="note">Ninguém no ranking ainda. Seja o primeiro.</p>`;
   else h += `<ol class="rk-list">` + rankList.map((r, i) => {
     const me = r.id === meId, cls = (CLASSES.find(c => c.id === r.cls) || CLASSES[0]).n;
-    return `<li class="${me ? 'me' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.name)}${me ? ' (você)' : mine(r.id) ? ' (sua conta)' : ''}<small>${esc(cls)} · ${fmt(r.kills || 0)} abates</small></span>
+    const bd = (BUILDS.find(b => b.id === r.build) || BUILDS.find(b => b.cls === r.cls) || BUILDS[0]).n;
+    return `<li class="${me ? 'me' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.name)}${me ? ' (você)' : mine(r.id) ? ' (sua conta)' : ''}<small>${esc(cls)} · build ${esc(bd)} · ${fmt(r.kills || 0)} abates</small></span>
       <span class="lv">Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}</span></li>`;
   }).join('') + `</ol>`;
   if(meId && rankList && rankList.length >= RANK_N && !rankList.some(r => r.id === meId)) h += `<p class="note">${esc(heroName())} ainda não está no top ${RANK_N}.</p>`;

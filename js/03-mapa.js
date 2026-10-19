@@ -17,9 +17,10 @@ if(window.ResizeObserver) new ResizeObserver(resize).observe(cv.parentElement); 
 resize();
 
 let scene = 'map', mode = 'hunt', mapDef = MAPS[0], WORLD = {w:W_MAP, h:W_MAP};
-const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,alpha:1,atk:null,cast:null,kite:0};
+// whirl = Giro de Lâmina em andamento, dash = Investida em andamento (Guerreiro)
+const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,alpha:1,atk:null,cast:null,kite:0,whirl:null,dash:null};
 let mons = [], projs = [], clouds = [], drops = [], coins = [], parts = [], texts = [], later = [], decor = [], rings = [];
-const cds = {arrow:0,fan:0,rain:0,burst:0};
+const cds = {}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
 let portal = null, trans = null, fade = 0, townWait = 0, deadT = 0, T = 0, spawnT = 0, groundPat = null, townPat = null;
 const cam = {x:900, y:900};
 const FOUNT = {x:350,y:400}, TPORT = {x:350,y:600};
@@ -83,7 +84,7 @@ function makeTown(){
 function makeMon(type, x, y, ml, elite){
   const d = MONS[type], hpMax = d.hp * (14 + ml*9 + ml*ml*.7 + ml*ml*ml*.025) * (elite ? 3.2 : 1);
   return {type, d, x, y, ml, elite, hp:hpMax, hpMax, r:d.r*(elite?1.3:1), dmg:d.dmg*(3 + ml*1.5 + ml*ml*.02)*(elite?1.5:1), spd:d.spd*(elite?1.05:1),
-    acd:rnd(0,1), atkT:0, fired:false, face:rnd(0,TAU), anim:rnd(0,9), hit:0, poisons:[], pAcc:0, pT:.6, aggro:false, moving:false, wx:x, wy:y, wt:0, dead:false, deadT:0,
+    acd:rnd(0,1), atkT:0, fired:false, face:rnd(0,TAU), anim:rnd(0,9), hit:0, poisons:[], bleeds:[], pAcc:0, pT:.6, aggro:false, moving:false, wx:x, wy:y, wt:0, dead:false, deadT:0,
     name: elite ? `${d.n} ${pick(ELITE_TAG)}` : d.n};
 }
 function spawnPack(initial){
@@ -101,7 +102,7 @@ function clearWorld(){ mons = []; projs = []; clouds = []; drops = []; coins = [
 function enterMap(id){
   mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id;
   scene = 'map'; mode = 'hunt'; WORLD = {w:W_MAP, h:W_MAP}; clearWorld();
-  hero.x = W_MAP/2; hero.y = W_MAP/2; hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = null; hero.kite = 0;
+  hero.x = W_MAP/2; hero.y = W_MAP/2; hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.kite = 0;
   cam.x = hero.x; cam.y = hero.y;
   groundPat = makeGround(mapDef); decor = makeDecor(mapDef);
   for(let i = 0; i < 5; i++) spawnPack(true);
@@ -112,7 +113,7 @@ function enterMap(id){
 }
 function enterTown(){
   scene = 'town'; mode = 'townWalk'; WORLD = {w:700, h:720}; clearWorld(); decor = [];
-  hero.x = TPORT.x; hero.y = TPORT.y - 10; hero.scale = 1; hero.alpha = 1; hero.face = -Math.PI/2; hero.atk = hero.cast = null;
+  hero.x = TPORT.x; hero.y = TPORT.y - 10; hero.scale = 1; hero.alpha = 1; hero.face = -Math.PI/2; hero.atk = hero.cast = hero.whirl = hero.dash = null;
   cam.x = hero.x; cam.y = hero.y - 60; townWait = 0;
   if(!townPat) townPat = makeTown();
   if(S.char){ rollShop(); log('O mercador trouxe 3 itens novos', '#e2ae4a'); }
@@ -121,7 +122,7 @@ function enterTown(){
 }
 function startPortal(dest, reason){
   if(mode === 'portal' || trans) return;
-  mode = 'portal'; hero.atk = null; hero.cast = null; hero.moving = false;
+  mode = 'portal'; hero.atk = null; hero.cast = null; hero.whirl = hero.dash = null; hero.moving = false;
   const px = clamp(hero.x + 34, 30, WORLD.w - 30), py = clamp(hero.y - 14, 30, WORLD.h - 30);
   portal = {x:px, y:py, t:0, dest};
   if(reason) log(reason, '#9fc2ff');
