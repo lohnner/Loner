@@ -219,6 +219,31 @@ function npcDelivery() {
       allow delete: if false;
     }
 
+    // Caçada da Víbora: ranking público. Cada conta Google só escreve a própria linha.
+    match /ranking/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.keys().hasOnly(['name', 'lv', 'par', 'score', 'cls', 'kills', 'updated'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 14
+        && request.resource.data.lv is int
+        && request.resource.data.lv >= 1
+        && request.resource.data.lv <= 40
+        && request.resource.data.par is int
+        && request.resource.data.par >= 0
+        && (request.resource.data.lv == 40 || request.resource.data.par == 0)
+        && request.resource.data.score is number
+        && request.resource.data.score >= request.resource.data.lv + request.resource.data.par
+        && request.resource.data.score < request.resource.data.lv + request.resource.data.par + 1
+        && request.resource.data.cls is string
+        && request.resource.data.cls.size() <= 20
+        && request.resource.data.kills is int
+        && request.resource.data.updated == request.time;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;
