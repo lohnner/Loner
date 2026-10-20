@@ -97,33 +97,40 @@ const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
 // Todas as criaturas da fase causam esse dano — o jogador precisa da resistência certa.
 const DUN_ELEMS = ['fire','cold','light','poison','chaos','necro','psy'], DUN_ELEM_SPAN = 5;
 const dunElem = p => DUN_ELEMS[Math.floor((Math.max(1, p) - 1)/DUN_ELEM_SPAN) % DUN_ELEMS.length];
-// Ataques em área: a criatura marca o chão onde o herói está e, depois de AOE_T (1 s), causa m × o dano dela em quem estiver dentro (raio r).
-// cd = recarga; o ataque normal continua. Elites marcam uma área 20% maior. Os Campos de Trigo (mapa inicial) não têm.
+// Golpes em área: a criatura marca o chão e, depois de AOE_T (1 s), o golpe acerta quem ainda estiver dentro (m × o dano dela).
+// Cada um tem um jeito (k) que combina com a criatura:
+//   leap  = pula e cai na marca (onde o herói estava): lobos, cães, sapo, carniçal, gárgula, brutamonte
+//   cone  = golpe em cone à frente dela (spread = abertura em radianos): espada, ferrão, baforada
+//   slam  = pisão/tremor em volta dela mesma
+//   bomb  = arremessa algo que cai na marca (bomba, poção, bloco de gelo, teia)
+//   spell = magia que surge embaixo do herói (raízes, coluna de fogo, chuva de ossos...)
+// reach = distância máxima para começar o golpe. cd = recarga; o ataque normal continua. Elites: área 20% maior. Campos de Trigo não têm.
 const AOE_T = 1;
 const MON_AOE = {
   // à distância
-  bruxa:{n:'Poça Maldita', r:55, m:1.5, cd:6},
-  ossudo:{n:'Chuva de Ossos', r:60, m:1.5, cd:7},
-  cultista:{n:'Coluna de Fogo', r:55, m:1.6, cd:6},
-  feiticeiro:{n:'Colapso Mental', r:65, m:1.7, cd:6},
+  bruxa:{n:'Poção Maldita', k:'bomb', r:55, m:1.5, cd:6, reach:300},
+  ossudo:{n:'Chuva de Ossos', k:'spell', r:60, m:1.5, cd:7, reach:320},
+  cultista:{n:'Coluna de Fogo', k:'spell', r:55, m:1.6, cd:6, reach:320},
+  feiticeiro:{n:'Colapso Mental', k:'spell', r:65, m:1.7, cd:6, reach:320},
+  espirito:{n:'Nevasca', k:'spell', r:60, m:1.4, cd:7, reach:300},
   // corpo a corpo
-  lobo:{n:'Bote', r:50, m:1.3, cd:8},
-  ent:{n:'Raízes', r:60, m:1.6, cd:7},
-  sapo:{n:'Salto Pesado', r:55, m:1.4, cd:8},
-  sanguessuga:{n:'Dreno', r:45, m:1.3, cd:8},
-  goblin:{n:'Dinamite', r:55, m:1.5, cd:8},
-  aranhacav:{n:'Ninho de Teia', r:55, m:1.4, cd:8},
-  golem:{n:'Tremor', r:75, m:2, cd:8},
-  esqueleto:{n:'Golpe de Osso', r:50, m:1.4, cd:7},
-  carnical:{n:'Salto Voraz', r:55, m:1.5, cd:7},
-  lobogelo:{n:'Rajada Gélida', r:55, m:1.4, cd:8},
-  yeti:{n:'Bloco de Gelo', r:65, m:1.9, cd:7},
-  escorpiao:{n:'Ferroada', r:50, m:1.5, cd:7},
-  mumia:{n:'Praga Antiga', r:60, m:1.6, cd:7},
-  cavaleiro:{n:'Golpe Sombrio', r:65, m:1.8, cd:7},
-  gargula:{n:'Mergulho', r:55, m:1.5, cd:7},
-  brutamonte:{n:'Meteoro Infernal', r:80, m:2.2, cd:8},
-  cao:{n:'Baforada', r:55, m:1.5, cd:8},
+  lobo:{n:'Bote', k:'leap', r:48, m:1.3, cd:7, reach:260},
+  cao:{n:'Baforada', k:'cone', r:120, spread:.9, m:1.5, cd:7, reach:110},
+  lobogelo:{n:'Bote Gélido', k:'leap', r:50, m:1.4, cd:7, reach:260},
+  sapo:{n:'Salto Pesado', k:'leap', r:58, m:1.4, cd:8, reach:240},
+  carnical:{n:'Salto Voraz', k:'leap', r:55, m:1.5, cd:7, reach:260},
+  gargula:{n:'Mergulho', k:'leap', r:55, m:1.5, cd:7, reach:300},
+  brutamonte:{n:'Salto Infernal', k:'leap', r:85, m:2.2, cd:8, reach:280},
+  sanguessuga:{n:'Dreno', k:'slam', r:60, m:1.3, cd:8, reach:70},
+  golem:{n:'Tremor', k:'slam', r:95, m:2, cd:8, reach:110},
+  esqueleto:{n:'Golpe de Osso', k:'cone', r:95, spread:1.4, m:1.4, cd:7, reach:90},
+  escorpiao:{n:'Ferroada', k:'cone', r:120, spread:.45, m:1.5, cd:7, reach:110},
+  cavaleiro:{n:'Golpe Sombrio', k:'cone', r:120, spread:1.6, m:1.8, cd:7, reach:110},
+  goblin:{n:'Dinamite', k:'bomb', r:58, m:1.5, cd:8, reach:280},
+  aranhacav:{n:'Ninho de Teia', k:'bomb', r:55, m:1.4, cd:8, reach:260},
+  yeti:{n:'Bloco de Gelo', k:'bomb', r:65, m:1.9, cd:7, reach:280},
+  ent:{n:'Raízes', k:'spell', r:60, m:1.6, cd:7, reach:280},
+  mumia:{n:'Praga Antiga', k:'spell', r:60, m:1.6, cd:7, reach:260},
 };
 for(const k in MON_AOE){ MON_AOE[k].t = AOE_T; MONS[k].aoe = MON_AOE[k]; }
 // Esquiva de cada classe (botão à esquerda das habilidades ou barra de espaço): avanço rápido sem levar dano.

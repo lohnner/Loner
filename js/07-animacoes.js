@@ -32,7 +32,7 @@ function drawDecor(o){
 /* ---------- MAPA EM SALAS (3D) ---------- */
 // Paredes com altura WALL_H: o topo fica deslocado para cima e a face de baixo (sul) aparece quando tem chão embaixo.
 // Cores por tipo de mapa: [topo, face]; mapas abertos (campos/floresta/pântano) usam cerca viva/mata no lugar de pedra.
-const WALL_H = 48;
+const WALL_H = 34;
 const WALL_C = {field:['#4a6a2e','#2e4420'], forest:['#2a4a2a','#18301a'], swamp:['#3e4a2c','#262e1c'], mine:['#6a5a48','#43382c'], crypt:['#5c5a64','#3a3842'], ice:['#dfe9f2','#9aaebe'], desert:['#9a8262','#6a5840'], citadel:['#524864','#342c44'], hell:['#5a2a22','#331612']};
 const WALL_LEAF = {field:1, forest:1, swamp:1};
 // Prepara (uma vez por mapa) o desenho do chão e a lista de paredes
@@ -51,9 +51,9 @@ function drawWall(w){
   const C = WALL_C[mapDef.decor] || WALL_C.crypt, X = w.x, Y = w.y - TILE, top = Y - WALL_H, leaf = WALL_LEAF[mapDef.decor];
   if(w.south){ ctx.fillStyle = vgrad(Y + TILE - WALL_H, Y + TILE, C[1], shade(C[1], -.45)); ctx.fillRect(X, Y + TILE - WALL_H, TILE, WALL_H);
     if(!leaf){ ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; for(let r = 1; r < 3; r++){ const yy = Y + TILE - WALL_H + r*WALL_H/3; line(X, yy, X + TILE, yy); const o = (r + w.tx) % 2 ? TILE/2 : 0; line(X + o + TILE/4, yy - WALL_H/3, X + o + TILE/4, yy); } }
-    else { ctx.fillStyle = shade(C[1], -.2); for(let i = 0; i < 4; i++) circ(X + 8 + i*15, Y + TILE - 4 - ((w.h >> i) & 3)*2, 9); } }
+    else { ctx.fillStyle = shade(C[1], -.2); for(let i = 0; i < 3; i++) circ(X + TILE*(.18 + i*.32), Y + TILE - 4 - ((w.h >> i) & 3)*2, TILE*.17); } }
   ctx.fillStyle = vgrad(top, top + TILE, shade(C[0], .12), shade(C[0], -.12)); ctx.fillRect(X, top, TILE, TILE);
-  if(leaf){ for(let i = 0; i < 5; i++){ const hx = X + 10 + ((w.h >> (i*3)) % 40), hy = top + 10 + ((w.h >> (i*3 + 2)) % 40); sphere(hx, hy, 10 + (w.h >> i & 3)*2, i % 2 ? C[0] : shade(C[0], .1)); } }
+  if(leaf){ for(let i = 0; i < 4; i++){ const hx = X + TILE*.2 + ((w.h >> (i*3)) % (TILE*.6)), hy = top + TILE*.2 + ((w.h >> (i*3 + 2)) % (TILE*.6)); sphere(hx, hy, TILE*.16 + (w.h >> i & 3)*1.5, i % 2 ? C[0] : shade(C[0], .1)); } }
   else { ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1; line(X, top + TILE/2, X + TILE, top + TILE/2); line(X + ((w.tx % 2) ? TILE/2 : TILE/4), top, X + ((w.tx % 2) ? TILE/2 : TILE/4), top + TILE/2); line(X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE/2, X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE); }
 }
 // Chão (padrão do mapa só onde tem sala/corredor), sombra das paredes no chão e enfeites
@@ -257,7 +257,10 @@ function drawMon(m){
   const d = m.d, r = m.r, s = r/13, fx = Math.cos(m.face) >= 0 ? 1 : -1, H = monH(m), foot = r*.6;
   ctx.save(); ctx.translate(m.x, m.y + foot);
   if(m.dead) ctx.globalAlpha = Math.max(0, 1 - m.deadT/1.6);
-  ctx.fillStyle = 'rgba(0,0,0,.38)'; ell(0, 0, r*1.25, r*.42);
+  const lh = m.dead ? 0 : (m.leapH || 0); // altura do pulo: a sombra fica no chão e encolhe
+  ctx.fillStyle = 'rgba(0,0,0,.38)'; ell(0, 0, r*1.25*(1 - lh/260), r*.42*(1 - lh/260));
+  if(lh) ctx.translate(0, -lh);
+  if(m.wind > 0 && !m.dead) ctx.translate(rnd(-1.5, 1.5), rnd(-1, 1)); // tremendo ao preparar o golpe
   // Masmorra: aura no chão com a cor do elemento que a criatura causa
   if(m.el && !m.dead){ ctx.globalAlpha = .3 + .1*Math.sin(T*4 + m.anim); ctx.fillStyle = ELEM[m.el].c; ell(0, 0, r*1.5, r*.6); ctx.globalAlpha = m.dead ? ctx.globalAlpha : 1; }
   if(m.elite && !m.dead){ ctx.strokeStyle = `rgba(111,156,255,${.55 + .3*Math.sin(T*5)})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, -1, r*1.45, r*.55, 0, 0, TAU); ctx.stroke(); }
@@ -768,12 +771,21 @@ function render(){
     ctx.fillStyle = g; ell(c.x, c.y, c.r*pul, c.r*.8*pul);
     ctx.strokeStyle = c.fire ? `rgba(255,200,120,${.5*k})` : `rgba(190,240,120,${.5*k})`; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   }
-  // Áreas marcadas pelas criaturas: contorno + miolo que cresce até a hora do golpe
+  // Áreas marcadas pelas criaturas: contorno + miolo que cresce até a hora do golpe (cone para golpes à frente)
   for(const z of zones){
     const k = clamp(z.t/z.dur, 0, 1), pul = .5 + .5*Math.sin(T*(8 + k*16));
-    ctx.globalAlpha = .14 + .1*k; ctx.fillStyle = z.c; ell(z.x, z.y, z.r, z.r*.75);
-    ctx.globalAlpha = .35 + .3*k; ell(z.x, z.y, z.r*k, z.r*.75*k);
-    ctx.globalAlpha = .55 + .35*pul; ctx.strokeStyle = z.c; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*.75, 0, 0, TAU); ctx.stroke();
+    ctx.fillStyle = z.c; ctx.strokeStyle = z.c;
+    if(z.k === 'cone'){
+      const wedge = rr => { ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.ellipse(z.x, z.y, rr, rr*.75, 0, z.ang - z.spread/2, z.ang + z.spread/2); ctx.closePath(); };
+      ctx.globalAlpha = .14 + .1*k; wedge(z.r); ctx.fill();
+      ctx.globalAlpha = .35 + .3*k; wedge(z.r*k); ctx.fill();
+      ctx.globalAlpha = .55 + .35*pul; ctx.lineWidth = 2.5; wedge(z.r); ctx.stroke();
+    } else {
+      ctx.globalAlpha = .14 + .1*k; ell(z.x, z.y, z.r, z.r*.75);
+      ctx.globalAlpha = .35 + .3*k; ell(z.x, z.y, z.r*k, z.r*.75*k);
+      ctx.globalAlpha = .55 + .35*pul; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*.75, 0, 0, TAU); ctx.stroke();
+      if(z.k === 'spell'){ ctx.globalAlpha = .4*k; ctx.lineWidth = 1.5; for(let i = 0; i < 3; i++){ const a = T*2 + i*TAU/3; line(z.x + Math.cos(a)*z.r*.6, z.y + Math.sin(a)*z.r*.45, z.x + Math.cos(a + 2)*z.r*.6, z.y + Math.sin(a + 2)*z.r*.45); } }
+    }
     ctx.globalAlpha = 1;
   }
   for(const d of drops) if(vis(d)) drawItemDrop(d);
@@ -787,6 +799,16 @@ function render(){
   ents.sort((a, b) => a.y - b.y);
   for(const e of ents) e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e);
   if(scene === 'town') drawTownLabels();
+  // Arremessos das criaturas (bomba, poção, bloco de gelo, teia) voando em arco até a marca
+  for(const z of zones){
+    if(!z.bomb) continue;
+    const k = clamp(z.t/z.dur, 0, 1), b = z.bomb, x = b.x0 + (z.x - b.x0)*k, y = b.y0 + (z.y - b.y0)*k - Math.sin(k*Math.PI)*110;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(b.x0 + (z.x - b.x0)*k, (b.y0 + 30) + (z.y - b.y0 - 30)*k, 7, 3);
+    if(b.type === 'goblin'){ sphere(x, y, 6, '#3a3a40'); ctx.strokeStyle = '#c9a24a'; ctx.lineWidth = 1.5; line(x + 3, y - 4, x + 7, y - 9); ctx.fillStyle = `rgba(255,${200 + 55*Math.random() | 0},80,1)`; circ(x + 7, y - 10, 2.5); }
+    else if(b.type === 'yeti'){ ctx.save(); ctx.translate(x, y); ctx.rotate(T*6); ctx.fillStyle = vgrad(-10, 10, '#f0f8ff', '#8fc8e8'); rrect(-10, -10, 20, 20, 4); ctx.restore(); }
+    else if(b.type === 'aranhacav'){ ctx.fillStyle = '#e8e2f0'; circ(x, y, 7); ctx.strokeStyle = 'rgba(230,226,240,.6)'; ctx.lineWidth = 1; for(let i = 0; i < 4; i++){ const a = i*Math.PI/4; line(x - Math.cos(a)*9, y - Math.sin(a)*9, x + Math.cos(a)*9, y + Math.sin(a)*9); } }
+    else { sphere(x, y, 6, '#6a3a8a'); ctx.fillStyle = z.c; circ(x, y - 7, 2.5); } // poção
+  }
   const FX = fxLook();
   for(const p of projs){
     if(p.hostile){ ctx.fillStyle = p.c; circ(p.x, p.y, 4.5); ctx.globalAlpha = .35; circ(p.x, p.y, 8); ctx.globalAlpha = 1; continue; }

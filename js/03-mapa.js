@@ -91,10 +91,12 @@ function makeGround(md){
   return ctx.createPattern(c, 'repeat');
 }
 /* ---------- MAPA EM SALAS (sempre aleatório) ---------- */
-// Grade de LV_N×LV_N ladrilhos de TILE px. A cada entrada: 4×4 células, uma sala em cada, ligadas por um labirinto
-// (árvore aleatória + 2 voltas extras) com corredores de 2 ladrilhos; 2–4 salas da ponta somem para variar o formato.
+// Grade de LV_N×LV_N ladrilhos de TILE px (paredes finas de 1 ladrilho). A cada entrada genLevel() sorteia tudo de novo:
+// áreas de formatos variados (retângulo, círculo, oval, caverna, anel com ilha no meio para dar a volta, arena grande, cruz),
+// ligadas por uma árvore pelo caminho mais curto + 2–4 ligações extras (voltas); corredores curvos de largura 2 a 5.
+// Depois as bordas são suavizadas e tudo que ficou sem acesso vira parede.
 // LV.g: 0 = parede/vazio, 1 = chão, 2 = chão com obstáculo (bloqueia). LV.seen = ladrilhos já vistos (minimapa).
-const TILE = 60, LV_N = 40, LV_CELL = 10;
+const TILE = 40, LV_N = 60;
 let LV = null;
 // Obstáculos (bloqueiam) e enfeites do chão (não bloqueiam) por tipo de mapa — desenhados por drawDecor (07)
 const LV_SOLID = {field:['rock','tree'], forest:['tree','tree','rock'], swamp:['deadtree','rock'], mine:['crystal','rock'], crypt:['pillar','tomb'], ice:['pine','rock'], desert:['rock','pillar','deadtree'], citadel:['pillar','crystal'], hell:['rock','pillar']};
@@ -113,50 +115,86 @@ function rayEnd(x0, y0, x1, y1, r){
   return {x:lx, y:ly};
 }
 function genLevel(md){
-  const N = LV_N, C = N/LV_CELL, g = new Uint8Array(N*N), rooms = [];
-  const carve = (x0, y0, x1, y1) => { for(let y = Math.max(1, Math.min(y0, y1)); y <= Math.min(N - 2, Math.max(y0, y1)); y++) for(let x = Math.max(1, Math.min(x0, x1)); x <= Math.min(N - 2, Math.max(x0, x1)); x++) g[y*N + x] = 1; };
-  // salas
-  for(let cy = 0; cy < C; cy++) for(let cx = 0; cx < C; cx++){
-    const w = rint(5, 8), h = rint(4, 7), x0 = cx*LV_CELL + rint(1, LV_CELL - w - 1), y0 = cy*LV_CELL + rint(1, LV_CELL - h - 1);
-    rooms.push({cx, cy, x0, y0, x1:x0 + w - 1, y1:y0 + h - 1, links:[], on:true});
+  const N = LV_N, g = new Uint8Array(N*N), M = 3; // M = margem de parede/vazio na borda
+  const inb = (x, y) => x >= M && y >= M && x < N - M && y < N - M;
+  const set = (x, y) => { x = Math.round(x); y = Math.round(y); if(inb(x, y)) g[y*N + x] = 1; };
+  const disc = (cx, cy, r, ry) => { ry = ry || r; for(let y = Math.floor(cy - ry - 1); y <= cy + ry + 1; y++) for(let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++){ const dx = (x - cx)/r, dy = (y - cy)/ry; if(dx*dx + dy*dy <= 1) set(x, y); } };
+  const box = (x0, y0, x1, y1) => { for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++) set(x, y); };
+  const wall = (cx, cy, r) => { for(let y = Math.floor(cy - r); y <= cy + r; y++) for(let x = Math.floor(cx - r); x <= cx + r; x++) if((x - cx)*(x - cx) + (y - cy)*(y - cy) <= r*r && inb(x, y)) g[y*N + x] = 0; };
+  // 1) áreas espalhadas com distância mínima entre elas
+  const nodes = [], want = rint(9, 13);
+  for(let tries = 0; nodes.length < want && tries < 600; tries++){
+    const x = rnd(M + 6, N - M - 7), y = rnd(M + 6, N - M - 7);
+    if(nodes.every(n => Math.hypot(n.x - x, n.y - y) > 10)) nodes.push({x, y});
   }
-  const R = (cx, cy) => rooms[cy*C + cx];
-  // labirinto entre as células (busca em profundidade aleatória)
-  const seen = new Set(), stack = [R(rint(0, C - 1), rint(0, C - 1))], edges = [];
-  seen.add(stack[0]);
-  while(stack.length){
-    const r = stack[stack.length - 1], nb = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx, dy]) => R(r.cx + dx, r.cy + dy)).filter(o => o && !seen.has(o));
-    if(!nb.length){ stack.pop(); continue; }
-    const o = pick(nb); seen.add(o); edges.push([r, o]); r.links.push(o); o.links.push(r); stack.push(o);
+  // 2) formato de cada área (sorteado)
+  const SHAPES = ['rect','rect','circle','oval','cave','cave','ring','arena','cross'];
+  let arenas = 0;
+  for(const n of nodes){
+    let s = pick(SHAPES); if(s === 'arena' && arenas++) s = 'circle';
+    n.shape = s;
+    if(s === 'rect'){ const w = rint(3, 6), h = rint(3, 5); box(Math.round(n.x - w), Math.round(n.y - h), Math.round(n.x + w), Math.round(n.y + h)); }
+    else if(s === 'circle') disc(n.x, n.y, rnd(3.5, 5.5));
+    else if(s === 'oval') Math.random() < .5 ? disc(n.x, n.y, rnd(6, 8), rnd(3, 4)) : disc(n.x, n.y, rnd(3, 4), rnd(5.5, 7));
+    else if(s === 'cave'){ for(let i = 0; i < rint(4, 7); i++) disc(n.x + rnd(-4, 4), n.y + rnd(-3, 3), rnd(2, 3.6)); }
+    else if(s === 'ring'){ const r = rnd(6, 7.5); disc(n.x, n.y, r); wall(n.x, n.y, r - 3.2); n.ring = r; } // anel: ilha no meio para dar a volta
+    else if(s === 'arena') disc(n.x, n.y, rnd(8, 9.5), rnd(7, 8));
+    else { const a = rint(4, 6), b = rint(1, 2); box(Math.round(n.x - a), Math.round(n.y - b), Math.round(n.x + a), Math.round(n.y + b)); box(Math.round(n.x - b), Math.round(n.y - a), Math.round(n.x + b), Math.round(n.y + a)); }
   }
-  for(let i = 0; i < 2; i++){ const r = pick(rooms), o = pick([[1,0],[0,1]].map(([dx, dy]) => R(r.cx + dx, r.cy + dy)).filter(Boolean)); if(o && !r.links.includes(o)){ edges.push([r, o]); r.links.push(o); o.links.push(r); } }
-  // tira 2–4 salas da ponta (só uma ligação) para cada mapa ter um formato diferente
-  let cut = rint(2, 4);
-  for(const r of rooms.slice().sort(() => Math.random() - .5)){ if(cut <= 0) break; const live = r.links.filter(o => o.on); if(r.on && live.length === 1){ r.on = false; cut--; } }
-  const on = rooms.filter(r => r.on);
-  for(const r of on) carve(r.x0, r.y0, r.x1, r.y1);
-  // corredores (em L, largura 2)
+  // 3) ligações: árvore pelo menor caminho (Prim) + algumas voltas extras
+  const edges = [], inT = [nodes[0]];
+  while(inT.length < nodes.length){
+    let best = null, bd = 1e9;
+    for(const a of inT) for(const b of nodes) if(!inT.includes(b)){ const d = Math.hypot(a.x - b.x, a.y - b.y); if(d < bd){ bd = d; best = [a, b]; } }
+    edges.push(best); inT.push(best[1]);
+  }
+  for(let i = 0, extra = rint(2, 4); i < 40 && extra > 0; i++){
+    const a = pick(nodes), b = pick(nodes); if(a === b || Math.hypot(a.x - b.x, a.y - b.y) > 26 || edges.some(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) continue;
+    edges.push([a, b]); extra--;
+  }
+  // 4) corredores curvos: pincel redondo andando numa curva entre as áreas (largura 2 a 5)
   for(const [a, b] of edges){
-    if(!a.on || !b.on) continue;
-    const ax = (a.x0 + a.x1) >> 1, ay = (a.y0 + a.y1) >> 1, bx = (b.x0 + b.x1) >> 1, by = (b.y0 + b.y1) >> 1;
-    if(Math.random() < .5){ carve(ax, ay, bx, ay + 1); carve(bx, ay, bx + 1, by); } else { carve(ax, ay, ax + 1, by); carve(ax, by, bx, by + 1); }
-  }
-  // sala de início: uma da ponta; obstáculos e enfeites nas outras
-  const ends = on.filter(r => r.links.filter(o => o.on).length === 1), start = pick(ends.length ? ends : on);
-  const solids = [], deco = [], ST2 = LV_SOLID[md.decor] || ['rock'], DE = LV_DECO[md.decor] || ['tuft'];
-  const inner = (r, x, y) => x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1;
-  for(const r of on){
-    if(r !== start){
-      const n = rint(1, Math.max(2, Math.floor((r.x1 - r.x0)*(r.y1 - r.y0)/7)));
-      for(let i = 0; i < n; i++){
-        const x = rint(r.x0 + 1, r.x1 - 1), y = rint(r.y0 + 1, r.y1 - 1);
-        if(!inner(r, x, y) || g[y*N + x] !== 1) continue;
-        g[y*N + x] = 2; solids.push({t:pick(ST2), x:x*TILE + TILE/2, y:y*TILE + TILE*.75, s:rnd(.9, 1.25), v:Math.random()});
-      }
+    const w = pick([2, 2.5, 3, 3, 3.5, 4, 5]) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const bend = rnd(-.35, .35)*len, mx = (a.x + b.x)/2 - dy/len*bend, my = (a.y + b.y)/2 + dx/len*bend;
+    // começa na borda do anel (não atravessa a ilha)
+    for(let t = 0; t <= 1; t += .5/len){
+      const x = (1 - t)*(1 - t)*a.x + 2*(1 - t)*t*mx + t*t*b.x, y = (1 - t)*(1 - t)*a.y + 2*(1 - t)*t*my + t*t*b.y;
+      const insideRing = [a, b].some(n => n.ring && Math.hypot(x - n.x, y - n.y) < n.ring - 3.2);
+      if(!insideRing) disc(x, y, w);
     }
-    for(let i = 0; i < 4 + (r.x1 - r.x0); i++){ const o = {t:pick(DE), x:rnd(r.x0, r.x1 + 1)*TILE, y:rnd(r.y0, r.y1 + 1)*TILE, s:rnd(.7, 1.2), v:Math.random()}; if(o.t === 'lava'){ o.pts = []; let px = 0, py = 0; for(let j = 0; j < 5; j++){ o.pts.push([px, py]); px += rnd(-30, 30); py += rnd(-30, 30); } } deco.push(o); }
   }
-  return {N, g, seen:new Uint8Array(N*N), rooms:on, start, solids, deco, flow:new Int16Array(N*N).fill(-1), flowFrom:-1, flowT:0};
+  // 5) suaviza as bordas (tira pontas e buraquinhos)
+  const cnt = (x, y) => { let c = 0; for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++) if((i || j) && g[(y + j)*N + x + i]) c++; return c; };
+  const g2 = g.slice();
+  for(let y = M; y < N - M; y++) for(let x = M; x < N - M; x++){ const c = cnt(x, y); if(!g[y*N + x] && c >= 6) g2[y*N + x] = 1; else if(g[y*N + x] && c <= 1) g2[y*N + x] = 0; }
+  g.set(g2);
+  // 6) início: área mais afastada do meio; tudo sem acesso a partir dela vira parede
+  const start = nodes.slice().sort((p, q) => Math.hypot(q.x - N/2, q.y - N/2) - Math.hypot(p.x - N/2, p.y - N/2))[0];
+  let sx = Math.round(start.x), sy = Math.round(start.y);
+  if(!g[sy*N + sx]){ let bd = 1e9; for(let y = 0; y < N; y++) for(let x = 0; x < N; x++) if(g[y*N + x]){ const d = Math.hypot(x - start.x, y - start.y); if(d < bd){ bd = d; sx = x; sy = y; } } }
+  const bfs = () => { const dist = new Int16Array(N*N).fill(-1), q = [sy*N + sx]; dist[q[0]] = 0; for(let i = 0; i < q.length; i++){ const c = q[i], x = c % N, y = (c/N) | 0; for(const [ox, oy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const n = (y + oy)*N + x + ox; if(dist[n] < 0 && g[n] === 1){ dist[n] = dist[c] + 1; q.push(n); } } } return {dist, n:q.length}; };
+  let {dist} = bfs();
+  for(let i = 0; i < N*N; i++) if(g[i] && dist[i] < 0) g[i] = 0;
+  // 7) obstáculos só em ladrilho cercado de chão, longe do início, sem fechar passagem nenhuma
+  const solids = [], deco = [], ST2 = LV_SOLID[md.decor] || ['rock'], DE = LV_DECO[md.decor] || ['tuft'];
+  let floorN = 0; for(let i = 0; i < N*N; i++) if(g[i] === 1) floorN++;
+  const wantSolid = Math.floor(floorN/40);
+  for(let tries = 0; solids.length < wantSolid && tries < wantSolid*12; tries++){
+    const x = rint(M, N - M - 1), y = rint(M, N - M - 1), k = y*N + x;
+    if(g[k] !== 1 || cnt(x, y) < 8 || dist[k] < 6) continue;
+    g[k] = 2;
+    const r = bfs(); if(r.n < floorN - solids.length - 1){ g[k] = 1; continue; } // fecharia algum lugar: desiste
+    solids.push({t:pick(ST2), x:x*TILE + TILE/2, y:y*TILE + TILE*.8, s:rnd(.75, 1.05), v:Math.random()});
+  }
+  ({dist} = bfs());
+  // 8) enfeites no chão
+  for(let i = 0; i < floorN/9; i++){
+    const x = rint(M, N - M - 1), y = rint(M, N - M - 1); if(g[y*N + x] !== 1) continue;
+    const o = {t:pick(DE), x:(x + Math.random())*TILE, y:(y + Math.random())*TILE, s:rnd(.6, 1), v:Math.random()};
+    if(o.t === 'lava'){ o.pts = []; let px = 0, py = 0; for(let j = 0; j < 5; j++){ o.pts.push([px, py]); px += rnd(-25, 25); py += rnd(-25, 25); } }
+    deco.push(o);
+  }
+  return {N, g, seen:new Uint8Array(N*N), dist, startPos:{x:(sx + .5)*TILE, y:(sy + .5)*TILE}, solids, deco, flow:new Int16Array(N*N).fill(-1), flowFrom:-1, flowT:0};
 }
 // Caminho até o herói (busca em largura na grade, refeita quando ele troca de ladrilho): as criaturas seguem o número menor
 function updateFlow(){
@@ -166,14 +204,14 @@ function updateFlow(){
   const q = [k];
   for(let qi = 0; qi < q.length; qi++){
     const c = q[qi], cx = c % N, cy = (c / N) | 0, d = f[c];
-    if(d > 24) continue;
+    if(d > 36) continue;
     for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = cx + dx, ny = cy + dy; if(nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const n = ny*N + nx; if(f[n] < 0 && LV.g[n] === 1){ f[n] = d + 1; q.push(n); } }
   }
 }
-// Marca como visto tudo num raio de ~5 ladrilhos do herói (minimapa)
+// Marca como visto tudo num raio de ~8 ladrilhos (320 px) do herói (minimapa)
 function markSeen(){
-  const N = LV_N, tx = Math.floor(hero.x/TILE), ty = Math.floor(hero.y/TILE);
-  for(let y = ty - 5; y <= ty + 5; y++) for(let x = tx - 6; x <= tx + 6; x++) if(x >= 0 && y >= 0 && x < N && y < N && (x - tx)*(x - tx) + (y - ty)*(y - ty) <= 34) LV.seen[y*N + x] = 1;
+  const N = LV_N, tx = Math.floor(hero.x/TILE), ty = Math.floor(hero.y/TILE), R = 8;
+  for(let y = ty - R; y <= ty + R; y++) for(let x = tx - R; x <= tx + R; x++) if(x >= 0 && y >= 0 && x < N && y < N && (x - tx)*(x - tx) + (y - ty)*(y - ty) <= R*R) LV.seen[y*N + x] = 1;
 }
 function makeTown(){
   const N = 192, c = document.createElement('canvas'); c.width = c.height = N;
@@ -199,11 +237,12 @@ const SOLO_MAP = 'campos', MAP_MONS = 60;
 const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; const r = Math.random(); return r < .35 ? 1 : r < .65 ? 2 : rint(3, 5); };
 let mapTotal = 0, mapCleared = false;
 function spawnLevel(){
-  const total = mapDef === DUN ? DUN_KILLS : MAP_MONS, rooms = LV.rooms.filter(r => r !== LV.start);
-  const freeTile = r => { for(let k = 0; k < 20; k++){ const x = rint(r.x0, r.x1), y = rint(r.y0, r.y1); if(LV.g[y*LV_N + x] === 1) return {x:(x + .5)*TILE, y:(y + .5)*TILE}; } return {x:(r.x0 + .5)*TILE, y:(r.y0 + .5)*TILE}; };
+  const total = mapDef === DUN ? DUN_KILLS : MAP_MONS;
+  // lugares possíveis: chão a pelo menos 9 ladrilhos (pelo caminho) do início
+  const spots = []; for(let i = 0; i < LV_N*LV_N; i++) if(LV.g[i] === 1 && LV.dist[i] >= 9) spots.push(i);
   let left = total, guard = 0;
-  while(left > 0 && guard++ < 500){
-    const r = pick(rooms), p = freeTile(r), n = Math.min(left, packSize()), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
+  while(left > 0 && guard++ < 500 && spots.length){
+    const s = pick(spots), p = {x:(s % LV_N + .5)*TILE, y:(((s / LV_N) | 0) + .5)*TILE}, n = Math.min(left, packSize()), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
     for(let i = 0; i < n; i++){
       const t = Math.random() < .7 ? main : pick(mapDef.mons);
       let x = p.x + rnd(-40, 40), y = p.y + rnd(-40, 40); if(!walkable(x, y, 8)){ x = p.x; y = p.y; }
@@ -231,7 +270,7 @@ function enterMap(id){
   else { mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id; S.dun.phase = 0; }
   scene = 'map'; mode = 'hunt'; WORLD = {w:LV_N*TILE, h:LV_N*TILE}; clearWorld();
   LV = genLevel(mapDef); decor = LV.deco; minimapBig = false;
-  hero.x = ((LV.start.x0 + LV.start.x1 + 1)/2)*TILE; hero.y = ((LV.start.y0 + LV.start.y1 + 1)/2)*TILE;
+  hero.x = LV.startPos.x; hero.y = LV.startPos.y;
   hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null;
   cam.x = hero.x; cam.y = hero.y;
   groundPat = makeGround(mapDef);

@@ -90,8 +90,39 @@ function heroTimers(dt){
     if(c.t >= c.dur){ hero.cast = null; if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
   }
 }
+// Começa o golpe em área da criatura (ver MON_AOE em 01)
+function monAoe(m, A){
+  const ec = ELEM[m.el || m.d.el || 'phys'].c, R = A.r*(m.elite ? 1.2 : 1), dmg = m.dmg*A.m;
+  m.aoeT = A.cd*rnd(.85, 1.15); m.moving = false; m.fired = true;
+  m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
+  const z = {x:hero.x, y:hero.y, r:R, t:0, dur:A.t, dmg, mon:m, c:ec, k:A.k};
+  if(A.k === 'cone' || A.k === 'slam'){
+    // golpe dela mesma: fica parada se preparando
+    z.x = m.x; z.y = m.y; if(A.k === 'cone'){ z.ang = m.face; z.spread = A.spread; }
+    m.wind = A.t;
+  } else if(A.k === 'leap'){
+    // pula: sai do chão e cai na marca quando ela termina
+    const e = rayEnd(m.x, m.y, hero.x, hero.y, Math.min(14, m.r*.7));
+    z.x = e.x; z.y = e.y; m.leap = {x0:m.x, y0:m.y, x1:e.x, y1:e.y, t:0, dur:A.t};
+  } else if(A.k === 'bomb'){
+    // arremesso: o objeto voa em arco até a marca
+    z.bomb = {x0:m.x, y0:m.y - m.r*2, type:m.type};
+    m.atkT = .36;
+  } else m.atkT = .36; // magia: gesto de lançar
+  zones.push(z);
+  txt(m.x, m.y - m.r*3 - 10, A.n, ec, 11, -20);
+}
 function monUpdate(m, dt){
   if(m.dead){ m.deadT += dt; return; }
+  // no meio do pulo: voa até a marca e não faz mais nada
+  if(m.leap){
+    const L = m.leap; L.t += dt; const k = clamp(L.t/L.dur, 0, 1);
+    m.x = L.x0 + (L.x1 - L.x0)*k; m.y = L.y0 + (L.y1 - L.y0)*k; m.leapH = Math.sin(k*Math.PI)*(70 + m.r*2); m.moving = false; m.anim += dt;
+    if(k >= 1){ m.leap = null; m.leapH = 0; m.lx = m.x; m.ly = m.y; }
+    return;
+  }
+  // preparando cone/pisão: fica parada, tremendo
+  if(m.wind > 0){ m.wind -= dt; m.moving = false; }
   if(m.poisons.length || m.bleeds.length || m.burns.length){
     let dmg = 0;
     for(const p of m.poisons){ dmg += p.dps * Math.min(dt, p.t); p.t -= dt; }
@@ -113,8 +144,9 @@ function monUpdate(m, dt){
   const d = D(m, hero);
   // só nota o herói se ele estiver perto pelo caminho das salas (não através da parede)
   const fl = LV ? LV.flow[Math.floor(m.y/TILE)*LV_N + Math.floor(m.x/TILE)] : 0;
-  if(live && !m.aggro && d < 260 && fl >= 0 && fl <= 6) m.aggro = true;
+  if(live && !m.aggro && d < 260 && fl >= 0 && fl <= 9) m.aggro = true;
   if(!live) m.aggro = false;
+  if(m.wind > 0) return;
   if(m.atkT > 0){
     m.atkT -= dt; m.moving = false;
     if(!m.fired && m.atkT <= .18){
@@ -124,18 +156,11 @@ function monUpdate(m, dt){
     }
     return;
   }
-  // Ataque em área (MON_AOE): marca o chão embaixo do herói; o dano sai quando a marca termina (updateZones)
+  // Golpe em área (MON_AOE): marca o chão; o dano sai quando a marca termina (updateZones). O jeito depende da criatura (A.k).
   const A = m.d.aoe;
   if(A){
     m.aoeT = (m.aoeT === undefined ? rnd(1.5, A.cd) : m.aoeT) - dt;
-    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < 300){
-      m.aoeT = A.cd*rnd(.85, 1.15); m.atkT = .36; m.fired = true; m.moving = false;
-      m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
-      const ec = ELEM[m.el || m.d.el || 'phys'].c;
-      zones.push({x:hero.x, y:hero.y, r:A.r*(m.elite ? 1.2 : 1), t:0, dur:A.t, dmg:m.dmg*A.m, mon:m, c:ec});
-      txt(m.x, m.y - m.r*3 - 10, A.n, ec, 11, -20);
-      return;
-    }
+    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < A.reach && losClear(m, hero)){ monAoe(m, A); return; }
   }
   if(m.aggro){
     m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
@@ -173,15 +198,26 @@ function monChaseAng(m, fl){
   for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const v = LV.flow[(ty + dy)*LV_N + tx + dx]; if(v >= 0 && v < bv){ bv = v; best = [tx + dx, ty + dy]; } }
   return best ? Math.atan2((best[1] + .5)*TILE - m.y, (best[0] + .5)*TILE - m.x) : Math.atan2(hero.y - m.y, hero.x - m.x);
 }
+// O herói está dentro da área? Círculo (raio) ou cone (raio + abertura a partir da criatura)
+function zoneHits(z){
+  const d = D(z, hero);
+  if(z.k !== 'cone') return d < z.r + 8;
+  if(d > z.r + 10) return false;
+  let da = Math.atan2(hero.y - z.y, hero.x - z.x) - z.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+  return d < 22 || Math.abs(da) <= z.spread/2 + .12;
+}
 // Áreas marcadas no chão: quando o tempo acaba, explodem e acertam o herói se ele ainda estiver dentro
 function updateZones(dt){
   for(const z of zones){
     z.t += dt;
+    // pulo, cone e pisão são o corpo da criatura: se ela morreu antes, o golpe não sai
+    if((z.k === 'leap' || z.k === 'cone' || z.k === 'slam') && z.mon.dead){ z.done = true; continue; }
     if(z.t >= z.dur && !z.done){
       z.done = true;
       ring(z.x, z.y, z.r, z.c, .4, 4);
       for(let i = 0; i < 18; i++){ const an = Math.random()*TAU, rr = Math.sqrt(Math.random())*z.r; part({x:z.x + Math.cos(an)*rr, y:z.y + Math.sin(an)*rr*.75, vy:rnd(-120,-40), life:.45, size:rnd(2,4), c:z.c}); }
-      if(mode === 'hunt' && D(z, hero) < z.r + 8) hurtHero(z.dmg, z.mon);
+      if(mode === 'hunt' && zoneHits(z)) hurtHero(z.dmg, z.mon);
+      if(z.k === 'leap' || z.k === 'slam') for(let i = 0; i < 14; i++){ const an = Math.random()*TAU, sp = rnd(80, 200); part({x:z.x, y:z.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 60, grav:300, life:.5, size:rnd(2,4), c:'#7a6a58'}); }
     }
   }
   zones = zones.filter(z => !z.done);
