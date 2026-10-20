@@ -151,7 +151,7 @@ function panelMaps(){
     const lock = S.lv < m.req, here = S.map === m.id;
     const xm = xpMult(m), rec = mapRec(m), gq = my >= rec ? 'ok' : my >= rec - 5 ? 'mid' : 'bad';
     const xpChip = xm < 1 ? `<span class="chip bad">XP −${Math.round((1 - xm)*100)}%</span>` : `<span class="chip">XP 100%</span>`;
-    const mons = m.mons.map(k => MONS[k].n).join(', ');
+    const mons = m.mons.map(k => { const E = ELEM[MONS[k].el || 'phys']; return `${MONS[k].n} <span style="color:${E.c}">(${E.n.toLowerCase()})</span>`; }).join(', ');
     let btn;
     if(lock) btn = `<button class="btn" disabled>Requer nível ${m.req}</button>`;
     else if(here && scene === 'map') btn = `<span class="chip">Caçando aqui</span>`;
@@ -189,7 +189,10 @@ function panelHero(){
     ${stat('Duração ' + dotDe(), '+' + Math.round((st.pdur - 1)*100) + '%')}${stat('Recarga', '-' + st.cdr + '%')}
     ${stat('Roubo de vida', n1(st.ls) + '%')}${stat('Movimento', fmt(st.ms))}
     ${stat('ilvl médio do equipamento', avgIlvl())}${stat('Itens equipados', SLOTS.filter(k => S.eq[k]).length + '/7')}
-  </div></div>`;
+  </div></div>
+  <div class="sec"><h3>Resistências <span class="r">máx. ${RES_MAX}%</span></h3><div class="stats">
+    ${RES_KEYS.map(k => `<div class="stat"><span style="color:${ELEM[k].c}">${ELEM[k].n}</span><b>${st.res[k]}%</b></div>`).join('')}
+  </div><p class="note">Dano físico é reduzido pela armadura. Os outros tipos usam só metade da armadura e são reduzidos pela resistência.</p></div>`;
   if(S.lv >= MAX_LV){
     const pf = parFree();
     h += `<div class="sec"><h3>Paragon ${S.par} <span class="r">${pf} ${pf === 1 ? 'ponto livre' : 'pontos livres'}</span></h3>
@@ -282,7 +285,7 @@ function renderOrbDlg(k){
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
-const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado'};
+const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado', rf:'% de resistência a fogo', rc:'% de resistência a gelo', rl:'% de resistência elétrica', rx:'% de resistência a caos', rp:'% de resistência a veneno', rn:'% de resistência necrótica', rs:'% de resistência psíquica', rall:'% de resistência a fogo, gelo e elétrico'};
 const DIFF_DEC = {aps:1, crit:1, ls:1};
 function itemVals(it){
   const v = {}; if(!it) return v;

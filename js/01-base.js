@@ -69,7 +69,25 @@ const MONS = {
   gargula:{n:'Gárgula',kind:'quad',c1:'#4a4652',c2:'#7a7684',r:13,hp:1.1,dmg:1.15,spd:145,range:22,acd:.95,tail:1,eye:'#ff5a5a'},
   feiticeiro:{n:'Feiticeiro Sombrio',kind:'biped',c1:'#2a1f3a',c2:'#7a5aa8',r:12,hp:.9,dmg:1.35,spd:55,range:210,acd:1.9,ranged:'#c08aff',eye:'#e0b0ff'},
 };
-const ELITE_TAG = ['Voraz','Colossal','Implacável','Feroz','Imortal'];
+// Tipos de dano das criaturas. Físico é reduzido pela armadura; os outros pela resistência (st.res, máximo RES_MAX) e só pela metade da armadura.
+const ELEM = {
+  phys:{n:'Físico', c:'#ff6a5a'},
+  fire:{n:'Fogo', c:'#ff8a2b'},
+  cold:{n:'Gelo', c:'#8fd8ff'},
+  light:{n:'Elétrico', c:'#f4e66a'},
+  chaos:{n:'Caos', c:'#c08aff'},
+  poison:{n:'Veneno', c:'#9bd84a'},
+  necro:{n:'Necrótico', c:'#7fe0b0'},
+  psy:{n:'Psíquico', c:'#ff7ae0'},
+};
+const RES_MAX = 75, RES_KEYS = ['fire','cold','light','chaos','poison','necro','psy'];
+// Criaturas que causam dano não físico (as outras batem físico)
+const MON_EL = {aranha:'poison', sapo:'poison', bruxa:'chaos', aranhacav:'poison', golem:'light', carnical:'necro', ossudo:'necro',
+  lobogelo:'cold', yeti:'cold', espirito:'cold', escorpiao:'poison', mumia:'necro', cultista:'fire',
+  cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire'};
+for(const k in MON_EL) MONS[k].el = MON_EL[k];
+MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.ranged = '#9af0c8'; MONS.feiticeiro.ranged = '#ff8ae8';
+const ELITE_TAG =['Voraz','Colossal','Implacável','Feroz','Imortal'];
 
 const SKD = {
   // Arqueiro (veneno)
@@ -169,8 +187,17 @@ const AFX = {
   cdr:{n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
   pdur:{n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
   gf:{n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
+  // Resistências (fogo, gelo e elétrico também vêm de "todas as elementais")
+  rf:{n:v=>`+${v}% de resistência a fogo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
+  rc:{n:v=>`+${v}% de resistência a gelo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
+  rl:{n:v=>`+${v}% de resistência elétrica`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
+  rx:{n:v=>`+${v}% de resistência a caos`,lo:()=>4,hi:l=>9+l*.45,slots:['chest','boots','ring','amulet']},
+  rp:{n:v=>`+${v}% de resistência a veneno`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
+  rn:{n:v=>`+${v}% de resistência necrótica`,lo:()=>4,hi:l=>9+l*.45,slots:['helm','chest','ring','amulet']},
+  rs:{n:v=>`+${v}% de resistência psíquica`,lo:()=>4,hi:l=>9+l*.45,slots:['helm','ring','amulet']},
+  rall:{n:v=>`+${v}% de resistência a fogo, gelo e elétrico`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
 };
-const SUF = {life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
+const SUF = {rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rx:'do Vazio',rp:'do Antídoto',rn:'da Cripta',rs:'da Mente',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
 const RA = ['Presa','Sussurro','Agouro','Espinho','Mordida','Lamento','Véu','Garra','Sombra','Sopro','Ferrão','Prece'];
 const RB = ['Fel','Cinzas','Musgo','Ossos','Víbora','Cripta','Névoa','Peste','Corvo','Brejo','Cicuta','Lodo'];
 const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do Pântano','Capuz da Mamba'],chest:['Pele da Hidra','Manto da Cicuta'],gloves:['Toque Pestilento','Dedos de Áspide'],boots:['Passos do Charco','Botas da Naja'],ring:['Olho da Serpente','Aliança Verde'],amulet:['Coração de Peçonha','Lágrima de Cobra']};
