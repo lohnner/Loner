@@ -46,6 +46,10 @@ const ICON_SK = {
   channel: SVG('<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 3"/><path d="M4 4l2 2M20 4l-2 2" />'),
   ward: SVG('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".2"/><path d="M12 6l1.6 3.8 4 .4-3 2.7.9 4L12 14.8 8.5 16.9l.9-4-3-2.7 4-.4z"/>'),
   combust: SVG('<circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2" stroke-width="2.2"/>'),
+  // Supremas (nível 40)
+  storm: SVG('<path d="M6 10a4 4 0 0 1 1-7.8A5 5 0 0 1 16.5 4 3.5 3.5 0 0 1 17 11z" fill="currentColor" fill-opacity=".3"/><path d="M7 13l-2 8M11 13l-2 8M15 13l-2 8M19 13l-2 8"/><path d="M5 21l-1-2M9 21l-1-2M13 21l-1-2M17 21l-1-2"/>'),
+  titan: SVG('<path d="M12 2l3 6 6 1-4.5 4 1 6.5L12 16l-5.5 3.5 1-6.5L3 9l6-1z" fill="currentColor" fill-opacity=".3"/><path d="M12 7v6M9.5 10.5h5"/>'),
+  cataclysm: SVG('<circle cx="8" cy="8" r="3.5" fill="currentColor" fill-opacity=".35"/><circle cx="17" cy="6" r="2.5" fill="currentColor" fill-opacity=".35"/><circle cx="15" cy="15" r="4" fill="currentColor" fill-opacity=".35"/><path d="M3 3l3 3M13 2l2 2M9 9l3 3M3 21h18"/>'),
   bloodlust: SVG('<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z" fill="currentColor" fill-opacity=".3"/><path d="M12 9v6M9 12h6"/>'),
 };
 
@@ -56,9 +60,42 @@ const inTown = () => scene === 'town';
 function dirtyPanel(){ panelDirty = true; }
 
 const ICON_DODGE = SVG('<path d="M4 17c3-1 5-4 6-8M10 9l3 2 2-4"/><circle cx="16" cy="5" r="2" fill="currentColor"/><path d="M3 21h6M2 13h4M3 9h3" stroke-dasharray="2 2"/><path d="M13 11l4 3-2 6"/>');
+/* ---------- MINIMAPA ---------- */
+// Pequeno (canto de cima à direita): só o que já foi visto. Grande (toque nele): mostra também as áreas ainda não visitadas.
+// As criaturas só aparecem quando faltam MM_SHOW ou menos.
+const MM_SHOW = 10;
+function drawMinimap(){
+  const wrap = $('#mmWrap'), show = scene === 'map' && !!LV && mode !== 'dead';
+  wrap.hidden = !show; if(!show) return;
+  wrap.classList.toggle('big', minimapBig);
+  const c = $('#mm'), px = Math.round((minimapBig ? Math.min(440, innerWidth*.86) : 96) * Math.min(2, devicePixelRatio || 1));
+  if(c.width !== px){ c.width = px; c.height = px; }
+  const g = c.getContext('2d'), N = LV_N, k = px/N;
+  g.clearRect(0, 0, px, px);
+  for(let y = 0; y < N; y++) for(let x = 0; x < N; x++){
+    const t = LV.g[y*N + x]; if(!t) continue;
+    const seen = LV.seen[y*N + x];
+    if(seen) g.fillStyle = t === 2 ? '#6a6458' : '#b8b09a';
+    else if(minimapBig) g.fillStyle = '#5a2a2a'; // não visitado
+    else continue;
+    g.fillRect(x*k, y*k, Math.ceil(k), Math.ceil(k));
+  }
+  // criaturas: só quando faltam poucas
+  const left = monsLeft();
+  if(left > 0 && left <= MM_SHOW){ g.fillStyle = '#ff4a3a'; for(const m of mons) if(!m.dead){ g.beginPath(); g.arc(m.x/TILE*k, m.y/TILE*k, Math.max(2.5, k*.45), 0, TAU); g.fill(); } }
+  // herói
+  g.fillStyle = '#9bd84a'; g.strokeStyle = '#0c0f0d'; g.lineWidth = Math.max(1, k*.15); g.beginPath(); g.arc(hero.x/TILE*k, hero.y/TILE*k, Math.max(3, k*.55), 0, TAU); g.fill(); g.stroke();
+  if(minimapBig){ g.font = `700 ${Math.round(px/26)}px "Alegreya Sans", sans-serif`; g.fillStyle = '#e9e3d1'; g.fillText('■ visitado', 8, px - 30); g.fillStyle = '#c86a6a'; g.fillText('■ ainda não visitado', 8, px - 10); }
+  const el = $('#mmLeft');
+  const txt2 = inDun() ? `Fase ${S.dun.phase} · ${ELEM[dunElem(S.dun.phase)].n} · faltam ${left}` : left ? `Faltam ${left} criatura${left === 1 ? '' : 's'}` : 'Mapa limpo! Volte para a vila';
+  if(el.textContent !== txt2) el.textContent = txt2;
+  el.classList.toggle('done', !left && !inDun());
+}
+// Habilidades na barra: as 4 da classe e, no nível 40, a suprema (tecla 5)
+const barSkills = () => ultOf() ? [...ACTIVE, ultOf()] : ACTIVE;
 function buildSkillbar(){
   // Esquiva fica à esquerda das habilidades (barra de espaço no PC)
-  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` + ACTIVE.map(id => `<button class="sk" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
+  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` + barSkills().map(id => `<button class="sk${SKD[id].ult ? ' ult' : ''}" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
@@ -72,14 +109,14 @@ function updateHud(){
   $('#xpBar').classList.toggle('para', maxed);
   const pct = Math.round(hero.hp/ST.life*100);
   let st = '', dot = '#9bd84a';
-  if(mode === 'hunt' && inDun()){ st = `Masmorra · fase ${S.dun.phase} · ${S.dun.kills}/${DUN_KILLS} abates`; dot = '#c08aff'; }
-  else if(mode === 'hunt') st = `Caçando em ${mapDef.name}`;
+  if(mode === 'hunt' && inDun()){ st = `Masmorra · fase ${S.dun.phase} (${ELEM[dunElem(S.dun.phase)].n}) · ${S.dun.kills}/${DUN_KILLS} abates`; dot = ELEM[dunElem(S.dun.phase)].c; }
+  else if(mode === 'hunt') st = mapCleared ? `${mapDef.name} limpo! Volte para a vila` : `${mapDef.name} · faltam ${monsLeft()} criaturas`;
   else if(mode === 'portal'){ st = 'Abrindo portal…'; dot = '#8ab4ff'; }
   else if(mode === 'dead'){ st = 'Caiu em combate. Voltando para a vila…'; dot = '#d4473b'; }
   else if(mode === 'townLeave'){ st = 'Saindo pelo portal…'; dot = '#8ab4ff'; }
   else {
     dot = '#e2ae4a';
-    st = hero.hp < ST.life ? `Na vila, curando ${pct}%` : townLeaveIn() > 0 ? `Partindo sozinho em ${Math.ceil(townLeaveIn())}s (ande para ficar)` : 'Na vila · ande até o Mercador, a Forja ou o Armazém';
+    st = hero.hp < ST.life ? `Na vila, curando ${pct}%` : 'Na vila · ande até o Mercador, a Forja ou o Armazém';
   }
   setText('#stText', st); $('#stDot').style.background = dot;
   setText('#hpText', `Vida ${fmt(hero.hp)}/${fmt(ST.life)}`);
@@ -90,7 +127,7 @@ function updateHud(){
     dEl.style.setProperty('--cd', (cd/cdMax).toFixed(3));
     dEl.querySelector('.cdn').textContent = cd > 0 ? Math.ceil(cd) : '';
   }
-  for(const id of ACTIVE){
+  for(const id of barSkills()){
     const el = $('#sb-' + id); if(!el) continue;
     const r = ST.rk(id), cdMax = SKD[id].cd*(1 - ST.cdr/100), cd = cds[id];
     el.classList.toggle('locked', r === 0);
@@ -99,13 +136,15 @@ function updateHud(){
     el.classList.toggle('fire', !!(hero.cast && hero.cast.id === id));
     el.style.setProperty('--cd', r ? (cd/cdMax).toFixed(3) : 0);
     el.querySelector('.cdn').textContent = r && cd > 0 ? Math.ceil(cd) : '';
-    el.querySelector('.rk').textContent = r ? r : 'Nv' + SKD[id].req;
+    el.querySelector('.rk').textContent = SKD[id].ult ? '5' : r ? r : 'Nv' + SKD[id].req;
     el.querySelector('.off').textContent = '';
   }
   const free = Math.max(0, ptsFree()) + (S.lv >= MAX_LV ? parFree() : 0);
   const pb = $('#ptsBadge'); pb.hidden = free <= 0; pb.textContent = free;
   const bb = $('#bagBadge'); bb.hidden = invUsed() === 0; bb.textContent = invUsed(); bb.style.background = invFull() ? 'var(--blood)' : '';
   $('#townBtn').hidden = !(scene === 'map' && mode === 'hunt');
+  $('#townBtn').classList.toggle('done', mapCleared && scene === 'map');
+  drawMinimap();
   // Vila: só o botão Partir (canto de cima, à direita)
   const gb = $('#goBtn'); gb.hidden = !(inTown() && mode === 'town');
   if(!gb.hidden) $('#goText').innerHTML = `Partir<small>${(MAPS.find(m => m.id === S.map) || MAPS[0]).name}</small>`;
@@ -244,7 +283,10 @@ function panelHero(){
       <div class="ctl"><span class="rank">${base}${bonus ? ` <span style="color:var(--perf)">+${bonus}</span>` : ''}/${k.max}</span>
       <button class="plus" data-act="skUp" data-v="${id}" ${canUp ? '' : 'disabled'} aria-label="Adicionar ponto em ${k.n}">+</button>${tog}</div></div>`;
   };
-  h += `<p class="note">As habilidades ativas são manuais: toque nelas na barra embaixo do mapa para usar. O ataque normal continua automático.</p>` + ACTIVE.map(row).join('') + `<h3 style="margin-top:6px">Passivas</h3>` + PASSIVE.map(row).join('');
+  h += `<p class="note">As habilidades ativas são manuais: toque nelas na barra embaixo do mapa para usar. O ataque normal sai sozinho em quem estiver ao alcance quando você para.</p>` + ACTIVE.map(row).join('') + `<h3 style="margin-top:6px">Passivas</h3>` + PASSIVE.map(row).join('');
+  const U = ultOf();
+  if(U) h += `<h3 style="margin-top:6px;color:#ffd24a">Habilidade suprema</h3><div class="skill"><div class="ico" style="color:#ffd24a">${ICON_SK[U]}</div>
+    <div><div class="sn">${SKD[U].n} <em>Suprema · ${n1(SKD[U].cd*(1 - st.cdr/100))}s · tecla 5</em></div><div class="sd">${skDesc(U, st)}</div></div><div class="ctl"><span class="rank">✦</span></div></div>`;
   h += `<button class="btn ${respecArm > performance.now() ? 'warn' : ''}" data-act="respec" ${town && S.gold >= cost ? '' : 'disabled'}>${respecArm > performance.now() ? 'Toque de novo para confirmar' : 'Redistribuir todos os pontos'}<small>Custa ${fmt(cost)} ouro${town ? '' : ' · só na vila'}</small></button></div>`;
   return h;
 }
@@ -288,9 +330,8 @@ function panelRules(){
     <input type="range" id="cfg-ret" min="10" max="90" step="5" value="${c.ret}">
     <p class="note">A marca branca na barra de vida do herói mostra esse limite.</p></div>
     <div class="sec">${sw('retFull', 'Voltar quando a mochila encher', `${invMax()} espaços`)}
-    ${sw('autoGo', 'Voltar a caçar depois de curar', 'Espera 3s na vila. Pausa enquanto um menu está aberto.')}
     ${sw('autoSell', 'Vender itens comuns ao chegar na vila')}
-    ${sw('manual', 'Andar manual', 'Celular: toque em qualquer lugar do mapa, segure e arraste para o lado que quer andar. PC: WASD ou setas. Parado, o herói ataca quem estiver ao alcance.')}
+    <p class="note">Andar é sempre manual. Celular: toque em qualquer lugar da tela, segure e arraste para o lado que quer andar; dois toques rápidos = esquiva. PC: WASD ou setas, espaço = esquiva. Parado, o herói ataca sozinho quem estiver ao alcance.</p>
     <div class="row"><label for="cfg-minPick">Pegar itens do chão a partir de</label><select id="cfg-minPick" data-cfg="minPick">${RAR.map((r, i) => `<option value="${i}" ${c.minPick === i ? 'selected' : ''}>${r.n}</option>`).join('')}</select></div></div>
     <div class="sec"><h3>Conta</h3>
       <div class="row"><label>${esc(fbUser ? (fbUser.email || fbUser.displayName || 'Conta Google') : 'Sem conta')}<small>${esc(heroName())} fica salvo na sua conta Google e aparece no ranking. Entre com a mesma conta em qualquer aparelho para continuar.</small></label><button class="btn" data-act="logout">Sair</button></div>
@@ -325,7 +366,9 @@ function panelDun(){
       <button class="plus" data-act="dunPhase" data-v="-1" ${D0.start > 1 ? '' : 'disabled'} aria-label="Fase anterior">−</button>
       <div class="big">${D0.start}</div>
       <button class="plus" data-act="dunPhase" data-v="1" ${D0.start < max ? '' : 'disabled'} aria-label="Próxima fase">+</button></div>
-    <p class="note">Criaturas com ${fmt(k*100)}% de vida e dano. Pode começar até a fase ${max}.</p></div>
+    <p class="note">Criaturas com ${fmt(k*100)}% de vida e dano, causando dano de <b style="color:${ELEM[dunElem(D0.start)].c}">${ELEM[dunElem(D0.start)].n}</b>. Pode começar até a fase ${max}.</p></div>
+    <div class="sec"><h3>Elemento das fases</h3><p class="note">A cada ${DUN_ELEM_SPAN} fases o elemento muda (e depois recomeça). Todas as criaturas da fase causam esse dano: prepare a resistência certa.</p>
+    <div class="stats">${DUN_ELEMS.map((e, i) => `<div class="stat"><span style="color:${ELEM[e].c}">${ELEM[e].n}</span><b>${i*DUN_ELEM_SPAN + 1}–${(i + 1)*DUN_ELEM_SPAN}</b></div>`).join('')}</div></div>
     <button class="btn primary full" data-act="dunGo" ${inTown() ? '' : 'disabled'}>Entrar no portal<small>${inTown() ? 'Fase ' + D0.start : 'Só pela vila'}</small></button></div>`;
 }
 // Forja da vila: escolhe 3 itens da mochila (forgeSel = ids) e eles viram 1 (forgeItems em 02)
@@ -481,6 +524,7 @@ const ACT = {
   go: () => depart(),
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
   dodge: () => doDodge(false),
+  mmToggle: () => { minimapBig = !minimapBig; drawMinimap(); },
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;
     const pr = buyPrice(it); if(S.gold < pr || invFull()) return;
@@ -622,9 +666,9 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => { if(e.target.id === 'cfg-ret'){ S.cfg.ret = +e.target.value; $('#retVal').textContent = S.cfg.ret + '%'; } });
 document.addEventListener('keydown', e => {
   if(e.target.closest('input,textarea')) return;
-  const i = '1234'.indexOf(e.key);
-  if(i >= 0){
-    const id = ACTIVE[i];
+  const i = '12345'.indexOf(e.key);
+  if(i >= 0 && barSkills()[i]){
+    const id = barSkills()[i];
     if(AIMABLE[id]){ if(e.repeat || aim) return; if(canAim(id)){ aim = {id, src:'key', key:e.key}; return; } }
     // Habilidades de alvo: com o mouse em cima de uma criatura, vão nela
     if(id === 'arrow' || id === 'burst' || id === 'firebolt'){ const h = hoverMon(); if(h){ if(!e.repeat) setFocus(h); manualCast(id, {tgt:h}); return; } }
@@ -632,7 +676,7 @@ document.addEventListener('keydown', e => {
   }
   if(e.key === 'Escape' && aim){ aim = null; return; }
   if(e.code === 'Space'){ e.preventDefault(); if(!e.repeat) doDodge(true); return; }
-  if(MOVE_KEY[e.key.toLowerCase()]){ moveKeys[e.key.toLowerCase()] = true; if((S.cfg.manual || inTown()) && e.key.startsWith('Arrow')) e.preventDefault(); return; }
+  if(MOVE_KEY[e.key.toLowerCase()]){ moveKeys[e.key.toLowerCase()] = true; if(e.key.startsWith('Arrow')) e.preventDefault(); return; }
   if(e.key.toLowerCase() === 't') ACT.goTown();
 });
 document.addEventListener('keyup', e => { moveKeys[e.key.toLowerCase()] = false; if(aim && aim.src === 'key' && e.key === aim.key) aimRelease(); });
@@ -666,7 +710,7 @@ cv.addEventListener('pointerdown', e => {
     if(now - tapT < 320 && Math.hypot(x - tapX, y - tapY) < 70){ tapT = 0; const md = manualDir(); doDodge(false, md !== null ? md : hero.face); return; }
     tapT = now; tapX = x; tapY = y;
   }
-  if(S.cfg.manual && e.pointerType !== 'mouse' && !joy && !aim){
+  if(e.pointerType !== 'mouse' && !joy && !aim){
     joy = {pid:e.pointerId, ox:x, oy:y, dx:0, dy:0, moved:false};
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
     return;

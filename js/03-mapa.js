@@ -90,20 +90,90 @@ function makeGround(md){
   }
   return ctx.createPattern(c, 'repeat');
 }
-function makeDecor(md){
-  const R = rng(md.seed*7), out = [];
-  const add = (t, n) => { for(let i = 0; i < n; i++){ const o = {t, x:60 + R()*(W_MAP-120), y:60 + R()*(W_MAP-120), s:.7 + R()*.7, v:R()}; if(t === 'lava'){ o.pts = []; let x = 0, y = 0; for(let j = 0; j < 5; j++){ o.pts.push([x,y]); x += (R()-.5)*60; y += (R()-.5)*60; } } out.push(o); } };
-  ({field:()=>{add('wheat',70);add('rock',22);add('tuft',80);add('fence',14);},
-    forest:()=>{add('tree',60);add('bush',40);add('rock',15);add('tuft',60);},
-    swamp:()=>{add('puddle',45);add('reed',60);add('deadtree',20);add('tuft',30);},
-    mine:()=>{add('rock',40);add('crystal',30);add('fence',16);add('bones',20);},
-    crypt:()=>{add('pillar',34);add('tomb',36);add('bones',40);},
-    ice:()=>{add('pine',55);add('rock',30);add('tuft',40);},
-    desert:()=>{add('rock',35);add('pillar',14);add('deadtree',18);add('skull',22);add('bones',25);},
-    citadel:()=>{add('pillar',40);add('tomb',20);add('skull',26);add('crystal',14);},
-    hell:()=>{add('lava',40);add('rock',30);add('skull',24);}})[md.decor]();
-  out.sort((a, b) => a.y - b.y);
-  return out;
+/* ---------- MAPA EM SALAS (sempre aleatório) ---------- */
+// Grade de LV_N×LV_N ladrilhos de TILE px. A cada entrada: 4×4 células, uma sala em cada, ligadas por um labirinto
+// (árvore aleatória + 2 voltas extras) com corredores de 2 ladrilhos; 2–4 salas da ponta somem para variar o formato.
+// LV.g: 0 = parede/vazio, 1 = chão, 2 = chão com obstáculo (bloqueia). LV.seen = ladrilhos já vistos (minimapa).
+const TILE = 60, LV_N = 40, LV_CELL = 10;
+let LV = null;
+// Obstáculos (bloqueiam) e enfeites do chão (não bloqueiam) por tipo de mapa — desenhados por drawDecor (07)
+const LV_SOLID = {field:['rock','tree'], forest:['tree','tree','rock'], swamp:['deadtree','rock'], mine:['crystal','rock'], crypt:['pillar','tomb'], ice:['pine','rock'], desert:['rock','pillar','deadtree'], citadel:['pillar','crystal'], hell:['rock','pillar']};
+const LV_DECO = {field:['wheat','tuft','wheat'], forest:['bush','tuft'], swamp:['puddle','reed','tuft'], mine:['bones','tuft'], crypt:['bones','skull'], ice:['tuft'], desert:['skull','bones'], citadel:['skull','bones'], hell:['lava','skull']};
+const tileAt = (x, y) => { const tx = Math.floor(x/TILE), ty = Math.floor(y/TILE); return tx < 0 || ty < 0 || tx >= LV_N || ty >= LV_N ? 0 : LV.g[ty*LV_N + tx]; };
+// Dá para ficar em (x, y)? Confere uma caixinha em volta dos pés (r = meia largura)
+function walkable(x, y, r){
+  if(!LV || scene !== 'map') return true;
+  r = r || 10;
+  return tileAt(x - r, y - r*.6) === 1 && tileAt(x + r, y - r*.6) === 1 && tileAt(x - r, y + r*.4) === 1 && tileAt(x + r, y + r*.4) === 1;
+}
+// Último ponto livre andando em linha reta de (x0,y0) até (x1,y1) — usado em esquiva, Investida e avanços
+function rayEnd(x0, y0, x1, y1, r){
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d/8)); let lx = x0, ly = y0;
+  for(let i = 1; i <= n; i++){ const x = x0 + (x1 - x0)*i/n, y = y0 + (y1 - y0)*i/n; if(!walkable(x, y, r)) break; lx = x; ly = y; }
+  return {x:lx, y:ly};
+}
+function genLevel(md){
+  const N = LV_N, C = N/LV_CELL, g = new Uint8Array(N*N), rooms = [];
+  const carve = (x0, y0, x1, y1) => { for(let y = Math.max(1, Math.min(y0, y1)); y <= Math.min(N - 2, Math.max(y0, y1)); y++) for(let x = Math.max(1, Math.min(x0, x1)); x <= Math.min(N - 2, Math.max(x0, x1)); x++) g[y*N + x] = 1; };
+  // salas
+  for(let cy = 0; cy < C; cy++) for(let cx = 0; cx < C; cx++){
+    const w = rint(5, 8), h = rint(4, 7), x0 = cx*LV_CELL + rint(1, LV_CELL - w - 1), y0 = cy*LV_CELL + rint(1, LV_CELL - h - 1);
+    rooms.push({cx, cy, x0, y0, x1:x0 + w - 1, y1:y0 + h - 1, links:[], on:true});
+  }
+  const R = (cx, cy) => rooms[cy*C + cx];
+  // labirinto entre as células (busca em profundidade aleatória)
+  const seen = new Set(), stack = [R(rint(0, C - 1), rint(0, C - 1))], edges = [];
+  seen.add(stack[0]);
+  while(stack.length){
+    const r = stack[stack.length - 1], nb = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx, dy]) => R(r.cx + dx, r.cy + dy)).filter(o => o && !seen.has(o));
+    if(!nb.length){ stack.pop(); continue; }
+    const o = pick(nb); seen.add(o); edges.push([r, o]); r.links.push(o); o.links.push(r); stack.push(o);
+  }
+  for(let i = 0; i < 2; i++){ const r = pick(rooms), o = pick([[1,0],[0,1]].map(([dx, dy]) => R(r.cx + dx, r.cy + dy)).filter(Boolean)); if(o && !r.links.includes(o)){ edges.push([r, o]); r.links.push(o); o.links.push(r); } }
+  // tira 2–4 salas da ponta (só uma ligação) para cada mapa ter um formato diferente
+  let cut = rint(2, 4);
+  for(const r of rooms.slice().sort(() => Math.random() - .5)){ if(cut <= 0) break; const live = r.links.filter(o => o.on); if(r.on && live.length === 1){ r.on = false; cut--; } }
+  const on = rooms.filter(r => r.on);
+  for(const r of on) carve(r.x0, r.y0, r.x1, r.y1);
+  // corredores (em L, largura 2)
+  for(const [a, b] of edges){
+    if(!a.on || !b.on) continue;
+    const ax = (a.x0 + a.x1) >> 1, ay = (a.y0 + a.y1) >> 1, bx = (b.x0 + b.x1) >> 1, by = (b.y0 + b.y1) >> 1;
+    if(Math.random() < .5){ carve(ax, ay, bx, ay + 1); carve(bx, ay, bx + 1, by); } else { carve(ax, ay, ax + 1, by); carve(ax, by, bx, by + 1); }
+  }
+  // sala de início: uma da ponta; obstáculos e enfeites nas outras
+  const ends = on.filter(r => r.links.filter(o => o.on).length === 1), start = pick(ends.length ? ends : on);
+  const solids = [], deco = [], ST2 = LV_SOLID[md.decor] || ['rock'], DE = LV_DECO[md.decor] || ['tuft'];
+  const inner = (r, x, y) => x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1;
+  for(const r of on){
+    if(r !== start){
+      const n = rint(1, Math.max(2, Math.floor((r.x1 - r.x0)*(r.y1 - r.y0)/7)));
+      for(let i = 0; i < n; i++){
+        const x = rint(r.x0 + 1, r.x1 - 1), y = rint(r.y0 + 1, r.y1 - 1);
+        if(!inner(r, x, y) || g[y*N + x] !== 1) continue;
+        g[y*N + x] = 2; solids.push({t:pick(ST2), x:x*TILE + TILE/2, y:y*TILE + TILE*.75, s:rnd(.9, 1.25), v:Math.random()});
+      }
+    }
+    for(let i = 0; i < 4 + (r.x1 - r.x0); i++){ const o = {t:pick(DE), x:rnd(r.x0, r.x1 + 1)*TILE, y:rnd(r.y0, r.y1 + 1)*TILE, s:rnd(.7, 1.2), v:Math.random()}; if(o.t === 'lava'){ o.pts = []; let px = 0, py = 0; for(let j = 0; j < 5; j++){ o.pts.push([px, py]); px += rnd(-30, 30); py += rnd(-30, 30); } } deco.push(o); }
+  }
+  return {N, g, seen:new Uint8Array(N*N), rooms:on, start, solids, deco, flow:new Int16Array(N*N).fill(-1), flowFrom:-1, flowT:0};
+}
+// Caminho até o herói (busca em largura na grade, refeita quando ele troca de ladrilho): as criaturas seguem o número menor
+function updateFlow(){
+  const N = LV_N, tx = clamp(Math.floor(hero.x/TILE), 0, N - 1), ty = clamp(Math.floor(hero.y/TILE), 0, N - 1), k = ty*N + tx;
+  if(k === LV.flowFrom) return;
+  LV.flowFrom = k; const f = LV.flow; f.fill(-1); f[k] = 0;
+  const q = [k];
+  for(let qi = 0; qi < q.length; qi++){
+    const c = q[qi], cx = c % N, cy = (c / N) | 0, d = f[c];
+    if(d > 24) continue;
+    for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = cx + dx, ny = cy + dy; if(nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const n = ny*N + nx; if(f[n] < 0 && LV.g[n] === 1){ f[n] = d + 1; q.push(n); } }
+  }
+}
+// Marca como visto tudo num raio de ~5 ladrilhos do herói (minimapa)
+function markSeen(){
+  const N = LV_N, tx = Math.floor(hero.x/TILE), ty = Math.floor(hero.y/TILE);
+  for(let y = ty - 5; y <= ty + 5; y++) for(let x = tx - 6; x <= tx + 6; x++) if(x >= 0 && y >= 0 && x < N && y < N && (x - tx)*(x - tx) + (y - ty)*(y - ty) <= 34) LV.seen[y*N + x] = 1;
 }
 function makeTown(){
   const N = 192, c = document.createElement('canvas'); c.width = c.height = N;
@@ -122,27 +192,30 @@ function makeMon(type, x, y, ml, elite){
     acd:rnd(0,1), atkT:0, fired:false, face:rnd(0,TAU), anim:rnd(0,9), hit:0, poisons:[], bleeds:[], burns:[], pAcc:0, pT:.6, aggro:false, moving:false, wx:x, wy:y, wt:0, dead:false, deadT:0,
     name: elite ? `${d.n} ${pick(ELITE_TAG)}` : d.n};
 }
-// Primeiro mapa: criaturas sozinhas e longe umas das outras (difícil pegar duas de uma vez).
-// Demais mapas: sozinha (35%), dupla (30%) ou grupo de 3 a 5 (35%).
-const SOLO_MAP = 'campos', SOLO_GAP = 260;
+// Criaturas do mapa: MAP_MONS por mapa (Masmorra: DUN_KILLS), espalhadas pelas salas (menos a de início). Não nascem mais:
+// matou todas, o mapa está limpo e o jogador volta para a vila.
+// Primeiro mapa: criaturas sozinhas. Demais: sozinha (35%), dupla (30%) ou grupo de 3 a 5 (35%).
+const SOLO_MAP = 'campos', MAP_MONS = 60;
 const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; const r = Math.random(); return r < .35 ? 1 : r < .65 ? 2 : rint(3, 5); };
-function spawnPack(initial){
-  const solo = mapDef.id === SOLO_MAP;
-  let x, y, tries = 0, ok;
-  do{
-    const a = Math.random()*TAU, dd = initial ? rnd(280, 800) : rnd(460, 850); x = hero.x + Math.cos(a)*dd; y = hero.y + Math.sin(a)*dd; tries++;
-    ok = x >= 80 && y >= 80 && x <= W_MAP-80 && y <= W_MAP-80 && (!solo || !mons.some(m => !m.dead && D(m, {x, y}) < SOLO_GAP));
-  } while(!ok && tries < 40);
-  if(!ok && solo) return; // sem lugar longe o bastante: tenta de novo no próximo spawn
-  x = clamp(x, 80, W_MAP-80); y = clamp(y, 80, W_MAP-80);
-  const n = packSize(), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
-  for(let i = 0; i < n; i++){
-    const t = Math.random() < .7 ? main : pick(mapDef.mons);
-    const m = makeMon(t, x + rnd(-50,50), y + rnd(-50,50), rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
-    if(inDun()){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; }
-    mons.push(m);
+let mapTotal = 0, mapCleared = false;
+function spawnLevel(){
+  const total = mapDef === DUN ? DUN_KILLS : MAP_MONS, rooms = LV.rooms.filter(r => r !== LV.start);
+  const freeTile = r => { for(let k = 0; k < 20; k++){ const x = rint(r.x0, r.x1), y = rint(r.y0, r.y1); if(LV.g[y*LV_N + x] === 1) return {x:(x + .5)*TILE, y:(y + .5)*TILE}; } return {x:(r.x0 + .5)*TILE, y:(r.y0 + .5)*TILE}; };
+  let left = total, guard = 0;
+  while(left > 0 && guard++ < 500){
+    const r = pick(rooms), p = freeTile(r), n = Math.min(left, packSize()), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
+    for(let i = 0; i < n; i++){
+      const t = Math.random() < .7 ? main : pick(mapDef.mons);
+      let x = p.x + rnd(-40, 40), y = p.y + rnd(-40, 40); if(!walkable(x, y, 8)){ x = p.x; y = p.y; }
+      const m = makeMon(t, x, y, rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
+      if(inDun()){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunElem(S.dun.phase); }
+      m.lx = m.x; m.ly = m.y;
+      mons.push(m); left--;
+    }
   }
+  mapTotal = total; mapCleared = false;
 }
+const monsLeft = () => mons.filter(m => !m.dead).length;
 // Masmorra: entra numa fase (S.dun.phase) com 0 abates; inDun() diz se o herói está lá
 const inDun = () => scene === 'map' && mapDef === DUN;
 function enterDungeon(phase){
@@ -150,19 +223,22 @@ function enterDungeon(phase){
   S.dun.phase = clamp(phase || 1, 1, S.dun.best + 1); S.dun.kills = 0;
   enterMap(DUN.id);
 }
-function clearWorld(){ zones = []; hero.dodge = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
+let minimapBig = false; // minimapa grande (aberto ao tocar nele)
+function clearWorld(){ zones = []; hero.dodge = null; hero.buff = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
 function enterMap(id){
   // A Masmorra não muda S.map (o mapa de caça normal continua o mesmo para quando sair dela)
   if(id === DUN.id && S.dun.phase > 0) mapDef = DUN;
   else { mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id; S.dun.phase = 0; }
-  scene = 'map'; mode = 'hunt'; WORLD = {w:W_MAP, h:W_MAP}; clearWorld();
-  hero.x = W_MAP/2; hero.y = W_MAP/2; hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.kite = 0;
+  scene = 'map'; mode = 'hunt'; WORLD = {w:LV_N*TILE, h:LV_N*TILE}; clearWorld();
+  LV = genLevel(mapDef); decor = LV.deco; minimapBig = false;
+  hero.x = ((LV.start.x0 + LV.start.x1 + 1)/2)*TILE; hero.y = ((LV.start.y0 + LV.start.y1 + 1)/2)*TILE;
+  hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null;
   cam.x = hero.x; cam.y = hero.y;
-  groundPat = makeGround(mapDef); decor = makeDecor(mapDef);
-  for(let i = 0; i < (mapDef.id === SOLO_MAP ? 9 : 7); i++) spawnPack(true);
+  groundPat = makeGround(mapDef);
+  spawnLevel(); markSeen();
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
-  if(mapDef === DUN){ log(`Masmorra · fase ${S.dun.phase}: mate ${DUN_KILLS} criaturas`, '#d9a0ff'); dirtyPanel(); return; }
-  log(`Caçando em ${mapDef.name}`, '#c9e6a0');
+  if(mapDef === DUN){ log(`Masmorra · fase ${S.dun.phase} (${ELEM[dunElem(S.dun.phase)].n}): mate as ${DUN_KILLS} criaturas`, ELEM[dunElem(S.dun.phase)].c); dirtyPanel(); return; }
+  log(`${mapDef.name}: ${mapTotal} criaturas para caçar`, '#c9e6a0');
   const xm = xpMult(mapDef); if(xm < 1) log(`Mapa abaixo do seu nível: XP reduzida em ${Math.round((1 - xm)*100)}%`, '#ff8c80');
   dirtyPanel();
 }

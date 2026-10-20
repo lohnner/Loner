@@ -3,12 +3,15 @@
 'use strict';
 
 /* ---------- ATUALIZAÇÃO ---------- */
+// Anda na direção ang; paredes e obstáculos do mapa bloqueiam (escorrega pela parede)
 function moveDir(ang, dt, mul){
   const s = ST.ms * (mul || 1) * dt;
   const nx = clamp(hero.x + Math.cos(ang)*s, 20, WORLD.w - 20), ny = clamp(hero.y + Math.sin(ang)*s, 20, WORLD.h - 20);
-  const moved = Math.abs(nx - hero.x) + Math.abs(ny - hero.y) > s*.3;
-  hero.x = nx; hero.y = ny; hero.moving = true; hero.walkT += dt;
-  return moved;
+  hero.moving = true; hero.walkT += dt;
+  if(walkable(nx, ny)){ hero.x = nx; hero.y = ny; return true; }
+  if(walkable(nx, hero.y)){ hero.x = nx; return true; }
+  if(walkable(hero.x, ny)){ hero.y = ny; return true; }
+  return false;
 }
 function moveTo(p, dt, mul){
   const d = D(hero, p); if(d < 5){ hero.moving = false; return true; }
@@ -22,44 +25,9 @@ function heroAI(dt){
   if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
   if(hero.dodge) return;
   if(hero.cast || hero.dash){ hero.moving = false; return; }
-  if(S.cfg.manual){ manualAI(dt); return; }
-  // Automático: se está dentro de uma área marcada no chão, sai dela (reage com atraso, então às vezes não dá tempo)
-  const z = zones.find(z => z.t > z.dur*.3 && D(z, hero) < z.r + 12);
-  if(z){ const an = D(z, hero) > 2 ? Math.atan2(hero.y - z.y, hero.x - z.x) : hero.face + Math.PI/2; if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = an; moveDir(an, dt); return; }
-  const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
-  // Girando: anda até os inimigos sem atacar normalmente
-  if(hero.whirl){ if(near && nd > 26 && nd < 400) moveDir(Math.atan2(near.y - hero.y, near.x - hero.x), dt, .75); else hero.moving = false; return; }
-  if(hero.atk && !hero.atk.rel){ hero.moving = false; const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); return; }
-  // Prioridade: pegar o que caiu das criaturas (itens e orbes) antes de lutar; só um alvo clicado passa na frente
-  if(!foc){ const dr = nearestDrop(PICK_RANGE); if(dr){ moveTo(dr, dt); return; } }
-  if(isWar() && near && (nd < 320 || foc)){
-    // Guerreiro: vai para cima e bate de perto, sem recuar
-    const ang = Math.atan2(near.y - hero.y, near.x - hero.x), reach = MELEE + near.r;
-    hero.face = ang;
-    if(nd > reach){ moveDir(ang, dt); return; }
-    hero.moving = false;
-    if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:near};
-    return;
-  }
-  if(near && (nd < 300 || foc)){
-    const ang = Math.atan2(near.y - hero.y, near.x - hero.x);
-    hero.face = ang;
-    if(!near.d.ranged && nd < 46 && hero.kite < .7){
-      const away = ang + Math.PI;
-      if(moveDir(away, dt, .9)){ hero.kite += dt; hero.face = ang; return; }
-      hero.kite = 1;
-    }
-    if(nd > RANGE){ moveDir(ang, dt); return; }
-    hero.moving = false;
-    if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:near};
-  } else {
-    const dr = nearestDrop(700);
-    if(dr) moveTo(dr, dt);
-    else if(near) moveTo(near, dt);
-    else hero.moving = false;
-  }
+  manualAI(dt);
 }
-// Andar manual (Regras): o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
+// Andar é sempre manual: o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
 // Itens e orbes são pegos ao passar por cima.
 function manualAI(dt){
   if(hero.dodge) return;
@@ -72,13 +40,7 @@ function manualAI(dt){
   const t = foc && D(foc, hero) <= reach(foc) ? foc : nearestMon(hero);
   if(!t || D(t, hero) > reach(t)) return;
   hero.face = Math.atan2(t.y - hero.y, t.x - hero.x);
-  if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:t};
-}
-const PICK_RANGE = 500;
-function nearestDrop(maxD){
-  let dr = null, dd = maxD;
-  for(const d of drops) if(!d.gone && canPick(d)){ const x = D(d, hero); if(x < dd){ dd = x; dr = d; } }
-  return dr;
+  if(!hero.atk) hero.atk = {t:0, dur:1/(ST.aps*heroBuff('aps')), rel:false, tgt:t};
 }
 // Fim da Investida: explosão pequena em volta de onde o Guerreiro parou
 const DASH_BOOM_R = 65;
@@ -90,6 +52,7 @@ function dashBoom(d){
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
   hero.invul = Math.max(0, (hero.invul || 0) - dt);
+  if(hero.buff){ hero.buff.t -= dt; if(Math.random() < dt*20) part({x:hero.x + rnd(-12,12), y:hero.y - rnd(0,40), vy:-50, life:.5, size:rnd(2,3.5), c:hero.buff.c}); if(hero.buff.t <= 0) hero.buff = null; }
   // Visual de rastro (Baú de Visuais): partículas atrás do herói ao andar, mais fortes na esquiva
   const TR = lookOf('trail');
   if(TR && (hero.moving || hero.dodge) && hero.scale > .5 && Math.random() < dt*(hero.dodge ? 60 : 16)) part({x:hero.x + rnd(-6,6), y:hero.y - rnd(0,14), vx:rnd(-15,15), vy:rnd(-30,-5), life:rnd(.4,.7), size:rnd(1.5,3.2), c:pick(TR.c)});
@@ -148,13 +111,15 @@ function monUpdate(m, dt){
   m.hit = Math.max(0, m.hit - dt); m.acd -= dt; m.anim += dt;
   const live = mode === 'hunt' || mode === 'portal';
   const d = D(m, hero);
-  if(live && !m.aggro && d < 240) m.aggro = true;
+  // só nota o herói se ele estiver perto pelo caminho das salas (não através da parede)
+  const fl = LV ? LV.flow[Math.floor(m.y/TILE)*LV_N + Math.floor(m.x/TILE)] : 0;
+  if(live && !m.aggro && d < 260 && fl >= 0 && fl <= 6) m.aggro = true;
   if(!live) m.aggro = false;
   if(m.atkT > 0){
     m.atkT -= dt; m.moving = false;
     if(!m.fired && m.atkT <= .18){
       m.fired = true;
-      if(m.d.ranged){ const an = Math.atan2(hero.y - m.y, hero.x - m.x); projs.push({x:m.x, y:m.y, vx:Math.cos(an)*260, vy:Math.sin(an)*260, a:an, life:1.6, hostile:true, mon:m, dmg:m.dmg, c:m.d.ranged}); }
+      if(m.d.ranged){ const an = Math.atan2(hero.y - m.y, hero.x - m.x); projs.push({x:m.x, y:m.y, vx:Math.cos(an)*260, vy:Math.sin(an)*260, a:an, life:1.6, hostile:true, mon:m, dmg:m.dmg, c:m.el ? ELEM[m.el].c : m.d.ranged}); }
       else if(d < m.d.range + m.r + 18) hurtHero(m.dmg, m);
     }
     return;
@@ -166,23 +131,47 @@ function monUpdate(m, dt){
     if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < 300){
       m.aoeT = A.cd*rnd(.85, 1.15); m.atkT = .36; m.fired = true; m.moving = false;
       m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
-      zones.push({x:hero.x, y:hero.y, r:A.r*(m.elite ? 1.2 : 1), t:0, dur:A.t, dmg:m.dmg*A.m, mon:m, c:ELEM[m.d.el || 'phys'].c});
-      txt(m.x, m.y - m.r*3 - 10, A.n, ELEM[m.d.el || 'phys'].c, 11, -20);
+      const ec = ELEM[m.el || m.d.el || 'phys'].c;
+      zones.push({x:hero.x, y:hero.y, r:A.r*(m.elite ? 1.2 : 1), t:0, dur:A.t, dmg:m.dmg*A.m, mon:m, c:ec});
+      txt(m.x, m.y - m.r*3 - 10, A.n, ec, 11, -20);
       return;
     }
   }
   if(m.aggro){
     m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
     const reach = m.d.ranged ? m.d.range : m.d.range + m.r;
-    if(d > reach){ m.x += Math.cos(m.face)*m.spd*dt; m.y += Math.sin(m.face)*m.spd*dt; m.moving = true; }
+    const see = losClear(m, hero);
+    if(d > reach || !see){ monStep(m, see ? m.face : monChaseAng(m, fl), m.spd, dt); m.moving = true; }
     else { m.moving = false; if(m.acd <= 0){ m.atkT = .36; m.fired = false; m.acd = m.d.acd; } }
   } else {
     m.wt -= dt;
     if(m.wt <= 0){ m.wx = m.x + rnd(-90,90); m.wy = m.y + rnd(-90,90); m.wt = rnd(2,5); }
     const wd = Math.hypot(m.wx - m.x, m.wy - m.y);
-    if(wd > 6){ m.face = Math.atan2(m.wy - m.y, m.wx - m.x); m.x += Math.cos(m.face)*m.spd*.3*dt; m.y += Math.sin(m.face)*m.spd*.3*dt; m.moving = true; } else m.moving = false;
+    if(wd > 6){ m.face = Math.atan2(m.wy - m.y, m.wx - m.x); if(!monStep(m, m.face, m.spd*.3, dt)) m.wt = 0; m.moving = true; } else m.moving = false;
   }
-  m.x = clamp(m.x, 20, W_MAP - 20); m.y = clamp(m.y, 20, W_MAP - 20);
+  m.x = clamp(m.x, 20, WORLD.w - 20); m.y = clamp(m.y, 20, WORLD.h - 20);
+}
+// Visão livre entre a e b (nenhuma parede no meio; obstáculos não tapam a visão)
+function losClear(a, b){
+  if(!LV) return true;
+  const d = D(a, b), n = Math.ceil(d/24);
+  for(let i = 1; i < n; i++){ if(tileAt(a.x + (b.x - a.x)*i/n, a.y + (b.y - a.y)*i/n) === 0) return false; }
+  return true;
+}
+// Criatura anda sem atravessar parede (escorrega nela); devolve false se ficou presa
+function monStep(m, ang, sp, dt){
+  const r = Math.min(14, m.r*.7), nx = m.x + Math.cos(ang)*sp*dt, ny = m.y + Math.sin(ang)*sp*dt;
+  if(walkable(nx, ny, r)){ m.x = nx; m.y = ny; return true; }
+  if(walkable(nx, m.y, r)){ m.x = nx; return true; }
+  if(walkable(m.x, ny, r)){ m.y = ny; return true; }
+  return false;
+}
+// Direção para chegar no herói: perto (mesmo ladrilho ou vizinho) vai reto; longe, segue o ladrilho vizinho com caminho menor
+function monChaseAng(m, fl){
+  if(!LV || fl < 0 || fl === 0) return Math.atan2(hero.y - m.y, hero.x - m.x);
+  const tx = Math.floor(m.x/TILE), ty = Math.floor(m.y/TILE); let best = null, bv = fl;
+  for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const v = LV.flow[(ty + dy)*LV_N + tx + dx]; if(v >= 0 && v < bv){ bv = v; best = [tx + dx, ty + dy]; } }
+  return best ? Math.atan2((best[1] + .5)*TILE - m.y, (best[0] + .5)*TILE - m.x) : Math.atan2(hero.y - m.y, hero.x - m.x);
 }
 // Áreas marcadas no chão: quando o tempo acaba, explodem e acertam o herói se ele ainda estiver dentro
 function updateZones(dt){
@@ -209,11 +198,17 @@ function separate(){
     const dx = a.x - hero.x, dy = a.y - hero.y, min = a.r + 10, d = Math.hypot(dx, dy);
     if(d < min && d > .01){ a.x = hero.x + dx/d*min; a.y = hero.y + dy/d*min; }
   }
+  // empurrões não podem jogar criatura para dentro da parede: volta para o último lugar livre
+  for(const m of mons){ if(m.dead) continue; if(walkable(m.x, m.y, Math.min(14, m.r*.7))){ m.lx = m.x; m.ly = m.y; } else if(m.lx !== undefined){ m.x = m.lx; m.y = m.ly; } }
 }
 function updateField(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
-  spawnT -= dt;
-  if(spawnT <= 0 && mons.filter(m => !m.dead).length < 16 && mode === 'hunt'){ spawnPack(false); spawnT = 1.2; }
+  if(LV){ LV.flowT -= dt; if(LV.flowT <= 0){ LV.flowT = .2; updateFlow(); markSeen(); } }
+  // Mapa limpo: matou todas as criaturas (Masmorra passa de fase em dunKill)
+  if(!mapCleared && mapTotal && mode === 'hunt' && !inDun() && monsLeft() === 0){
+    mapCleared = true; log(`${mapDef.name} limpo! Volte para a vila.`, '#f5cf3a'); ring(hero.x, hero.y, 140, '#f5cf3a', 1, 5);
+    txt(hero.x, hero.y - 70, 'Mapa limpo!', '#f5cf3a', 24, -18);
+  }
   heroTimers(dt);
   if(mode === 'hunt'){ if(T - (hero.lastHit || 0) > 3 && hero.hp < ST.life) hero.hp = Math.min(ST.life, hero.hp + ST.life*.02*dt); heroAI(dt); }
   else if(mode === 'portal'){
@@ -231,6 +226,8 @@ function updateField(dt){
   mons = mons.filter(m => !m.dead || m.deadT < 1.6);
   for(const p of projs){
     p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt;
+    // projéteis batem na parede (a bola de fogo e a flecha de praga explodem nela)
+    if(LV && tileAt(p.x, p.y) === 0){ if(p.boom && !p.hostile) explode(p); p.life = 0; continue; }
     if(p.hostile){
       if(hero.scale > .6 && mode !== 'dead' && Math.hypot(p.x - hero.x, p.y - hero.y) < 14){ hurtHero(p.dmg, p.mon); p.life = 0; }
     } else {
@@ -290,8 +287,6 @@ function townMove(ang, dt){
   if(!townBlocked(hero.x, ny)){ hero.y = ny; return true; }
   return false;
 }
-// Saída automática (Regras › Voltar a caçar depois de curar): só se o jogador não mexeu em nada desde que chegou; devolve os segundos que faltam (0 = não vai sair)
-const townLeaveIn = () => scene === 'town' && mode === 'town' && S.cfg.autoGo && townIdle && hero.hp >= ST.life && !uiOpen() ? Math.max(.01, 3 - townWait) : 0;
 function updateTown(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
   heroTimers(dt);
@@ -313,8 +308,6 @@ function updateTown(dt){
     // portal de saída: entrar nele (depois de ter saído de perto) parte para a caçada
     if(D(hero, TPORT) > 90) townArmed = true;
     if(townArmed && D(hero, TPORT) < 26) depart();
-    // saída automática
-    if(townLeaveIn() > 0){ townWait += dt; if(townWait >= 3) depart(); } else townWait = 0;
   } else if(mode === 'townLeave'){
     if(moveTo(townExit, dt, .9)){ hero.scale = Math.max(0, hero.scale - dt*2.5); if(hero.scale < .3) transition(() => enterMap(S.map)); }
   }

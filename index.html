@@ -8,7 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/estilo.css?v=12">
+<link rel="stylesheet" href="css/estilo.css?v=13">
 
 <div id="app">
   <header class="hud gut">
@@ -23,6 +23,8 @@
     <canvas id="cv"></canvas>
     <div id="log" aria-live="polite"></div>
     <button id="townBtn" data-act="goTown" hidden aria-label="Voltar para a vila"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="6" ry="9"/><ellipse cx="12" cy="12" rx="2.5" ry="5" fill="currentColor" fill-opacity=".35"/></svg>Voltar à vila</button>
+    <!-- Minimapa (nos mapas): toque para abrir grande; embaixo, quantas criaturas faltam -->
+    <div id="mmWrap" hidden><canvas id="mm" data-act="mmToggle" aria-label="Minimapa (toque para ampliar)"></canvas><div id="mmLeft"></div></div>
     <!-- Na vila só existe o botão Partir; Mercador, Forja, Armazém e Masmorra se abrem andando até eles -->
     <button id="goBtn" data-act="go" hidden aria-label="Partir para a caçada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h12M13 7l5 5-5 5"/></svg><span id="goText">Partir</span></button>
   </main>
@@ -50,13 +52,13 @@
   <div class="dcard" id="dcard"></div>
 </div>
 
-<script src="js/01-base.js?v=12"></script>
-<script src="js/02-modelos.js?v=12"></script>
-<script src="js/03-mapa.js?v=12"></script>
-<script src="js/04-batalha.js?v=12"></script>
-<script src="js/05-habilidades.js?v=12"></script>
-<script src="js/06-cena.js?v=12"></script>
-<script src="js/07-animacoes.js?v=12"></script>
-<script src="js/08-hud.js?v=12"></script>
-<script src="js/09-conta.js?v=12"></script>
-<script src="js/10-inicio.js?v=12"></script>
+<script src="js/01-base.js?v=13"></script>
+<script src="js/02-modelos.js?v=13"></script>
+<script src="js/03-mapa.js?v=13"></script>
+<script src="js/04-batalha.js?v=13"></script>
+<script src="js/05-habilidades.js?v=13"></script>
+<script src="js/06-cena.js?v=13"></script>
+<script src="js/07-animacoes.js?v=13"></script>
+<script src="js/08-hud.js?v=13"></script>
+<script src="js/09-conta.js?v=13"></script>
+<script src="js/10-inicio.js?v=13"></script>

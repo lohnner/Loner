@@ -64,12 +64,23 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .sk.dodge.ready{border-color:#3c5a8a;box-shadow:0 0 10px rgba(130,170,255,.3)}
 @media (hover:none){.sk.dodge .rk{display:none}}
 .forge-grid{grid-template-columns:repeat(3,minmax(0,84px));justify-content:center}
+.sk.ult{color:#ffd24a;border-color:#8a6a1a;background:radial-gradient(circle at 50% 35%,#3a2e10,var(--panel2))}
+.sk.ult.ready{border-color:#f5cf3a;box-shadow:0 0 14px rgba(245,207,58,.45)}
 .sk.locked{opacity:.32}
 .sk.disabled{filter:grayscale(1);opacity:.55}
 .sk.ready{border-color:var(--poison-d);box-shadow:0 0 10px rgba(155,216,74,.3)}
 .sk.queued{border-color:var(--gold)}
 #townBtn{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;display:flex;align-items:center;gap:7px;padding:9px 14px 9px 11px;border-radius:24px;border:1px solid #4a5fa8;background:rgba(18,22,40,.88);color:#cfdcff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
 #townBtn svg{width:22px;height:22px;color:#a9c4ff}
+#mmWrap{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:grid;gap:4px;justify-items:end;z-index:2}
+#mm{width:96px;height:96px;border-radius:10px;border:1px solid #4a5a3a;background:rgba(6,8,6,.75);box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:pointer}
+#mmLeft{font-size:12px;font-weight:800;color:#e9e3d1;background:rgba(8,10,9,.8);padding:2px 8px;border-radius:8px;text-align:right;max-width:170px}
+#mmLeft.done{color:#f5cf3a;border:1px solid #8a6a1a}
+#mmWrap.big{top:50%;right:50%;transform:translate(50%,-50%);justify-items:center}
+#mmWrap.big #mm{width:min(86vw,440px);height:min(86vw,440px);border-color:#8a9a6a}
+#mmWrap.big #mmLeft{max-width:none;text-align:center}
+#townBtn.done{border-color:#f5cf3a;color:#ffe9a0;box-shadow:0 0 16px rgba(245,207,58,.5);animation:pulse 1.2s infinite alternate}
+@keyframes pulse{to{transform:scale(1.06)}}
 #goBtn{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:10px;display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:24px;border:1px solid var(--poison-d);background:rgba(20,34,16,.9);color:#d8f0b8;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.5);z-index:2}
 #goBtn svg{width:20px;height:20px;color:var(--poison)}
 #goBtn small{display:block;font-size:11px;font-weight:600;color:var(--muted)}

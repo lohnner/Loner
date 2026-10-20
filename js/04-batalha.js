@@ -21,11 +21,15 @@ const hasDot = m => (isWar() ? m.bleeds : isMage() ? m.burns : m.poisons).length
 const DOT_C = () => isWar() ? '#e0574a' : isMage() ? '#ff8a2b' : '#9bd84a';
 
 /* ---------- COMBATE ---------- */
+// Bônus temporário do herói (Fúria do Titã): hero.buff = {t, dmg, aps, ls}; heroBuff('dmg') = multiplicador (1 sem bônus)
+const heroBuff = k => hero.buff && hero.buff.t > 0 ? (hero.buff[k] || 1) : 1;
 function dealHit(m, dmg, crit, color){
   if(m.dead) return;
+  dmg *= heroBuff('dmg');
   m.hp -= dmg; m.hit = .12; m.aggro = true;
   txt(m.x + rnd(-6,6), m.y - m.r - 8, fmt(dmg) + (crit ? '!' : ''), crit ? '#ffd24a' : (color || '#f3efe2'), crit ? 17 : 13);
-  if(ST.ls > 0 && scene === 'map'){ hero.hp = Math.min(ST.life, hero.hp + dmg*ST.ls/100); }
+  const ls = ST.ls + (hero.buff && hero.buff.t > 0 ? hero.buff.ls || 0 : 0);
+  if(ls > 0 && scene === 'map'){ hero.hp = Math.min(ST.life, hero.hp + dmg*ls/100); }
   if(m.hp <= 0) kill(m);
 }
 function kill(m){
@@ -72,9 +76,12 @@ function dunKill(){
   const D0 = S.dun; D0.kills++;
   if(D0.kills < DUN_KILLS) return;
   if(D0.phase > D0.best){ D0.best = D0.phase; rankDirty = true; }
-  log(`Fase ${D0.phase} concluída! Fase ${D0.phase + 1}: criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes`, '#d9a0ff');
+  const ne = dunElem(D0.phase + 1);
+  log(`Fase ${D0.phase} concluída! Fase ${D0.phase + 1} (${ELEM[ne].n}): criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes`, ELEM[ne].c);
   ring(hero.x, hero.y, 120, '#c08aff', .9, 5); txt(hero.x, hero.y - 60, `Fase ${D0.phase + 1}`, '#e0b0ff', 22, -20);
   D0.phase++; D0.kills = 0; save(); dirtyPanel();
+  // a próxima fase é um mapa novo (sorteado de novo)
+  later.push({t:2.5, fn:() => { if(inDun() && mode === 'hunt') transition(() => enterMap(DUN.id)); }});
 }
 function dropItem(m){
   const rar = rollRar(m.elite), it = genItem(m.ml + (m.elite ? 1 : 0), rar);
@@ -90,6 +97,7 @@ function gainXp(x){
     ring(hero.x, hero.y, 80, '#e2ae4a', .9, 4); ring(hero.x, hero.y, 50, '#ffe39a', .7, 2);
     txt(hero.x, hero.y - 46, 'NÍVEL ' + S.lv, '#e2ae4a', 20, -24);
     log(S.lv === MAX_LV ? `Nível máximo ${MAX_LV}! A XP agora vira níveis de Paragon.` : `Nível ${S.lv}! Ponto de habilidade para gastar no Herói.`, '#e2ae4a');
+    if(S.lv === MAX_LV){ buildSkillbar(); log(`Habilidade suprema liberada: ${SKD[ULT[clsOf()]].n} (tecla 5)!`, '#ffd24a'); txt(hero.x, hero.y - 74, SKD[ULT[clsOf()]].n, '#ffd24a', 18, -18); }
     dirtyPanel(); rankDirty = true;
   }
   if(S.lv >= MAX_LV && S.xp > 0){ const rest = S.xp; S.xp = 0; gainParagon(rest); }
@@ -124,8 +132,8 @@ function doDodge(fromKey, ang){
   if(ang === null){ const n = nearestMon(hero); ang = n && D(n, hero) < 300 ? Math.atan2(hero.y - n.y, hero.x - n.x) : hero.face; }
   if(hero.atk && !hero.atk.rel) hero.atk = null;
   hero.whirl = null;
-  const x1 = clamp(hero.x + Math.cos(ang)*D0.len, 20, WORLD.w - 20), y1 = clamp(hero.y + Math.sin(ang)*D0.len, 20, WORLD.h - 20);
-  hero.dodge = {x0:hero.x, y0:hero.y, x1, y1, t:0, dur:D0.dur};
+  const e = rayEnd(hero.x, hero.y, clamp(hero.x + Math.cos(ang)*D0.len, 20, WORLD.w - 20), clamp(hero.y + Math.sin(ang)*D0.len, 20, WORLD.h - 20));
+  hero.dodge = {x0:hero.x, y0:hero.y, x1:e.x, y1:e.y, t:0, dur:D0.dur};
   hero.invul = D0.dur + .15; hero.face = ang;
   cds.dodge = D0.cd*(1 - ST.cdr/100);
   if(isMage()) for(let i = 0; i < 16; i++){ const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*10, y:hero.y - 18 + Math.sin(an)*14, vx:Math.cos(an)*80, vy:Math.sin(an)*80, life:.35, size:rnd(1.5,3), c:pick(['#ffb050','#ffe0a0'])}); }
@@ -135,7 +143,7 @@ function hurtHero(dmg, src){
   if(scene !== 'map' || mode === 'dead' || hero.scale < .6) return;
   if(hero.invul > 0){ txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
   // Físico: armadura. Elemental (fogo, gelo, elétrico, caos, veneno): metade da armadura + resistência.
-  const el = (src && src.d.el) || 'phys', arm = el === 'phys' ? ST.armor : ST.armor*.5;
+  const el = (src && (src.el || src.d.el)) || 'phys', arm = el === 'phys' ? ST.armor : ST.armor*.5;
   const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = el === 'phys' ? 0 : (ST.res[el] || 0)/100;
   const d = dmg * (1 - red) * (1 - res) * (1 - (ST.dr || 0));
   hero.hp -= d; hero.hit = .14; hero.lastHit = T;
@@ -216,6 +224,10 @@ function manualCast(id, aimAt){
     if(id === 'firebolt' || id === 'burst') t = bestCluster(near).m; // explodem no alvo: mira onde tem mais gente
     return cast(id, {tgt:t});
   }
+  if(SKD[id].ult){
+    if(!live.some(m => D(m, hero) < ULT_R)){ log('Nenhum inimigo por perto'); return; }
+    return cast(id, {});
+  }
   if(id === 'inferno'){
     if(!live.some(m => D(m, hero) < INFERNO_R)){ log('Nenhum inimigo por perto'); return; }
     return cast(id, {});
@@ -230,7 +242,9 @@ function manualCast(id, aimAt){
   if(id === 'rain' || id === 'charge' || id === 'meteor'){ const c = bestCluster(near); return cast(id, {x:c.m.x, y:c.m.y}); }
   if(id === 'fan' || id === 'flamewave') return cast(id, {x:near[0].x, y:near[0].y});
 }
-const CAST_DUR = {rain:.45, burst:.5, rupture:.5, charge:.12, whirl:.15, cleave:.28, meteor:.45, inferno:.55, flamewave:.3};
+const CAST_DUR = {rain:.45, burst:.5, rupture:.5, charge:.12, whirl:.15, cleave:.28, meteor:.45, inferno:.55, flamewave:.3, storm:.5, titan:.5, cataclysm:.6};
+// Supremas (nível 40): alcance para achar inimigos
+const ULT_R = 420;
 function cast(id, data){
   hero.atk = null;
   hero.cast = {id, t:0, dur: CAST_DUR[id] || .32, done:false, data};
@@ -240,6 +254,7 @@ function cast(id, data){
 }
 function doSkill(c){
   const r = ST.rk(c.id), a = ST.avg;
+  if(SKD[c.id].ult) return doUlt(c.id);
   if(c.id === 'arrow'){
     let t = c.data.tgt; if(!t || t.dead) t = nearestMon(hero, RANGE + 80); if(!t) return;
     const ang = Math.atan2(t.y - hero.y, t.x - hero.x), cm = rollCrit();
@@ -271,14 +286,15 @@ function doSkill(c){
     let t = c.data.tgt; if(!t || t.dead) t = nearestMon(hero, CLEAVE_REACH); if(!t) return;
     // Avança até encostar no alvo
     const d = D(t, hero), stop = t.r + 14;
-    if(d > stop){ const an = Math.atan2(t.y - hero.y, t.x - hero.x), mv = Math.min(d - stop, CLEAVE_REACH); for(let i = 0; i < 6; i++) part({x:hero.x + Math.cos(an)*mv*i/6, y:hero.y + Math.sin(an)*mv*i/6, life:.25, size:3, c:'rgba(220,220,230,.6)'}); hero.x += Math.cos(an)*mv; hero.y += Math.sin(an)*mv; }
+    if(d > stop){ const an = Math.atan2(t.y - hero.y, t.x - hero.x), mv = Math.min(d - stop, CLEAVE_REACH); for(let i = 0; i < 6; i++) part({x:hero.x + Math.cos(an)*mv*i/6, y:hero.y + Math.sin(an)*mv*i/6, life:.25, size:3, c:'rgba(220,220,230,.6)'}); const e = rayEnd(hero.x, hero.y, hero.x + Math.cos(an)*mv, hero.y + Math.sin(an)*mv); hero.x = e.x; hero.y = e.y; }
     hero.face = Math.atan2(t.y - hero.y, t.x - hero.x);
     meleeHit(t, 1.5 + .15*r, a*(1.5 + .4*r)*ST.pois);
     ring(t.x, t.y, t.r*1.7, '#e0574a', .3, 3); hero.swing = .28;
   } else if(c.id === 'charge'){
     const an = Math.atan2(c.data.y - hero.y, c.data.x - hero.x), len = Math.min(CHARGE_LEN, Math.max(60, D(c.data, hero)));
     hero.face = an;
-    hero.dash = {x0:hero.x, y0:hero.y, x1:clamp(hero.x + Math.cos(an)*len, 20, WORLD.w - 20), y1:clamp(hero.y + Math.sin(an)*len, 20, WORLD.h - 20), t:0, dur:.24, hit:new Set(), mult:1.1 + .12*r, dot:a*(.8 + .2*r)*ST.pois, endMult:.8 + .08*r};
+    const e = rayEnd(hero.x, hero.y, clamp(hero.x + Math.cos(an)*len, 20, WORLD.w - 20), clamp(hero.y + Math.sin(an)*len, 20, WORLD.h - 20));
+    hero.dash = {x0:hero.x, y0:hero.y, x1:e.x, y1:e.y, t:0, dur:.24, hit:new Set(), mult:1.1 + .12*r, dot:a*(.8 + .2*r)*ST.pois, endMult:.8 + .08*r};
   } else if(c.id === 'whirl'){
     hero.whirl = {t:0, dur:2, tick:0, ang:0, mult:.25 + .025*r, dot:a*(.17 + .04*r)*ST.pois};
   } else if(c.id === 'rupture'){
@@ -326,6 +342,46 @@ function doSkill(c){
       if(rems[i] > 0 && !m.dead){ dealHit(m, rems[i]*(1 + .15*r), false, '#ffb070'); ring(m.x, m.y, 40, '#ffb070', .4, 3); }
       burn(m, a*(3 + .5*r)*ST.pois, 4*ST.pdur);
     });
+  }
+}
+/* ---------- SUPREMAS (nível 40) ---------- */
+// Arqueiro · Tempestade de Flechas: por 4s, a cada 0,2s caem flechas em até 3 inimigos em volta (220% do dano da arma + muito veneno).
+// Guerreiro · Fúria do Titã: esmaga o chão (raio 220, 600% + sangramento enorme) e por 8s: +60% de dano, +50% de velocidade de ataque, 25% de roubo de vida e 1,5s sem levar dano.
+// Mago · Cataclismo: 10 meteoros em 2,5s nos inimigos em volta (raio 110 cada, 500% + queimadura e chão em chamas).
+function doUlt(id){
+  const a = ST.avg, P = ST.pois, live = () => mons.filter(m => !m.dead && D(m, hero) < ULT_R);
+  if(id === 'storm'){
+    ring(hero.x, hero.y, ULT_R, '#d8f07a', .8, 4); txt(hero.x, hero.y - 70, 'Tempestade de Flechas!', '#d8f07a', 18, -20);
+    for(let i = 0; i < 20; i++) later.push({t:i*.2, fn:() => {
+      if(scene !== 'map') return;
+      for(const m of live().sort(() => Math.random() - .5).slice(0, 3)){
+        for(let k = 0; k < 3; k++) part({x:m.x + rnd(-6, 6), y:m.y - 300, vx:rnd(-10, 10), vy:900, life:.32, size:2, c:fxLook() ? fxLook().c : '#e8f0b0', kind:'streak'});
+        const cm = rollCrit(); dealHit(m, a*2.2*cm, cm > 1, '#d8f07a'); poison(m, a*2.5*P, 4*ST.pdur);
+        ring(m.x, m.y, 24, '#9bd84a', .3, 2);
+      }
+    }});
+  } else if(id === 'titan'){
+    ring(hero.x, hero.y, 220, '#e0574a', .8, 9); ring(hero.x, hero.y, 120, '#ffb09a', .5, 4);
+    for(let i = 0; i < 60; i++){ const an = Math.random()*TAU, sp = rnd(160, 420); part({x:hero.x, y:hero.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 80, grav:320, life:.7, size:rnd(2.5,5), c:pick(['#e0574a','#7a5a40','#ffb09a'])}); }
+    for(const m of mons) if(!m.dead && D(m, hero) < 220 + m.r){ meleeHit(m, 6, a*6*P); }
+    hero.buff = {t:8, dmg:1.6, aps:1.5, ls:25, c:'#e0574a'}; hero.invul = Math.max(hero.invul, 1.5); hero.swing = .4;
+    txt(hero.x, hero.y - 70, 'Fúria do Titã!', '#ff8a7a', 18, -20);
+  } else if(id === 'cataclysm'){
+    txt(hero.x, hero.y - 70, 'Cataclismo!', '#ffb040', 18, -20);
+    for(let i = 0; i < 10; i++) later.push({t:i*.25, fn:() => {
+      if(scene !== 'map') return;
+      const L = live(), t = L.length ? pick(L) : null;
+      const x = t ? t.x + rnd(-20, 20) : hero.x + rnd(-220, 220), y = t ? t.y + rnd(-20, 20) : hero.y + rnd(-160, 160), R = 110;
+      ring(x, y, R, 'rgba(255,138,43,.9)', .45, 2);
+      for(let k = 0; k < 4; k++) part({x:x + rnd(-8, 8), y:y - 340, vx:rnd(-10, 10), vy:700, life:.48, size:8 - k, c:k ? '#ffb040' : '#fff0c0', kind:'streak'});
+      later.push({t:.45, fn:() => {
+        if(scene !== 'map') return;
+        ring(x, y, R, '#ff8a2b', .5, 7); ring(x, y, R*.5, '#ffd24a', .35, 3);
+        for(let k = 0; k < 26; k++){ const an = Math.random()*TAU, sp = rnd(80, 280); part({x, y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 80, grav:280, life:.6, size:rnd(2,5), c:pick(['#ff8a2b','#ffd24a','#5a2a18'])}); }
+        for(const m of mons) if(!m.dead && D(m, {x, y}) < R + m.r*.5) spellHit(m, 5, a*3*P, 4);
+        clouds.push({x, y, r:R*.8, t:0, dur:3, tick:0, dps:a*1.2*P, fire:true});
+      }});
+    }});
   }
 }
 // Acerto de magia: dano da arma × mult (pode ser crítico) e queimadura opcional

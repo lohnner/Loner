@@ -29,6 +29,50 @@ function drawDecor(o){
     case 'skull': ctx.fillStyle = '#cfc6b0'; circ(x, y, 5*s); ctx.fillRect(x - 3*s, y + 2*s, 6*s, 4*s); ctx.fillStyle = '#1a0d0a'; circ(x - 2*s, y, 1.4*s); circ(x + 2*s, y, 1.4*s); break;
   }
 }
+/* ---------- MAPA EM SALAS (3D) ---------- */
+// Paredes com altura WALL_H: o topo fica deslocado para cima e a face de baixo (sul) aparece quando tem chão embaixo.
+// Cores por tipo de mapa: [topo, face]; mapas abertos (campos/floresta/pântano) usam cerca viva/mata no lugar de pedra.
+const WALL_H = 48;
+const WALL_C = {field:['#4a6a2e','#2e4420'], forest:['#2a4a2a','#18301a'], swamp:['#3e4a2c','#262e1c'], mine:['#6a5a48','#43382c'], crypt:['#5c5a64','#3a3842'], ice:['#dfe9f2','#9aaebe'], desert:['#9a8262','#6a5840'], citadel:['#524864','#342c44'], hell:['#5a2a22','#331612']};
+const WALL_LEAF = {field:1, forest:1, swamp:1};
+// Prepara (uma vez por mapa) o desenho do chão e a lista de paredes
+function prepLevel(){
+  if(LV.prep) return;
+  const N = LV_N, g = LV.g, floor = new Path2D(), walls = [], aoN = [];
+  const at = (x, y) => x < 0 || y < 0 || x >= N || y >= N ? 0 : g[y*N + x];
+  for(let y = 0; y < N; y++) for(let x = 0; x < N; x++){
+    if(at(x, y)){ floor.rect(x*TILE, y*TILE, TILE, TILE); if(!at(x, y - 1)) aoN.push([x, y]); continue; }
+    let near = false; for(let dy = -1; dy <= 1 && !near; dy++) for(let dx = -1; dx <= 1; dx++) if(at(x + dx, y + dy)){ near = true; break; }
+    if(near) walls.push({x:x*TILE, y:(y + 1)*TILE, tx:x, ty:y, south:!!at(x, y + 1), h:(x*73856093 ^ y*19349663) >>> 0});
+  }
+  LV.prep = {floor, walls, aoN};
+}
+function drawWall(w){
+  const C = WALL_C[mapDef.decor] || WALL_C.crypt, X = w.x, Y = w.y - TILE, top = Y - WALL_H, leaf = WALL_LEAF[mapDef.decor];
+  if(w.south){ ctx.fillStyle = vgrad(Y + TILE - WALL_H, Y + TILE, C[1], shade(C[1], -.45)); ctx.fillRect(X, Y + TILE - WALL_H, TILE, WALL_H);
+    if(!leaf){ ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; for(let r = 1; r < 3; r++){ const yy = Y + TILE - WALL_H + r*WALL_H/3; line(X, yy, X + TILE, yy); const o = (r + w.tx) % 2 ? TILE/2 : 0; line(X + o + TILE/4, yy - WALL_H/3, X + o + TILE/4, yy); } }
+    else { ctx.fillStyle = shade(C[1], -.2); for(let i = 0; i < 4; i++) circ(X + 8 + i*15, Y + TILE - 4 - ((w.h >> i) & 3)*2, 9); } }
+  ctx.fillStyle = vgrad(top, top + TILE, shade(C[0], .12), shade(C[0], -.12)); ctx.fillRect(X, top, TILE, TILE);
+  if(leaf){ for(let i = 0; i < 5; i++){ const hx = X + 10 + ((w.h >> (i*3)) % 40), hy = top + 10 + ((w.h >> (i*3 + 2)) % 40); sphere(hx, hy, 10 + (w.h >> i & 3)*2, i % 2 ? C[0] : shade(C[0], .1)); } }
+  else { ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1; line(X, top + TILE/2, X + TILE, top + TILE/2); line(X + ((w.tx % 2) ? TILE/2 : TILE/4), top, X + ((w.tx % 2) ? TILE/2 : TILE/4), top + TILE/2); line(X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE/2, X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE); }
+}
+// Chão (padrão do mapa só onde tem sala/corredor), sombra das paredes no chão e enfeites
+function drawLevelFloor(vis){
+  prepLevel();
+  const C = WALL_C[mapDef.decor] || WALL_C.crypt;
+  ctx.fillStyle = shade(C[1], -.55); ctx.fillRect(-200, -200, WORLD.w + 400, WORLD.h + 400);
+  if(groundPat){ ctx.fillStyle = groundPat; ctx.fill(LV.prep.floor); }
+  // sombra que a parede joga no chão logo abaixo dela
+  for(const [x, y] of LV.prep.aoN){ const X = x*TILE, Y = y*TILE; if(!vis({x:X, y:Y})) continue; ctx.fillStyle = vgrad(Y, Y + 26, 'rgba(0,0,0,.45)', 'rgba(0,0,0,0)'); ctx.fillRect(X, Y, TILE, 26); }
+  for(const o of decor) if(vis(o)) drawDecor(o);
+  // Masmorra: o chão fica com a cor do elemento da fase
+  if(inDun()){ ctx.globalAlpha = .1; ctx.fillStyle = ELEM[dunElem(S.dun.phase)].c; ctx.fill(LV.prep.floor); ctx.globalAlpha = 1; }
+}
+// Paredes e obstáculos visíveis entram na ordenação por y junto com o herói e as criaturas
+function levelProps(vis, out){
+  for(const w of LV.prep.walls) if(vis({x:w.x + TILE/2, y:w.y - TILE/2})) out.push({y:w.y, draw:() => drawWall(w)});
+  for(const o of LV.solids) if(vis(o)) out.push({y:o.y, draw:() => drawDecor(o)});
+}
 /* ---------- HERÓIS (corpo em pé com volume: luz vindo de cima à esquerda) ---------- */
 const hexRGB = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
 // k > 0 clareia, k < 0 escurece (cores em #rrggbb)
@@ -214,6 +258,8 @@ function drawMon(m){
   ctx.save(); ctx.translate(m.x, m.y + foot);
   if(m.dead) ctx.globalAlpha = Math.max(0, 1 - m.deadT/1.6);
   ctx.fillStyle = 'rgba(0,0,0,.38)'; ell(0, 0, r*1.25, r*.42);
+  // Masmorra: aura no chão com a cor do elemento que a criatura causa
+  if(m.el && !m.dead){ ctx.globalAlpha = .3 + .1*Math.sin(T*4 + m.anim); ctx.fillStyle = ELEM[m.el].c; ell(0, 0, r*1.5, r*.6); ctx.globalAlpha = m.dead ? ctx.globalAlpha : 1; }
   if(m.elite && !m.dead){ ctx.strokeStyle = `rgba(111,156,255,${.55 + .3*Math.sin(T*5)})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, -1, r*1.45, r*.55, 0, 0, TAU); ctx.stroke(); }
   ctx.save();
   if(m.dead) ctx.rotate(fx*Math.min(1, m.deadT*4)*1.45); // cai para a frente
@@ -709,11 +755,11 @@ function render(){
   const vx0 = cam.x - hw - 80, vx1 = cam.x + hw + 80, vy0 = cam.y - hh - 80, vy1 = cam.y + hh + 80;
   const vis = o => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
   ctx.save(); ctx.translate(cw/2, ch/2); ctx.scale(z, z); ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
-  const pat = scene === 'town' ? townPat : groundPat;
-  if(pat){ ctx.fillStyle = pat; ctx.fillRect(0, 0, WORLD.w, WORLD.h); }
-  ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 16; ctx.strokeRect(-8, -8, WORLD.w + 16, WORLD.h + 16);
-  if(scene === 'town') drawTown();
-  else for(const o of decor) if(vis(o)) drawDecor(o);
+  if(scene === 'town'){
+    if(townPat){ ctx.fillStyle = townPat; ctx.fillRect(0, 0, WORLD.w, WORLD.h); }
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 16; ctx.strokeRect(-8, -8, WORLD.w + 16, WORLD.h + 16);
+    drawTown();
+  } else if(LV) drawLevelFloor(vis);
   for(const c of clouds){
     const k = Math.min(1, c.t*3) * Math.min(1, (c.dur - c.t)*2), pul = 1 + Math.sin(T*6)*.04;
     // Nuvem ácida (verde) ou chão em chamas do Meteoro (laranja)
@@ -737,6 +783,7 @@ function render(){
   if(portal) drawPortal(portal.x, portal.y, clamp(portal.t/.6, 0, 1));
   const ents = mons.filter(m => !m.dead && vis(m)); ents.push(hero);
   if(scene === 'town') for(const p of townProps()) ents.push(p); // prédios, árvores e postes entram na ordem por y
+  else if(LV) levelProps(vis, ents); // paredes e obstáculos do mapa
   ents.sort((a, b) => a.y - b.y);
   for(const e of ents) e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e);
   if(scene === 'town') drawTownLabels();

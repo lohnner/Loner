@@ -93,6 +93,10 @@ MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.range
 const DUN_KILLS = 50, DUN_STEP = 1.25;
 const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada fase mais forte.'};
 const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
+// Elemento das fases: muda a cada DUN_ELEM_SPAN fases, passando pelos 7 tipos sem repetir, e depois recomeça.
+// Todas as criaturas da fase causam esse dano — o jogador precisa da resistência certa.
+const DUN_ELEMS = ['fire','cold','light','poison','chaos','necro','psy'], DUN_ELEM_SPAN = 5;
+const dunElem = p => DUN_ELEMS[Math.floor((Math.max(1, p) - 1)/DUN_ELEM_SPAN) % DUN_ELEMS.length];
 // Ataques em área: a criatura marca o chão onde o herói está e, depois de AOE_T (1 s), causa m × o dano dela em quem estiver dentro (raio r).
 // cd = recarga; o ataque normal continua. Elites marcam uma área 20% maior. Os Campos de Trigo (mapa inicial) não têm.
 const AOE_T = 1;
@@ -162,7 +166,13 @@ const SKD = {
   channel:{n:'Mente Ágil',act:0,req:5,max:10},
   ward:{n:'Escudo Arcano',act:0,req:7,max:10},
   combust:{n:'Combustão',act:0,req:12,max:5},
+  // Habilidades supremas: liberam sozinhas no nível 40 (sem pontos), uma por classe, tecla 5
+  storm:{n:'Tempestade de Flechas',act:1,req:40,max:1,cd:30,ult:1},
+  titan:{n:'Fúria do Titã',act:1,req:40,max:1,cd:30,ult:1},
+  cataclysm:{n:'Cataclismo',act:1,req:40,max:1,cd:30,ult:1},
 };
+const ULT = {arqueiro:'storm', guerreiro:'titan', mago:'cataclysm'};
+const ultOf = () => S.lv >= MAX_LV ? ULT[clsOf()] : null; // suprema liberada (ou null)
 // Cada classe tem 4 ativas (teclas 1–4) e 5 passivas. ACTIVE/PASSIVE mudam com setClass() ao entrar com um personagem.
 // Rank máximo das habilidades: 7 (as de máximo 5 continuam 5)
 const SK_MAX = 7;

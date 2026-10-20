@@ -120,7 +120,7 @@ function calcStats(eq = S.eq){
     for(const af of it.affix){ if(af.k === 'skill') bonus[af.s] = (bonus[af.s]||0) + af.v; else a[af.k] += af.v; }
   }
   const L = S.lv, war = isWar();
-  const rk = id => S.sk[id] > 0 ? S.sk[id] + (bonus[id]||0) : 0;
+  const rk = id => SKD[id] && SKD[id].ult ? (ULT[clsOf()] === id && S.lv >= MAX_LV ? 1 : 0) : S.sk[id] > 0 ? S.sk[id] + (bonus[id]||0) : 0;
   const pp = S.pp || {}, dm = (1 + L*.03) * (1 + .01*(pp.dmg || 0)), st = {rk, bonus};
   // Paragon: cada nível dá +1 de dano (na arma) e +10 de vida, para todas as classes
   const par = S.par || 0;
@@ -197,6 +197,9 @@ function skDesc(id, st){
     case 'potency': return `+${12*r}% de dano de veneno.`;
     case 'agility': return `+${5*r}% de velocidade de ataque.`;
     case 'hide': return `+${7*r}% de vida e +${3*r} de armadura.`;
+    case 'storm': return `Suprema (nível 40). Por 4s chovem flechas em até 3 inimigos em volta a cada 0,2s: cada uma causa ${pc(2.2)} do dano da arma e envenena ${fmt(a*2.5*p)} em ${n1(4*d)}s.`;
+    case 'titan': return `Suprema (nível 40). Esmaga o chão (raio 220): ${pc(6)} do dano da arma e ${fmt(a*6*p)} de sangramento em todos. Depois, por 8s: +60% de dano, +50% de velocidade de ataque e 25% do dano vira vida. 1,5s sem levar dano.`;
+    case 'cataclysm': return `Suprema (nível 40). 10 meteoros caem em 2,5s nos inimigos em volta (raio 110 cada): ${pc(5)} do dano da arma, queimadura de ${fmt(a*3*p)} e chão em chamas.`;
     case 'contagion': return `Quando um inimigo envenenado morre, ${pc(.3+.1*r)} do veneno dele salta para quem estiver perto.`;
   }
   return '';
