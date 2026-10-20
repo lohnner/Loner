@@ -33,7 +33,7 @@ const JOY_R = 55, JOY_DEAD = 12;
 const MOVE_KEY = {w:[0,-1], arrowup:[0,-1], s:[0,1], arrowdown:[0,1], a:[-1,0], arrowleft:[-1,0], d:[1,0], arrowright:[1,0]};
 // Direção pedida pelo jogador (ângulo) ou null se não está mandando andar
 function manualDir(){
-  if(!S.cfg.manual) return null;
+  if(!S.cfg.manual && scene !== 'town') return null; // na vila é sempre manual
   if(joy && Math.hypot(joy.dx, joy.dy) > JOY_DEAD) return Math.atan2(joy.dy, joy.dx);
   let x = 0, y = 0; for(const k in moveKeys) if(moveKeys[k] && MOVE_KEY[k]){ x += MOVE_KEY[k][0]; y += MOVE_KEY[k][1]; }
   return x || y ? Math.atan2(y, x) : null;

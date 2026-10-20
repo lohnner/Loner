@@ -238,8 +238,10 @@ function npcDelivery() {
       allow create, update: if request.auth != null
         && rid.matches(request.auth.uid + '_c[0-9]+')
         && request.auth.token.firebase.sign_in_provider == 'google.com'
-        && request.resource.data.keys().hasOnly(['name', 'lv', 'par', 'score', 'cls', 'build', 'kills', 'updated'])
+        && request.resource.data.keys().hasOnly(['name', 'lv', 'par', 'score', 'cls', 'build', 'kills', 'updated', 'dun'])
         && (!('build' in request.resource.data) || (request.resource.data.build is string && request.resource.data.build.size() <= 20))
+        // dun = melhor fase concluída na Masmorra (só existe no nível 40)
+        && (!('dun' in request.resource.data) || (request.resource.data.dun is int && request.resource.data.dun >= 1 && request.resource.data.dun <= 100000 && request.resource.data.lv == 40))
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 14

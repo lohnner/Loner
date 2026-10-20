@@ -77,15 +77,22 @@ function nameItem(it){
   if(it.rar < LEG_R) return `${pick(RA)} de ${pick(RB)}`;
   return pick(LEG[it.slot]);
 }
-// Forja da vila: 3 itens viram 1 com status novos.
-// Iguais (mesmo espaço, mesma base e mesma classe): sai o mesmo item, com a melhor raridade e o maior ilvl dos três.
-// Diferentes: sai um deles (sorteado), com a raridade e o ilvl dele.
-const forgeSame = list => list.every(i => i.slot === list[0].slot && i.base === list[0].base && (i.cls || '') === (list[0].cls || ''));
+// Forja da vila: 3 itens do mesmo tipo (mesmo espaço; arma também da mesma classe, ex.: 3 arcos) e da mesma raridade
+// viram 1 item desse tipo na raridade acima (Comum → Incomum → Raro → Épico → Lendário), com status novos e o maior ilvl dos três.
+const forgeMatch = (a, b) => a.slot === b.slot && a.rar === b.rar && (a.slot !== 'bow' || (a.cls || '') === (b.cls || ''));
+// Motivo de não poder forjar (ou '' se pode)
+function forgeWhy(list){
+  if(list.length !== 3) return 'Escolha 3 itens';
+  if(!list.every(i => forgeMatch(i, list[0]))) return 'Os 3 precisam ser do mesmo tipo e da mesma raridade';
+  if(list[0].rar >= LEG_R) return 'Lendário já é a maior raridade';
+  return '';
+}
+// Custo da forja: cresce com o maior ilvl e a raridade (ex.: 3 Raros ilvl 20 ≈ 2.200; 3 Épicos ilvl 40 ≈ 8.400)
+const forgeCost = list => Math.round((50 + Math.max(...list.map(i => i.ilvl))*25) * [1,2,4,8,16][Math.max(...list.map(i => i.rar))]);
 function forgeItems(list){
-  const same = forgeSame(list);
-  const src = same ? list.reduce((a, b) => b.rar > a.rar || (b.rar === a.rar && b.ilvl > a.ilvl) ? b : a) : pick(list);
-  const ilvl = same ? Math.max(...list.map(i => i.ilvl)) : src.ilvl;
-  return genItem(ilvl, src.rar, src.slot, src.cls || clsOf());
+  const src = list[0], ilvl = Math.max(...list.map(i => i.ilvl));
+  // arma ou item de classe sai para a mesma classe; o resto, para a sua
+  return genItem(ilvl, src.rar + 1, src.slot, src.cls || clsOf());
 }
 function rollRar(elite){
   const r = Math.random(), m = elite ? 4 : 1;
@@ -95,7 +102,8 @@ function rollRar(elite){
   if(r < .22*(elite?2:1)) return 1;
   return 0;
 }
-function shopRar(){ const r = Math.random(); if(r < .03) return 4; if(r < .12) return 3; if(r < .35) return 2; if(r < .75) return 1; return 0; }
+// Raridade dos itens do mercador: Comum 60% · Incomum 30% · Raro 7,5% · Épico 2% · Lendário 0,5%
+function shopRar(){ const r = Math.random(); if(r < .005) return 4; if(r < .025) return 3; if(r < .1) return 2; if(r < .4) return 1; return 0; }
 // O mercador vende para a sua classe
 function rollShop(){ S.shop = [0,1,2].map(() => genItem(Math.max(1, S.lv), shopRar(), null, clsOf())); }
 const buyPrice = it => Math.round(sellPrice(it) * 4);
@@ -114,14 +122,16 @@ function calcStats(eq = S.eq){
   const L = S.lv, war = isWar();
   const rk = id => S.sk[id] > 0 ? S.sk[id] + (bonus[id]||0) : 0;
   const pp = S.pp || {}, dm = (1 + L*.03) * (1 + .01*(pp.dmg || 0)), st = {rk, bonus};
-  st.min = wmin*dm; st.max = wmax*dm; st.avg = (st.min + st.max)/2;
+  // Paragon: cada nível dá +1 de dano (na arma) e +10 de vida, para todas as classes
+  const par = S.par || 0;
+  st.min = wmin*dm + par; st.max = wmax*dm + par; st.avg = (st.min + st.max)/2;
   // As passivas de cada classe ocupam o mesmo papel: Dedos Ligeiros = Fúria, Toxina Potente = Brutalidade, Couro Curtido ~ Pele de Ferro
   st.aps = aps * (1 + a.ias/100) * (1 + .05*(rk('agility') + rk('fury') + rk('channel'))) * (1 + .005*(pp.ias || 0));
   st.crit = Math.min(75, 5 + a.crit); st.critd = 150 + a.critd;
   st.pois = 1 + a.pois/100 + .12*(rk('potency') + rk('brutality') + rk('pyro')) + .015*(pp.pois || 0);
   st.pdur = 1 + a.pdur/100;
   // O Guerreiro luta colado: nasce com mais vida e armadura. O Mago é o mais frágil.
-  st.life = (70 + L*14 + a.life) * (war ? 1.4 : isMage() ? .92 : 1) * (1 + .07*(rk('hide') + rk('ward')) + .08*rk('iron')) * (1 + .01*(pp.life || 0));
+  st.life = (70 + L*14 + a.life) * (war ? 1.4 : isMage() ? .92 : 1) * (1 + .07*(rk('hide') + rk('ward')) + .08*rk('iron')) * (1 + .01*(pp.life || 0)) + 10*par;
   st.armor = a.armor + 3*(rk('hide') + rk('ward')) + 6*rk('iron') + (war ? 10 + L*2.2 : 0);
   st.dr = war ? .15 : 0; // Couraça: o Guerreiro recebe 15% menos dano
   st.ms = 125 * (1 + a.ms/100);

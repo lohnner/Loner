@@ -12,7 +12,7 @@ const fmt = n => Math.round(n).toLocaleString('pt-BR');
 const n1 = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR');
 const pc = n => Math.round(n * 100) + '%';
 const TAU = Math.PI * 2;
-const W_MAP = 1800, INV_MAX = 10, RANGE = 230, MAX_LV = 40, MELEE = 46;
+const W_MAP = 1800, RANGE = 230, MAX_LV = 40, MELEE = 46;
 
 /* ---------- DADOS ---------- */
 // Raridades: cada uma tem um número fixo de atributos (AFF_N). O Lendário ainda ganha +habilidade da classe.
@@ -87,6 +87,12 @@ const MON_EL = {aranha:'poison', sapo:'poison', bruxa:'chaos', aranhacav:'poison
   cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire'};
 for(const k in MON_EL) MONS[k].el = MON_EL[k];
 MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.ranged = '#9af0c8'; MONS.feiticeiro.ranged = '#ff8ae8';
+// Masmorra (fim de jogo): o portal abre na vila no nível 40. Fases de DUN_KILLS abates com criaturas de todos os mapas no nível 40;
+// cada fase deixa as criaturas DUN_STEP vezes mais fortes que a anterior (vida e dano): fase N = 1,25^(N−1).
+// Morrer ou voltar para a vila encerra a corrida; a próxima pode começar em qualquer fase até a melhor concluída + 1. S.dun.best vai para o ranking.
+const DUN_KILLS = 50, DUN_STEP = 1.25;
+const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada fase mais forte.'};
+const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
 // Ataques em área: a criatura marca o chão onde o herói está e, depois de AOE_T (1 s), causa m × o dano dela em quem estiver dentro (raio r).
 // cd = recarga; o ataque normal continua. Elites marcam uma área 20% maior. Os Campos de Trigo (mapa inicial) não têm.
 const AOE_T = 1;
@@ -171,8 +177,15 @@ const ORBS = {
   lenda:{n:'Orbe da Lenda', from:3, to:4, chance:.003, c:'#f5cf3a', d:'Transforma um item Épico em Lendário: ganha mais 1 atributo, +habilidade da sua classe, a melhor base e um nome lendário.'},
   anul:{n:'Orbe da Anulação', rm:1, chance:.015, c:'#e05a5a', d:'Remove 1 atributo aleatório do item, que cai 1 raridade. Use para trocar um atributo ruim: depois melhore de novo com outro orbe. Num Lendário, ele perde também a +habilidade.'},
 };
+// Forja de orbes: ORB_UP_N orbes iguais viram 1 do próximo da lista (a Anulação não entra)
+const ORB_UP = {desp:'asc', asc:'exa', exa:'lenda'}, ORB_UP_N = 10;
 for(const k in ORBS){ const O = ORBS[k]; O.ok = O.rm ? it => it.rar >= 1 : it => it.rar === O.from; }
-const STASH_MAX = 10; // armazém da vila (só usa na vila), dividido entre os personagens da conta
+// Espaços: a mochila (por personagem, S.invX comprados) começa com 10 e vai até 20; o armazém da vila (da conta, acct.stashX) começa com 10 e vai até 50.
+// Cada espaço comprado fica mais caro (slotPrice). stashMax() fica em 09-conta.js.
+const INV_BASE = 10, INV_CAP = 20, STASH_BASE = 10, STASH_CAP = 50;
+const invMax = () => INV_BASE + (S.invX || 0);
+const invSlotPrice = () => 5000 + 5000*(S.invX || 0);        // 5 mil, 10 mil, ... 50 mil
+const stashSlotPrice = n => 5000 + 2500*n;                     // n = espaços já comprados: 5 mil ... 102,5 mil
 const CLASS_KIT = {
   arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
   guerreiro:{active:['cleave','charge','whirl','rupture'], passive:['serrated','brutality','fury','iron','bloodlust']},
@@ -193,7 +206,7 @@ const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
 // Espaços usados na mochila: itens + uma pilha por tipo de orbe
 const orbStacks = () => Object.keys(ORBS).filter(k => (S.orbs && S.orbs[k]) > 0).length;
 const invUsed = () => S.inv.length + orbStacks();
-const invFull = () => invUsed() >= INV_MAX;
+const invFull = () => invUsed() >= invMax();
 // O espaço da arma se chama 'bow' por compatibilidade com saves antigos; o nome muda com a classe
 const WEAPON_N = {arqueiro:'Arco', guerreiro:'Arma', mago:'Cajado'};
 const SLOT_N = {get bow(){ return WEAPON_N[clsOf()]; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
@@ -248,12 +261,12 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[]};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
   const cls = (s.char && s.char.cls) || 'arqueiro', d = defaults(cls);
-  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})}});
+  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})},look:{...d.look,...(s.look||{})},dun:{...d.dun,...(s.dun||{}),phase:0,kills:0}});
   // Saves antigos sem limite de nível: o que passou de 40 vira Paragon
   if(d.lv > MAX_LV){ d.par += d.lv - MAX_LV; d.lv = MAX_LV; d.xp = 0; }
   d.orbs = {...defaults(cls).orbs, ...(s.orbs || {})};
@@ -263,6 +276,7 @@ function normalize(s){
   if(!Array.isArray(d.inv)) d.inv = [];
   if(!Array.isArray(d.shop)) d.shop = [];
   if(!d.char && (d.lv > 1 || d.kills > 0)) d.char = {name:'Víbora',cls:'arqueiro',build:'veneno',color:0};
+  d.speed = 1; // não existe mais escolha de velocidade: sempre 1x
   if((s.ver || 0) < 3){ d.inv.forEach(migrateItem); d.shop.forEach(migrateItem); for(const k in d.eq) migrateItem(d.eq[k]); }
   d.ver = 3;
   return d;
@@ -274,6 +288,37 @@ function readLocal(key){
 }
 const heroName = () => S.char ? S.char.name : 'Herói';
 const CLOAKS = [{n:'Musgo',a:'#2b4d30',b:'#3f6b3b',h:'#1f3a25'},{n:'Couro',a:'#5a3f26',b:'#7a5a38',h:'#3e2a19'},{n:'Noite',a:'#28344f',b:'#3c4c70',h:'#1b2438'},{n:'Sangue',a:'#5a2224',b:'#7d3336',h:'#3d1618'}];
+// Visuais do Baú de Visuais (COS_CHEST de ouro cada baú; sai um visual que a conta ainda não tem). t = tipo:
+// skin = cores da roupa (a, b, h como em CLOAKS) · trail = rastro ao andar e na esquiva · fx = cor dos ataques e magias · name = cor do nome
+const COS_CHEST = 50000;
+const COS_T = {skin:'Roupa', trail:'Rastro', fx:'Efeito dos ataques', name:'Cor do nome'};
+const COS = {
+  sk_ouro:{t:'skin', n:'Ouro Real', a:'#7a5a12', b:'#c9a23a', h:'#5a4210'},
+  sk_gelo:{t:'skin', n:'Gelo Eterno', a:'#3a6a8a', b:'#8fc8e8', h:'#2a4a66'},
+  sk_abismo:{t:'skin', n:'Sombra Abissal', a:'#1a1424', b:'#3a2a52', h:'#0e0a16'},
+  sk_esmeralda:{t:'skin', n:'Esmeralda', a:'#0f5a3a', b:'#2fa86a', h:'#0a3a26'},
+  sk_carmesim:{t:'skin', n:'Carmesim Real', a:'#7a0f1a', b:'#c8283a', h:'#4a0a12'},
+  sk_prata:{t:'skin', n:'Prata Lunar', a:'#6a6e7a', b:'#c8ccd6', h:'#44464e'},
+  tr_fogo:{t:'trail', n:'Rastro de Fogo', c:['#ff8a2b','#ffd24a']},
+  tr_gelo:{t:'trail', n:'Rastro de Gelo', c:['#8fd8ff','#ffffff']},
+  tr_sombra:{t:'trail', n:'Rastro Sombrio', c:['#3a2a52','#8a5ad8']},
+  tr_estrelas:{t:'trail', n:'Poeira de Estrelas', c:['#fff4b0','#ffffff','#b0d8ff']},
+  tr_folhas:{t:'trail', n:'Folhas', c:['#6abf3a','#c8e070']},
+  tr_sangue:{t:'trail', n:'Rastro de Sangue', c:['#a01a14','#ff4a3a']},
+  fx_arcano:{t:'fx', n:'Arcano', c:'#c08aff', c2:'#f0d8ff'},
+  fx_gelo:{t:'fx', n:'Gélido', c:'#7fd0ff', c2:'#e8f8ff'},
+  fx_ouro:{t:'fx', n:'Dourado', c:'#f5cf3a', c2:'#fff4c0'},
+  fx_sombra:{t:'fx', n:'Sombrio', c:'#6a3aa8', c2:'#2a1440'},
+  fx_sangue:{t:'fx', n:'Sangrento', c:'#e0283a', c2:'#ffb0b8'},
+  nm_ouro:{t:'name', n:'Nome Dourado', c:'#f5cf3a'},
+  nm_rubi:{t:'name', n:'Nome Rubi', c:'#ff4a5a'},
+  nm_safira:{t:'name', n:'Nome Safira', c:'#5aa8ff'},
+  nm_ametista:{t:'name', n:'Nome Ametista', c:'#c08aff'},
+  nm_jade:{t:'name', n:'Nome Jade', c:'#5fd35f'},
+  nm_arcoiris:{t:'name', n:'Nome Arco-íris', c:'#ff8a2b', rainbow:1},
+};
+// Visual equipado do personagem (ou null)
+const lookOf = t => { const id = S.look && S.look[t]; return id && COS[id] && COS[id].t === t ? COS[id] : null; };
 const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{id:'guerreiro',n:'Guerreiro',d:'Corpo a corpo com lâminas',ok:1},{id:'mago',n:'Mago',d:'Magias de fogo à distância',ok:1}];
 // Builds liberadas por classe (cls); as sem cls ainda não existem
 const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1,cls:'arqueiro'},{id:'sangramento',n:'Sangramento',d:'Cortes que sangram',ok:1,cls:'guerreiro'},{id:'fogo',n:'Fogo',d:'Explosões e queimaduras',ok:1,cls:'mago'},{id:'gelo',n:'Gelo',d:'Em breve'}];

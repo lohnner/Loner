@@ -8,14 +8,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/estilo.css?v=7">
+<link rel="stylesheet" href="css/estilo.css?v=12">
 
 <div id="app">
   <header class="hud gut">
     <div class="hud-top">
       <span class="hero-id" id="heroName">Herói</span><span class="lvl" id="lvText">Nv 1</span>
       <span class="gold"><i></i><span id="goldText">0</span></span>
-      <button class="speed" id="speedBtn" data-act="speed" aria-label="Velocidade do jogo">x1</button>
     </div>
     <div class="xp" aria-hidden="true"><i id="xpBar"></i></div>
     <div class="status"><span class="dot" id="stDot"></span><span id="stText">Caçando</span><span id="hpText"></span></div>
@@ -24,16 +23,8 @@
     <canvas id="cv"></canvas>
     <div id="log" aria-live="polite"></div>
     <button id="townBtn" data-act="goTown" hidden aria-label="Voltar para a vila"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="6" ry="9"/><ellipse cx="12" cy="12" rx="2.5" ry="5" fill="currentColor" fill-opacity=".35"/></svg>Voltar à vila</button>
-    <div id="townCard" hidden>
-      <div class="tc-head"><span class="tc-name">Vila de Brejal</span><span id="tcInfo"></span></div>
-      <div class="tc-actions">
-        <button class="btn gold" id="tcSell" data-act="sellR" data-v="0">Vender comuns</button>
-        <button class="btn gold" id="tcShop" data-act="tab" data-v="shop">Mercador</button>
-        <button class="btn" id="tcStash" data-act="tab" data-v="stash">Armazém</button>
-        <button class="btn" id="tcForge" data-act="tab" data-v="forge">Forja</button>
-        <button class="btn primary" id="tcGo" data-act="go">Partir</button>
-      </div>
-    </div>
+    <!-- Na vila só existe o botão Partir; Mercador, Forja, Armazém e Masmorra se abrem andando até eles -->
+    <button id="goBtn" data-act="go" hidden aria-label="Partir para a caçada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h12M13 7l5 5-5 5"/></svg><span id="goText">Partir</span></button>
   </main>
   <div class="skillbar gut" id="skillbar"></div>
   <nav class="nav gut" id="nav">
@@ -59,13 +50,13 @@
   <div class="dcard" id="dcard"></div>
 </div>
 
-<script src="js/01-base.js?v=7"></script>
-<script src="js/02-modelos.js?v=7"></script>
-<script src="js/03-mapa.js?v=7"></script>
-<script src="js/04-batalha.js?v=7"></script>
-<script src="js/05-habilidades.js?v=7"></script>
-<script src="js/06-cena.js?v=7"></script>
-<script src="js/07-animacoes.js?v=7"></script>
-<script src="js/08-hud.js?v=7"></script>
-<script src="js/09-conta.js?v=7"></script>
-<script src="js/10-inicio.js?v=7"></script>
+<script src="js/01-base.js?v=12"></script>
+<script src="js/02-modelos.js?v=12"></script>
+<script src="js/03-mapa.js?v=12"></script>
+<script src="js/04-batalha.js?v=12"></script>
+<script src="js/05-habilidades.js?v=12"></script>
+<script src="js/06-cena.js?v=12"></script>
+<script src="js/07-animacoes.js?v=12"></script>
+<script src="js/08-hud.js?v=12"></script>
+<script src="js/09-conta.js?v=12"></script>
+<script src="js/10-inicio.js?v=12"></script>

@@ -33,6 +33,7 @@ function kill(m){
   m.dead = true; m.deadT = 0; S.kills++;
   let xp = (6 + m.ml*4.5) * (m.elite ? 3.5 : 1);
   xp *= xpMult(mapDef);
+  if(inDun()){ xp *= dunMult(S.dun.phase); dunKill(); }
   gainXp(xp);
   for(let i = 0; i < 10; i++) part({x:m.x, y:m.y, vx:rnd(-90,90), vy:rnd(-110,40), grav:240, life:rnd(.4,.8), size:rnd(1.5,3.5), c:m.d.c1});
   const cr = ST.rk('contagion');
@@ -66,6 +67,15 @@ function kill(m){
   if(Math.random() < (m.elite ? .75 : .12)) dropItem(m);
   if(m.elite && Math.random() < .35) dropItem(m);
 }
+// Masmorra: conta o abate; com DUN_KILLS a fase é concluída (vai para o ranking) e começa a próxima, 25% mais forte
+function dunKill(){
+  const D0 = S.dun; D0.kills++;
+  if(D0.kills < DUN_KILLS) return;
+  if(D0.phase > D0.best){ D0.best = D0.phase; rankDirty = true; }
+  log(`Fase ${D0.phase} concluída! Fase ${D0.phase + 1}: criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes`, '#d9a0ff');
+  ring(hero.x, hero.y, 120, '#c08aff', .9, 5); txt(hero.x, hero.y - 60, `Fase ${D0.phase + 1}`, '#e0b0ff', 22, -20);
+  D0.phase++; D0.kills = 0; save(); dirtyPanel();
+}
 function dropItem(m){
   const rar = rollRar(m.elite), it = genItem(m.ml + (m.elite ? 1 : 0), rar);
   drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), it, t:0, gone:false});
@@ -92,7 +102,7 @@ function gainParagon(x){
     S.pxp -= parNeed(S.par); S.par++; refreshStats();
     ring(hero.x, hero.y, 80, '#b48cff', .9, 4); ring(hero.x, hero.y, 50, '#e2d4ff', .7, 2);
     txt(hero.x, hero.y - 46, 'PARAGON ' + S.par, '#c9a8ff', 20, -24);
-    log(`Paragon ${S.par}! Ponto de Paragon para gastar no Herói.`, '#c9a8ff');
+    log(`Paragon ${S.par}! +1 de dano, +10 de vida e 1 ponto para gastar no Herói.`, '#c9a8ff');
     dirtyPanel(); rankDirty = true;
   }
 }
@@ -105,10 +115,11 @@ const PARA = {
 };
 const parFree = () => S.par - Object.values(S.pp).reduce((a, v) => a + v, 0);
 // Esquiva (DODGE em 01): direção = para onde o jogador manda andar; no PC sem WASD, para o mouse; senão, para longe da criatura mais perto.
-function doDodge(fromKey){
+// ang (opcional) força a direção — o toque duplo no celular usa a direção para onde o herói está andando/olhando
+function doDodge(fromKey, ang){
   const D0 = DODGE[clsOf()];
   if(scene !== 'map' || mode !== 'hunt' || cds.dodge > 0 || hero.dodge || hero.dash || hero.cast) return false;
-  let ang = manualDir();
+  if(ang === undefined) ang = manualDir();
   if(ang === null && fromKey && mouse.on && mouse.x >= 0 && mouse.y >= 0 && mouse.x <= cw && mouse.y <= ch){ const w = toWorld(mouse.x, mouse.y); if(D(w, hero) > 10) ang = Math.atan2(w.y - hero.y, w.x - hero.x); }
   if(ang === null){ const n = nearestMon(hero); ang = n && D(n, hero) < 300 ? Math.atan2(hero.y - n.y, hero.x - n.x) : hero.face; }
   if(hero.atk && !hero.atk.rel) hero.atk = null;

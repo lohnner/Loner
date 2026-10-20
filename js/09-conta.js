@@ -62,7 +62,7 @@ function renderChars(){
     const cls = (CLASSES.find(x => x.id === c.char.cls) || CLASSES[0]).n, md = MAPS.find(m => m.id === c.map) || MAPS[0];
     const arm = delArm === c.cid && delArmT > performance.now();
     return `<div class="mapc"><span class="swatch" style="background:${(CLOAKS[c.char.color] || CLOAKS[0]).b}"></span>
-      <div class="mh"><span class="mn">${esc(c.char.name)}</span><span class="ml">Nv ${c.lv}${c.par ? ` · <span style="color:#c9a8ff">P${c.par}</span>` : ''}</span></div>
+      <div class="mh"><span class="mn" style="${c.look && COS[c.look.name] && !COS[c.look.name].rainbow ? 'color:' + COS[c.look.name].c : ''}">${esc(c.char.name)}</span><span class="ml">Nv ${c.lv}${c.par ? ` · <span style="color:#c9a8ff">P${c.par}</span>` : ''}</span></div>
       <div class="mm">${esc(cls)} · ${fmt(c.kills || 0)} abates · ${esc(md.name)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="pickChar" data-v="${c.cid}">Jogar</button>
       <button class="btn ${arm ? 'warn' : ''}" data-act="delChar" data-v="${c.cid}">${arm ? 'Toque de novo para apagar' : 'Apagar'}</button></div></div>`;
@@ -115,7 +115,8 @@ const parseJSON = txt => { try{ return JSON.parse(txt); }catch(e){ return null; 
 function toAcct(o){
   if(!o) return null;
   if(Array.isArray(o.chars)){
-    const a = {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), stash: Array.isArray(o.stash) ? o.stash : [], orbs: o.orbs && typeof o.orbs === 'object' ? o.orbs : {}, savedAt: o.savedAt || 0, rv: 3};
+    const a = {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), stash: Array.isArray(o.stash) ? o.stash : [], orbs: o.orbs && typeof o.orbs === 'object' ? o.orbs : {}, savedAt: o.savedAt || 0, rv: 3,
+      stashX: Math.max(0, Math.min(STASH_CAP - STASH_BASE, +o.stashX || 0)), cos: Array.isArray(o.cos) ? o.cos.filter(id => COS[id]) : []};
     if(!o.rv) a.stash.forEach(migrateItem); // armazém de antes das 5 raridades
     return a;
   }
@@ -127,7 +128,7 @@ function toAcct(o){
 // Usa o mais novo entre a nuvem e a cópia local; o save antigo sem conta (de antes do login) vira um personagem da conta.
 function loadAccount(cloudRaw){
   const cloud = toAcct(cloudRaw), local = toAcct(readLocal(KEY + ':' + fbUser.uid)), legacy = toAcct(readLocal(KEY));
-  acct = cloud || {chars: [], stash: [], orbs: {}, savedAt: 0, rv: 3};
+  acct = cloud || {chars: [], stash: [], orbs: {}, savedAt: 0, rv: 3, stashX: 0, cos: []};
   if(local && local.savedAt > acct.savedAt) acct = local;
   let changed = acct !== cloud;
   if(legacy && legacy.chars.length && acct.chars.length < MAX_CHARS){ acct.chars.push(legacy.chars[0]); changed = true; try{ localStorage.removeItem(KEY); }catch(e){} }
@@ -166,6 +167,9 @@ const stash = () => acct ? (acct.stash || (acct.stash = [])) : [];
 const stashId = () => Date.now()*1000 + Math.floor(Math.random()*1000);
 // Orbes no armazém: {tipo: quantidade}, cada tipo é uma pilha que ocupa 1 espaço (como na mochila)
 const stashOrbs = () => acct ? (acct.orbs || (acct.orbs = {})) : {};
+const stashMax = () => STASH_BASE + ((acct && acct.stashX) || 0);
+// Visuais da conta (comprados no Baú de Visuais): lista de ids de COS, valem para todos os personagens
+const cosOwned = () => acct ? (acct.cos || (acct.cos = [])) : [];
 const stashUsed = () => stash().length + Object.keys(ORBS).filter(k => stashOrbs()[k] > 0).length;
 function storeLocal(){ try{ localStorage.setItem(KEY + ':' + fbUser.uid, JSON.stringify(acct)); }catch(e){} }
 function cloudFlush(){
@@ -189,10 +193,13 @@ const rankScore = () => S.lv + S.par + Math.min(.999, S.lv >= MAX_LV ? S.pxp/par
 function pushRank(){
   if(!fb || !fbUser || !accountReady || !S.char || !S.cid) return;
   rankDirty = false; rankPushT = 60; lastScore = rankScore();
-  fb.db.collection(RANK).doc(rankId(S.cid)).set({
+  const row = {
     name: heroName(), lv: S.lv, par: S.par, score: lastScore, cls: S.char.cls || 'arqueiro', build: S.char.build || 'veneno', kills: S.kills,
     updated: firebase.firestore.FieldValue.serverTimestamp(),
-  }).then(() => { if(tab === 'rank') loadRank(); })
+  };
+  // dun = melhor fase concluída na Masmorra (só vai quando > 0; as regras do Firestore precisam aceitar o campo)
+  if(S.dun && S.dun.best > 0) row.dun = S.dun.best;
+  fb.db.collection(RANK).doc(rankId(S.cid)).set(row).then(() => { if(tab === 'rank') loadRank(); })
     .catch(e => { rankErr = 'Não foi possível enviar sua pontuação (' + (e.code || 'erro') + ').'; if(tab === 'rank') dirtyPanel(); });
 }
 function rankTick(dt){
@@ -200,27 +207,32 @@ function rankTick(dt){
   if(rankDirty || (rankPushT <= 0 && Math.abs(rankScore() - lastScore) > 1e-4)) pushRank();
   else if(rankPushT <= 0) rankPushT = 60;
 }
-// Ranking com abas: Geral (todas as classes, rankCls = 'geral') e uma por classe. Por classe busca só a classe e ordena aqui,
-// para não precisar de índice composto; o Geral usa orderBy('score') (índice simples, automático no Firestore).
-let rankCls = null;
+// Ranking com duas abas principais: Nível (Geral = todas as classes, ou uma classe) e Masmorra (rankCls = 'dun', melhor fase concluída).
+// Por classe busca só a classe e ordena aqui, para não precisar de índice composto; Geral e Masmorra usam orderBy (índice simples, automático).
+let rankCls = null, rankLvTab = null; // rankLvTab = última aba de nível escolhida (para voltar a ela)
 function loadRank(){
   if(!fbInit() || rankLoading) return;
   if(!rankCls) rankCls = clsOf();
   rankLoading = true;
-  const cls = rankCls, col = fb.db.collection(RANK);
-  (cls === 'geral' ? col.orderBy('score', 'desc').limit(RANK_N) : col.where('cls', '==', cls).limit(500)).get()
-    .then(q => { if(cls !== rankCls) return; rankList = q.docs.map(d => Object.assign({id: d.id}, d.data())).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, RANK_N); rankErr = ''; })
+  const cls = rankCls, col = fb.db.collection(RANK), key = cls === 'dun' ? 'dun' : 'score';
+  (cls === 'geral' ? col.orderBy('score', 'desc').limit(RANK_N) : cls === 'dun' ? col.orderBy('dun', 'desc').limit(RANK_N) : col.where('cls', '==', cls).limit(500)).get()
+    .then(q => { if(cls !== rankCls) return; rankList = q.docs.map(d => Object.assign({id: d.id}, d.data())).filter(r => key !== 'dun' || r.dun > 0).sort((a, b) => (b[key] || 0) - (a[key] || 0) || (b.score || 0) - (a.score || 0)).slice(0, RANK_N); rankErr = ''; })
     .catch(e => { rankErr = 'Não foi possível carregar o ranking (' + (e.code || 'erro') + ').'; })
     .finally(() => { rankLoading = false; if(tab === 'rank') dirtyPanel(); });
 }
 function panelRank(){
   let h = '';
   if(rankErr) h += `<p class="note" style="color:#ff8c80">${esc(rankErr)}</p>`;
-  const cur = rankCls || clsOf();
-  const tabs = [{id:'geral', n:'Geral', ic:ICON_RANK}, ...CLASSES.filter(c => c.ok).map(c => ({id:c.id, n:c.n, ic:CLS_ICON[c.id]}))];
-  h += `<div class="rk-tabs">${tabs.map(t => `<button class="${t.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${t.id}">${t.ic}${t.n}</button>`).join('')}</div>`;
-  h += `<div class="sec"><h3>Top ${RANK_N} · ${cur === 'geral' ? 'Todas as classes' : (CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
-    <p class="note">Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente. Só aparece o nome do herói.</p>`;
+  const cur = rankCls || clsOf(), isDun = cur === 'dun';
+  if(!isDun) rankLvTab = cur;
+  // abas principais: Nível / Masmorra
+  h += `<div class="rk-tabs rk-main"><button class="${isDun ? '' : 'on'}" data-act="rankCls" data-v="${rankLvTab || 'geral'}">${ICON_RANK}Nível</button><button class="${isDun ? 'on' : ''}" data-act="rankCls" data-v="dun">${ICON_DUN}Masmorra</button></div>`;
+  if(!isDun){
+    const tabs = [{id:'geral', n:'Geral', ic:ICON_RANK}, ...CLASSES.filter(c => c.ok).map(c => ({id:c.id, n:c.n, ic:CLS_ICON[c.id]}))];
+    h += `<div class="rk-tabs">${tabs.map(t => `<button class="${t.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${t.id}">${t.ic}${t.n}</button>`).join('')}</div>`;
+  }
+  h += `<div class="sec"><h3>Top ${RANK_N} · ${isDun ? 'Masmorra' : cur === 'geral' ? 'Todas as classes' : (CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
+    <p class="note">${isDun ? `Ordem pela fase mais alta concluída na Masmorra (libera no nível ${MAX_LV}). Todas as classes juntas.` : `Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente.`} Só aparece o nome do herói.</p>`;
   const meId = fbUser && S.cid ? rankId(S.cid) : '', mine = id => fbUser && id.startsWith(fbUser.uid + '_');
   if(rankList === null){ if(!rankErr) h += `<p class="note">Carregando…</p>`; }
   else if(!rankList.length) h += `<p class="note">Ninguém no ranking ainda. Seja o primeiro.</p>`;
@@ -228,7 +240,7 @@ function panelRank(){
     const me = r.id === meId, cls = (CLASSES.find(c => c.id === r.cls) || CLASSES[0]).n;
     const bd = (BUILDS.find(b => b.id === r.build) || BUILDS.find(b => b.cls === r.cls) || BUILDS[0]).n;
     return `<li class="${me ? 'me' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.name)}${me ? ' (você)' : mine(r.id) ? ' (sua conta)' : ''}<small>${esc(cls)} · build ${esc(bd)} · ${fmt(r.kills || 0)} abates</small></span>
-      <span class="lv">Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}</span></li>`;
+      <span class="lv">${isDun ? `Fase ${+r.dun || 0}<br><span class="p">Paragon ${+r.par || 0}</span>` : `Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}`}</span></li>`;
   }).join('') + `</ol>`;
   if(meId && rankList && rankList.length >= RANK_N && !rankList.some(r => r.id === meId)) h += `<p class="note">${esc(heroName())} ainda não está no top ${RANK_N}.</p>`;
   return h + `</div>`;

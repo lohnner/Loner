@@ -90,6 +90,9 @@ function dashBoom(d){
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
   hero.invul = Math.max(0, (hero.invul || 0) - dt);
+  // Visual de rastro (Baú de Visuais): partículas atrás do herói ao andar, mais fortes na esquiva
+  const TR = lookOf('trail');
+  if(TR && (hero.moving || hero.dodge) && hero.scale > .5 && Math.random() < dt*(hero.dodge ? 60 : 16)) part({x:hero.x + rnd(-6,6), y:hero.y - rnd(0,14), vx:rnd(-15,15), vy:rnd(-30,-5), life:rnd(.4,.7), size:rnd(1.5,3.2), c:pick(TR.c)});
   if(hero.dodge){
     // Esquiva: Arqueiro rola, Guerreiro avança, Mago some e reaparece (teleporte)
     const g = hero.dodge; g.t += dt; const k = clamp(g.t/g.dur, 0, 1), e = 1 - (1 - k)*(1 - k);
@@ -277,20 +280,43 @@ function updateField(dt){
   }
   coins = coins.filter(c => !c.got);
 }
+// Vila: o herói anda só quando o jogador manda (joystick/WASD ou toque/clique num ponto). Prédios e fonte bloqueiam (townBlocked em 03).
+function townMove(ang, dt){
+  const s = ST.ms*dt, nx = hero.x + Math.cos(ang)*s, ny = hero.y + Math.sin(ang)*s;
+  hero.face = ang; hero.moving = true; hero.walkT += dt;
+  if(!townBlocked(nx, ny)){ hero.x = nx; hero.y = ny; return true; }
+  // escorrega pela parede
+  if(!townBlocked(nx, hero.y)){ hero.x = nx; return true; }
+  if(!townBlocked(hero.x, ny)){ hero.y = ny; return true; }
+  return false;
+}
+// Saída automática (Regras › Voltar a caçar depois de curar): só se o jogador não mexeu em nada desde que chegou; devolve os segundos que faltam (0 = não vai sair)
+const townLeaveIn = () => scene === 'town' && mode === 'town' && S.cfg.autoGo && townIdle && hero.hp >= ST.life && !uiOpen() ? Math.max(.01, 3 - townWait) : 0;
 function updateTown(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
   heroTimers(dt);
-  if(mode === 'townWalk'){ if(moveTo(FOUNT, dt, .85)){ mode = 'town'; hero.face = -Math.PI/2; } }
-  else if(mode === 'town'){
-    hero.moving = false;
+  if(mode === 'town'){
+    // movimento: joystick/WASD tem prioridade; senão, anda até o ponto tocado
+    let ang = manualDir();
+    if(ang !== null) townGoal = null;
+    else if(townGoal){ if(D(hero, townGoal) < 8) townGoal = null; else ang = Math.atan2(townGoal.y - hero.y, townGoal.x - hero.x); }
+    if(ang !== null){ townIdle = false; if(!townMove(ang, dt) && townGoal) townGoal = null; } else hero.moving = false;
+    // cura em qualquer lugar da vila
     if(hero.hp < ST.life){
       hero.hp = Math.min(ST.life, hero.hp + ST.life*.4*dt);
       if(Math.random() < dt*14){ const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*14, y:hero.y + Math.sin(an)*8, vy:-50, life:.7, size:2, c:'#9fe0ff'}); }
-      townWait = 0;
-    } else if(S.cfg.autoGo && !uiOpen()){ townWait += dt; if(townWait >= 3) depart(); }
-    else townWait = 0;
+    }
+    // portas: chegar na frente de um prédio abre o painel dele (uma vez por visita à porta)
+    const z = townZones().find(z => D(hero, z) < z.r);
+    if(z && townZone !== z.id){ townZone = z.id; townGoal = null; hero.moving = false; if(!uiOpen()) openTab(z.tab); }
+    if(!z) townZone = null;
+    // portal de saída: entrar nele (depois de ter saído de perto) parte para a caçada
+    if(D(hero, TPORT) > 90) townArmed = true;
+    if(townArmed && D(hero, TPORT) < 26) depart();
+    // saída automática
+    if(townLeaveIn() > 0){ townWait += dt; if(townWait >= 3) depart(); } else townWait = 0;
   } else if(mode === 'townLeave'){
-    if(moveTo(TPORT, dt, .9)){ hero.scale = Math.max(0, hero.scale - dt*2.5); if(hero.scale < .3) transition(() => enterMap(S.map)); }
+    if(moveTo(townExit, dt, .9)){ hero.scale = Math.max(0, hero.scale - dt*2.5); if(hero.scale < .3) transition(() => enterMap(S.map)); }
   }
 }
 function step(dt){
