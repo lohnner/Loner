@@ -23,6 +23,29 @@ let aim = null, skipClickT = 0;
 const mouse = {x:0, y:0, on:false};
 const toWorld = (sx, sy) => ({x: cam.x + (sx - cw/2)/zoom, y: cam.y + (sy - ch/2)/zoom});
 const canAim = id => !!AIMABLE[id] && ST.rk(id) > 0 && scene === 'map' && mode === 'hunt' && cds[id] <= 0;
+
+/* ---------- ANDAR MANUAL (Regras › Andar manual) ---------- */
+// Celular: toca em qualquer lugar do mapa, segura e arrasta — o herói anda para esse lado (joystick que nasce onde o dedo tocou).
+// PC: WASD ou setas. joy.ox/oy e dx/dy ficam em pixels do canvas.
+let joy = null;
+const moveKeys = {};
+const JOY_R = 55, JOY_DEAD = 12;
+const MOVE_KEY = {w:[0,-1], arrowup:[0,-1], s:[0,1], arrowdown:[0,1], a:[-1,0], arrowleft:[-1,0], d:[1,0], arrowright:[1,0]};
+// Direção pedida pelo jogador (ângulo) ou null se não está mandando andar
+function manualDir(){
+  if(!S.cfg.manual) return null;
+  if(joy && Math.hypot(joy.dx, joy.dy) > JOY_DEAD) return Math.atan2(joy.dy, joy.dx);
+  let x = 0, y = 0; for(const k in moveKeys) if(moveKeys[k] && MOVE_KEY[k]){ x += MOVE_KEY[k][0]; y += MOVE_KEY[k][1]; }
+  return x || y ? Math.atan2(y, x) : null;
+}
+// Desenho do joystick (coordenadas de tela)
+function drawJoy(){
+  if(!joy || !joy.moved) return;
+  const d = Math.hypot(joy.dx, joy.dy), k = d > JOY_R ? JOY_R/d : 1;
+  ctx.fillStyle = 'rgba(255,255,255,.08)'; circ(joy.ox, joy.oy, JOY_R);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, JOY_R, 0, TAU); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; circ(joy.ox + joy.dx*k, joy.oy + joy.dy*k, 22);
+}
 function aimPoint(){
   if(!aim) return null;
   let dx = Math.cos(hero.face), dy = Math.sin(hero.face), k = AIM_RANGE*.6;

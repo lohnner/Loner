@@ -33,7 +33,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .status #hpText{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--fg);flex:none}
 
 .stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#050605}
-#cv{position:absolute;inset:0;display:block}
+#cv{position:absolute;inset:0;display:block;touch-action:none}
 #log{position:absolute;left:max(10px,env(safe-area-inset-left,0px));right:10px;top:8px;display:grid;gap:3px;justify-items:start;pointer-events:none;font-size:13px;font-weight:500}
 #log div{background:rgba(8,10,9,.66);padding:2px 8px;border-radius:5px;animation:logfade 5s forwards;max-width:100%}
 @keyframes logfade{0%,80%{opacity:1}100%{opacity:0}}

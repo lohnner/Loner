@@ -226,6 +226,7 @@ function panelHero(){
 const respecCost = () => 25*S.lv;
 // Mochila: janela no meio da tela com INV_MAX quadrados. Itens além do limite (saves antigos) aparecem em quadrados vermelhos.
 // Pilha de orbes: um espaço da mochila com a quantidade no canto
+const ICON_RANK = SVG('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/>'); // troféu (aba Geral do ranking)
 const ICON_ORB = SVG('<circle cx="12" cy="12" r="7" fill="currentColor" fill-opacity=".35"/><circle cx="9.5" cy="9.5" r="2" fill="currentColor"/>');
 const orbTile = k => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="orb" data-v="${k}" aria-label="${ORBS[k].n}, ${S.orbs[k]}">${ICON_ORB}<span class="qty">${S.orbs[k]}</span></button>`;
 function panelBag(){
@@ -253,6 +254,7 @@ function panelRules(){
     <div class="sec">${sw('retFull', 'Voltar quando a mochila encher', `${INV_MAX} espaços`)}
     ${sw('autoGo', 'Voltar a caçar depois de curar', 'Espera 3s na vila. Pausa enquanto um menu está aberto.')}
     ${sw('autoSell', 'Vender itens comuns ao chegar na vila')}
+    ${sw('manual', 'Andar manual', 'Celular: toque em qualquer lugar do mapa, segure e arraste para o lado que quer andar. PC: WASD ou setas. Parado, o herói ataca quem estiver ao alcance.')}
     <div class="row"><label for="cfg-minPick">Pegar itens do chão a partir de</label><select id="cfg-minPick" data-cfg="minPick">${RAR.map((r, i) => `<option value="${i}" ${c.minPick === i ? 'selected' : ''}>${r.n}</option>`).join('')}</select></div></div>
     <div class="sec"><h3>Conta</h3>
       <div class="row"><label>${esc(fbUser ? (fbUser.email || fbUser.displayName || 'Conta Google') : 'Sem conta')}<small>${esc(heroName())} fica salvo na sua conta Google e aparece no ranking. Entre com a mesma conta em qualquer aparelho para continuar.</small></label><button class="btn" data-act="logout">Sair</button></div>
@@ -483,18 +485,39 @@ document.addEventListener('keydown', e => {
     manualCast(id);
   }
   if(e.key === 'Escape' && aim){ aim = null; return; }
+  if(MOVE_KEY[e.key.toLowerCase()]){ moveKeys[e.key.toLowerCase()] = true; if(S.cfg.manual && e.key.startsWith('Arrow')) e.preventDefault(); return; }
   if(e.key.toLowerCase() === 't') ACT.goTown();
 });
-document.addEventListener('keyup', e => { if(aim && aim.src === 'key' && e.key === aim.key) aimRelease(); });
+document.addEventListener('keyup', e => { moveKeys[e.key.toLowerCase()] = false; if(aim && aim.src === 'key' && e.key === aim.key) aimRelease(); });
 window.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.on = true; });
 window.addEventListener('contextmenu', e => { if(aim){ e.preventDefault(); aim = null; } });
-window.addEventListener('blur', () => { aim = null; });
+window.addEventListener('blur', () => { aim = null; joy = null; for(const k in moveKeys) moveKeys[k] = false; });
 // Clicar/tocar numa criatura troca o alvo; tocar no chão vazio volta ao alvo automático
+// Andar manual no celular: o toque vira joystick; se soltar sem arrastar, conta como toque normal (troca o alvo)
 cv.addEventListener('pointerdown', e => {
   if(e.button > 0 || scene !== 'map' || mode !== 'hunt') return;
-  const r = cv.getBoundingClientRect();
-  setFocus(monAt(e.clientX - r.left, e.clientY - r.top, e.pointerType === 'mouse' ? 6 : 22));
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  if(S.cfg.manual && e.pointerType !== 'mouse' && !joy && !aim){
+    joy = {pid:e.pointerId, ox:x, oy:y, dx:0, dy:0, moved:false};
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
+  setFocus(monAt(x, y, e.pointerType === 'mouse' ? 6 : 22));
 });
+window.addEventListener('pointermove', e => {
+  if(!joy || e.pointerId !== joy.pid) return;
+  const r = cv.getBoundingClientRect();
+  joy.dx = e.clientX - r.left - joy.ox; joy.dy = e.clientY - r.top - joy.oy;
+  if(Math.hypot(joy.dx, joy.dy) > JOY_DEAD) joy.moved = true;
+  e.preventDefault();
+}, {passive:false});
+const joyEnd = e => {
+  if(!joy || e.pointerId !== joy.pid) return;
+  if(!joy.moved && e.type === 'pointerup' && scene === 'map') setFocus(monAt(joy.ox, joy.oy, 22));
+  joy = null;
+};
+window.addEventListener('pointerup', joyEnd);
+window.addEventListener('pointercancel', joyEnd);
 // Mira por toque: segura no botão, arrasta e solta
 $('#skillbar').addEventListener('pointerdown', e => {
   if(e.pointerType === 'mouse' || aim) return;

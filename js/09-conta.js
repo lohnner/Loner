@@ -200,14 +200,15 @@ function rankTick(dt){
   if(rankDirty || (rankPushT <= 0 && Math.abs(rankScore() - lastScore) > 1e-4)) pushRank();
   else if(rankPushT <= 0) rankPushT = 60;
 }
-// Ranking separado por classe (abas). Busca só a classe escolhida e ordena aqui, para não precisar de índice composto no Firestore.
+// Ranking com abas: Geral (todas as classes, rankCls = 'geral') e uma por classe. Por classe busca só a classe e ordena aqui,
+// para não precisar de índice composto; o Geral usa orderBy('score') (índice simples, automático no Firestore).
 let rankCls = null;
 function loadRank(){
   if(!fbInit() || rankLoading) return;
   if(!rankCls) rankCls = clsOf();
   rankLoading = true;
-  const cls = rankCls;
-  fb.db.collection(RANK).where('cls', '==', cls).limit(500).get()
+  const cls = rankCls, col = fb.db.collection(RANK);
+  (cls === 'geral' ? col.orderBy('score', 'desc').limit(RANK_N) : col.where('cls', '==', cls).limit(500)).get()
     .then(q => { if(cls !== rankCls) return; rankList = q.docs.map(d => Object.assign({id: d.id}, d.data())).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, RANK_N); rankErr = ''; })
     .catch(e => { rankErr = 'Não foi possível carregar o ranking (' + (e.code || 'erro') + ').'; })
     .finally(() => { rankLoading = false; if(tab === 'rank') dirtyPanel(); });
@@ -216,8 +217,9 @@ function panelRank(){
   let h = '';
   if(rankErr) h += `<p class="note" style="color:#ff8c80">${esc(rankErr)}</p>`;
   const cur = rankCls || clsOf();
-  h += `<div class="rk-tabs">${CLASSES.filter(c => c.ok).map(c => `<button class="${c.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${c.id}">${CLS_ICON[c.id]}${c.n}</button>`).join('')}</div>`;
-  h += `<div class="sec"><h3>Top ${RANK_N} · ${(CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
+  const tabs = [{id:'geral', n:'Geral', ic:ICON_RANK}, ...CLASSES.filter(c => c.ok).map(c => ({id:c.id, n:c.n, ic:CLS_ICON[c.id]}))];
+  h += `<div class="rk-tabs">${tabs.map(t => `<button class="${t.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${t.id}">${t.ic}${t.n}</button>`).join('')}</div>`;
+  h += `<div class="sec"><h3>Top ${RANK_N} · ${cur === 'geral' ? 'Todas as classes' : (CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
     <p class="note">Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente. Só aparece o nome do herói.</p>`;
   const meId = fbUser && S.cid ? rankId(S.cid) : '', mine = id => fbUser && id.startsWith(fbUser.uid + '_');
   if(rankList === null){ if(!rankErr) h += `<p class="note">Carregando…</p>`; }

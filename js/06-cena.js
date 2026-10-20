@@ -21,6 +21,7 @@ function heroAI(dt){
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
   if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
   if(hero.cast || hero.dash){ hero.moving = false; return; }
+  if(S.cfg.manual){ manualAI(dt); return; }
   const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
   // Girando: anda até os inimigos sem atacar normalmente
   if(hero.whirl){ if(near && nd > 26 && nd < 400) moveDir(Math.atan2(near.y - hero.y, near.x - hero.x), dt, .75); else hero.moving = false; return; }
@@ -53,6 +54,20 @@ function heroAI(dt){
     else if(near) moveTo(near, dt);
     else hero.moving = false;
   }
+}
+// Andar manual (Regras): o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
+// Itens e orbes são pegos ao passar por cima.
+function manualAI(dt){
+  const md = manualDir();
+  if(hero.whirl){ if(md !== null) moveDir(md, dt, .75); else hero.moving = false; return; }
+  if(md !== null){ if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = md; moveDir(md, dt); return; }
+  hero.moving = false;
+  if(hero.atk && !hero.atk.rel){ const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); return; }
+  const reach = m => isWar() ? MELEE + m.r + 6 : RANGE, foc = getFocus();
+  const t = foc && D(foc, hero) <= reach(foc) ? foc : nearestMon(hero);
+  if(!t || D(t, hero) > reach(t)) return;
+  hero.face = Math.atan2(t.y - hero.y, t.x - hero.x);
+  if(!hero.atk) hero.atk = {t:0, dur:1/ST.aps, rel:false, tgt:t};
 }
 const PICK_RANGE = 500;
 function nearestDrop(maxD){

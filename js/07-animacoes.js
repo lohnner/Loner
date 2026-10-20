@@ -561,6 +561,7 @@ function render(){
   const vg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw, ch)*.28, cw/2, ch/2, Math.max(cw, ch)*.72);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, scene === 'map' && mapDef.decor === 'hell' ? 'rgba(40,6,0,.75)' : 'rgba(0,0,0,.7)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, cw, ch);
+  drawJoy();
   if(mode === 'dead'){ ctx.fillStyle = `rgba(90,0,0,${Math.min(.45, deadT*.3)})`; ctx.fillRect(0, 0, cw, ch); }
   if(fade > 0){ ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, cw, ch); }
 }

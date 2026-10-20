@@ -212,7 +212,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[]};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[]};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
