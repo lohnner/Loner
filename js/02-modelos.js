@@ -8,16 +8,24 @@ const skew = () => Math.pow(Math.random(), 2.6); // valores altos são raros
 // 1 em 4 sai para a outra classe (o Arqueiro acha espadas, o Guerreiro acha arcos) — dá para vender.
 const otherCls = () => pick(CLASSES.filter(c => c.ok && c.id !== clsOf())).id;
 const canUse = it => !it.cls || it.cls === clsOf();
-// Nível exigido a partir do ilvl: quanto mais rara, mais perto do ilvl (Comum −3, Mágico −2, Raro −1, Lendário = ilvl), até o nível máximo
-const reqLv = it => clamp(it.ilvl - [3, 2, 1, 0][it.rar], 1, MAX_LV);
+// Nível exigido a partir do ilvl: quanto mais rara, mais perto do ilvl (Comum −3, Incomum −2, Raro −2, Épico −1, Lendário = ilvl), até o nível máximo
+const reqLv = it => clamp(it.ilvl - [3, 2, 2, 1, 0][it.rar], 1, MAX_LV);
 const canEquip = it => canUse(it) && S.lv >= reqLv(it);
 const clsName = id => (CLASSES.find(c => c.id === id) || CLASSES[0]).n;
+// Força da base (dano da arma / armadura) e dos atributos por raridade
+const RAR_F = [1, 1, 1.08, 1.18, 1.35];
+// +habilidade do Lendário (uma ativa ou passiva da classe do item)
+function addSkill(it, cls){
+  const K = CLASS_KIT[cls] || CLASS_KIT.arqueiro, s = pick([...K.active, ...K.passive]), v = Math.random() < .12 ? 2 : 1;
+  it.cls = cls; it.affix.push({k:'skill', s, v, t:v===2?1:.5});
+}
+const normalAffix = it => it.affix.filter(a => a.k !== 'skill');
 function genItem(ilvl, rar, slot, cls){
   slot = slot || (Math.random() < .22 ? 'bow' : pick(SLOTS.slice(1)));
   cls = cls || (Math.random() < .25 ? otherCls() : clsOf());
-  const rf = [1,1,1.15,1.35][rar];
+  const rf = RAR_F[rar];
   const it = {id:S.uid++, slot, rar, ilvl, affix:[]};
-  if(slot === 'bow' || rar === 3) it.cls = cls;
+  if(slot === 'bow' || rar === LEG_R) it.cls = cls;
   if(slot === 'bow'){
     const b = weaponBases(cls).slice().reverse().find(x => ilvl >= x.lv);
     const t = skew(), base = (3 + ilvl*1.5) * b.m * (1 + .45*t) * rf;
@@ -27,14 +35,14 @@ function genItem(ilvl, rar, slot, cls){
     it.base = BASES[slot][Math.min(3, Math.floor(ilvl/10))];
     if(ARMOR_M[slot]){ const t = skew(); it.armor = Math.round((3 + ilvl*1.3) * ARMOR_M[slot] * (1 + .5*t) * rf); it.bt = t; }
   }
-  addAffixes(it, [0, rint(1,2), rint(3,4), 4][rar]);
-  if(rar === 3){ const K = CLASS_KIT[cls] || CLASS_KIT.arqueiro, s = pick([...K.active, ...K.passive]); const v = Math.random() < .12 ? 2 : 1; it.affix.push({k:'skill', s, v, t:v===2?1:.5}); }
+  addAffixes(it, AFF_N[rar]);
+  if(rar === LEG_R) addSkill(it, cls);
   it.name = nameItem(it);
   return it;
 }
 // Sorteia n atributos novos (sem repetir os que o item já tem), com força pela raridade atual
 function addAffixes(it, n){
-  const rf = [1,1,1.15,1.35][it.rar], have = new Set(it.affix.map(a => a.k));
+  const rf = RAR_F[it.rar], have = new Set(it.affix.map(a => a.k));
   const pool = Object.keys(AFX).filter(k => AFX[k].slots.includes(it.slot) && !have.has(k));
   for(let i = 0; i < n && pool.length; i++){
     const k = pool.splice(Math.floor(Math.random()*pool.length), 1)[0], A = AFX[k], t = skew();
@@ -43,37 +51,45 @@ function addAffixes(it, n){
     it.affix.push({k, v, t});
   }
 }
-// Usa um orbe no item: Comum → Mágico (Despertar) ou Mágico → Raro (Ascensão). Devolve true se melhorou.
+// Usa um orbe no item. Orbes de melhoria sobem 1 raridade (+1 atributo, base melhor); a Anulação tira 1 atributo e baixa 1 raridade.
+// Devolve true se usou.
 function upgradeItem(it, k){
-  const O = ORBS[k]; if(!O || !it || it.rar !== O.from || !(S.orbs[k] > 0)) return false;
-  S.orbs[k]--; it.rar = O.to;
-  if(O.to === 2){
-    // base melhor (raro tem +15%), e completa até 3 ou 4 atributos
-    if(it.min){ it.min = Math.round(it.min*1.15); it.max = Math.round(it.max*1.15); }
-    if(it.armor) it.armor = Math.round(it.armor*1.15);
-    addAffixes(it, rint(3, 4) - it.affix.length);
-  } else addAffixes(it, rint(1, 2));
+  const O = ORBS[k]; if(!O || !it || !O.ok(it) || !(S.orbs[k] > 0)) return false;
+  S.orbs[k]--;
+  const from = it.rar, to = O.rm ? from - 1 : O.to, f = RAR_F[to] / RAR_F[from];
+  if(it.min){ it.min = Math.max(1, Math.round(it.min*f)); it.max = Math.max(it.min + 1, Math.round(it.max*f)); }
+  if(it.armor) it.armor = Math.max(1, Math.round(it.armor*f));
+  it.rar = to;
+  if(O.rm){
+    const rest = normalAffix(it); rest.splice(Math.floor(Math.random()*rest.length), 1);
+    it.affix = from === LEG_R ? rest : [...rest, ...it.affix.filter(a => a.k === 'skill')];
+    if(from === LEG_R && it.slot !== 'bow') delete it.cls; // sem a +habilidade, qualquer classe usa
+  } else {
+    addAffixes(it, AFF_N[to] - normalAffix(it).length);
+    if(to === LEG_R && !it.affix.some(a => a.k === 'skill')) addSkill(it, it.cls || clsOf());
+  }
   it.name = nameItem(it);
   return true;
 }
 function nameItem(it){
   if(it.rar === 0) return it.base;
-  if(it.rar === 1) return `${it.base} ${SUF[it.affix[0].k] || ''}`.trim();
-  if(it.rar === 2) return `${pick(RA)} de ${pick(RB)}`;
+  if(it.rar === 1) return `${it.base} ${SUF[(normalAffix(it)[0] || {}).k] || ''}`.trim();
+  if(it.rar < LEG_R) return `${pick(RA)} de ${pick(RB)}`;
   return pick(LEG[it.slot]);
 }
 function rollRar(elite){
   const r = Math.random(), m = elite ? 4 : 1;
-  if(r < .003*m) return 3;
-  if(r < .035*m) return 2;
+  if(r < .003*m) return 4;
+  if(r < .015*m) return 3;
+  if(r < .055*m) return 2;
   if(r < .22*(elite?2:1)) return 1;
   return 0;
 }
-function shopRar(){ const r = Math.random(); if(r < .03) return 3; if(r < .25) return 2; if(r < .7) return 1; return 0; }
+function shopRar(){ const r = Math.random(); if(r < .03) return 4; if(r < .12) return 3; if(r < .35) return 2; if(r < .75) return 1; return 0; }
 // O mercador vende para a sua classe
 function rollShop(){ S.shop = [0,1,2].map(() => genItem(Math.max(1, S.lv), shopRar(), null, clsOf())); }
 const buyPrice = it => Math.round(sellPrice(it) * 4);
-const sellPrice = it => Math.round((4 + it.ilvl*2) * [1,3,9,40][it.rar]);
+const sellPrice = it => Math.round((4 + it.ilvl*2) * [1,3,6,14,40][it.rar]);
 
 /* ---------- STATUS ---------- */
 function calcStats(eq = S.eq){

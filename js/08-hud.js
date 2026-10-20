@@ -99,7 +99,7 @@ function updateHud(){
     $('#tcSell').disabled = !commons.length;
     $('#tcSell').innerHTML = `Vender comuns<small>${commons.length} itens · ${fmt(commons.reduce((s, i) => s + sellPrice(i), 0))} ouro</small>`;
     $('#tcShop').innerHTML = `Mercador<small>${S.shop.length} ${S.shop.length === 1 ? 'oferta' : 'ofertas'}</small>`;
-    $('#tcStash').innerHTML = `Armazém<small>${stash().length}/${STASH_MAX}</small>`;
+    $('#tcStash').innerHTML = `Armazém<small>${stashUsed()}/${STASH_MAX}</small>`;
     $('#tcGo').innerHTML = `Partir<small>${mapDef.name}</small>`;
     let info = '';
     if(hero.hp < ST.life) info = `Curando ${pct}%`;
@@ -213,7 +213,7 @@ function panelHero(){
     const tog = '';
     return `<div class="skill${lockLv ? ' locked' : ''}"><div class="ico">${ICON_SK[id]}</div>
       <div><div class="sn">${k.n} <em>${lockLv ? 'Libera no nível ' + k.req : type}</em></div><div class="sd">${skDesc(id, st)}</div></div>
-      <div class="ctl"><span class="rank">${base}${bonus ? ` <span style="color:var(--r3)">+${bonus}</span>` : ''}/${k.max}</span>
+      <div class="ctl"><span class="rank">${base}${bonus ? ` <span style="color:var(--perf)">+${bonus}</span>` : ''}/${k.max}</span>
       <button class="plus" data-act="skUp" data-v="${id}" ${canUp ? '' : 'disabled'} aria-label="Adicionar ponto em ${k.n}">+</button>${tog}</div></div>`;
   };
   h += `<p class="note">As habilidades ativas são manuais: toque nelas na barra embaixo do mapa para usar. O ataque normal continua automático.</p>` + ACTIVE.map(row).join('') + `<h3 style="margin-top:6px">Passivas</h3>` + PASSIVE.map(row).join('');
@@ -237,7 +237,7 @@ function panelBag(){
   else if(!n) h += `<p class="note">A mochila está vazia. Os itens do chão são recolhidos sozinhos durante a caçada.</p>`;
   h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo. Orbes ficam empilhados num espaço só: toque neles para usar.</p></div>`;
   h += `<div class="sec"><h3>Vender em lote</h3>${town ? '' : '<p class="note">O mercador fica na vila. Volte para vender.</p>'}<div class="bulk">
-    ${[0,1,2].map(r => `<button class="btn" data-act="sellR" data-v="${r}" ${town && count(r) ? '' : 'disabled'} style="color:${RAR[r].c}">${RAR[r].n}s<small>${count(r)} itens</small></button>`).join('')}</div></div>`;
+    ${[0,1,2,3].map(r => `<button class="btn" data-act="sellR" data-v="${r}" ${town && count(r) ? '' : 'disabled'} style="color:${RAR[r].c}">${RAR[r].n}s<small>${count(r)} itens</small></button>`).join('')}</div></div>`;
   return h;
 }
 function panelRules(){
@@ -259,21 +259,25 @@ function panelRules(){
 }
 function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'stash') return stash().find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
 // Armazém da vila: janela no meio com STASH_MAX espaços; dividido entre os personagens da conta (fica em acct.stash, 09-conta.js)
+// Pilha de orbes no armazém ou na mochila dentro do painel do armazém: tocar move a pilha inteira
+const orbMoveTile = (k, n, act) => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="${act}" data-v="${k}" aria-label="${ORBS[k].n}, ${n}">${ICON_ORB}<span class="qty">${n}</span></button>`;
 function panelStash(){
-  const st = stash(), slots = [];
+  const st = stash(), so = stashOrbs(), n = stashUsed(), slots = [];
+  const cells = [...Object.keys(ORBS).filter(k => so[k] > 0).map(k => orbMoveTile(k, so[k], 'orbTake')), ...st.map(it => tileHTML(it, 'stash'))];
   // Itens além do limite (armazém antigo maior) aparecem em vermelho e continuam podendo ser retirados
-  for(let i = 0; i < Math.max(STASH_MAX, st.length); i++) slots.push(`<div class="slot${i >= STASH_MAX ? ' over' : ''}">${st[i] ? tileHTML(st[i], 'stash') : ''}</div>`);
-  const bag = S.inv.map(it => `<div class="slot">${tileHTML(it, 'inv')}</div>`).join('');
-  return `<p class="note">O armazém é da conta: o que você guarda aqui aparece para todos os seus personagens. Toque num item da mochila para guardar, ou num item do armazém para retirar.</p>
-    <div class="sec"><h3>Armazém <span class="r">${st.length}/${STASH_MAX}</span></h3><div class="inv-grid">${slots.join('')}</div></div>
-    <div class="sec"><h3>Mochila <span class="r">${invUsed()}/${INV_MAX}</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nenhum item na mochila.</p>'}</div>`;
+  for(let i = 0; i < Math.max(STASH_MAX, n); i++) slots.push(`<div class="slot${i >= STASH_MAX ? ' over' : ''}">${cells[i] || ''}</div>`);
+  const bag = [...Object.keys(ORBS).filter(k => S.orbs[k] > 0).map(k => orbMoveTile(k, S.orbs[k], 'orbPut')), ...S.inv.map(it => tileHTML(it, 'inv'))].map(c => `<div class="slot">${c}</div>`).join('');
+  return `<p class="note">O armazém é da conta: o que você guarda aqui aparece para todos os seus personagens. Toque num item da mochila para guardar, ou num item do armazém para retirar. Tocar numa pilha de orbes move a pilha inteira.</p>
+    <div class="sec"><h3>Armazém <span class="r">${n}/${STASH_MAX}</span></h3><div class="inv-grid">${slots.join('')}</div></div>
+    <div class="sec"><h3>Mochila <span class="r">${invUsed()}/${INV_MAX}</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nada na mochila.</p>'}</div>`;
 }
 // Janela do orbe: explica e mostra os itens que ele pode melhorar
 function renderOrbDlg(k){
   const O = ORBS[k], card = $('#dcard'); dlgItem = null; $('#dlg').hidden = false; card.style.setProperty('--rc', O.c);
-  const list = [...S.inv.map(it => ({it, w:'inv'})), ...SLOTS.filter(s => S.eq[s]).map(s => ({it:S.eq[s], w:'eq'}))].filter(x => x.it.rar === O.from);
+  const list = [...S.inv.map(it => ({it, w:'inv'})), ...SLOTS.filter(s => S.eq[s]).map(s => ({it:S.eq[s], w:'eq'}))].filter(x => O.ok(x.it));
+  const which = O.rm ? 'com atributos' : RAR[O.from].n.toLowerCase();
   card.innerHTML = `<h2 class="dname">${O.n}</h2><div class="dtype">Você tem ${S.orbs[k]}</div><p class="note" style="color:var(--fg)">${O.d}</p>
-    ${list.length ? `<div class="sec"><h3>Toque num item ${RAR[O.from].n.toLowerCase()} para melhorar</h3><div class="inv-grid">${list.map(x => `<div class="slot"><button class="tile r${x.it.rar}" style="--rc:${RAR[x.it.rar].c}" data-act="useOrb" data-v="${k}:${x.w}:${x.it.id}" aria-label="${x.it.name}">${itemIcon(x.it)}<span class="il">${x.it.ilvl}</span>${x.w === 'eq' ? '<span class="cls-tag" style="color:var(--poison)">Eq</span>' : ''}</button></div>`).join('')}</div></div>` : `<p class="note">Nenhum item ${RAR[O.from].n.toLowerCase()} na mochila ou equipado.</p>`}
+    ${list.length ? `<div class="sec"><h3>Toque num item ${which} para ${O.rm ? 'anular 1 atributo' : 'melhorar'}</h3><div class="inv-grid">${list.map(x => `<div class="slot"><button class="tile r${x.it.rar}" style="--rc:${RAR[x.it.rar].c}" data-act="useOrb" data-v="${k}:${x.w}:${x.it.id}" aria-label="${x.it.name}">${itemIcon(x.it)}<span class="il">${x.it.ilvl}</span>${x.w === 'eq' ? '<span class="cls-tag" style="color:var(--poison)">Eq</span>' : ''}</button></div>`).join('')}</div></div>` : `<p class="note">Nenhum item ${which} na mochila ou equipado.</p>`}
     <div class="dact"><button class="btn full" data-act="dlgClose">Fechar</button></div>`;
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
@@ -302,13 +306,13 @@ function itemDiff(it, cur){
 function renderDlg(){
   const it = findItem(dlgItem.where, dlgItem.id); if(!it){ closeDlg(); return; }
   const isEq = dlgItem.where === 'eq', isShop = dlgItem.where === 'shop', isStash = dlgItem.where === 'stash', town = inTown(), col = RAR[it.rar].c;
-  // Orbe que serve neste item (Comum → Despertar, Mágico → Ascensão)
-  const ok = Object.keys(ORBS).find(k => ORBS[k].from === it.rar);
-  const orbBtn = ok && !isShop && !isStash ? `<button class="btn full" data-act="useOrb" data-v="${ok}:${dlgItem.where}:${it.id}" ${S.orbs[ok] > 0 ? '' : 'disabled'} style="border-color:${ORBS[ok].c};color:${ORBS[ok].c}">Usar ${ORBS[ok].n}<small>Vira ${RAR[ORBS[ok].to].n} · você tem ${S.orbs[ok]}</small></button>` : '';
+  // Orbes que servem neste item: o de melhoria da raridade dele e a Anulação (só aparece se tiver)
+  const oks = Object.keys(ORBS).filter(k => ORBS[k].ok(it) && (!ORBS[k].rm || S.orbs[k] > 0));
+  const orbBtn = isShop || isStash ? '' : oks.map(k => `<button class="btn full" data-act="useOrb" data-v="${k}:${dlgItem.where}:${it.id}" ${S.orbs[k] > 0 ? '' : 'disabled'} style="border-color:${ORBS[k].c};color:${ORBS[k].c}">Usar ${ORBS[k].n}<small>${ORBS[k].rm ? 'Tira 1 atributo, vira ' + RAR[it.rar - 1].n : 'Vira ' + RAR[ORBS[k].to].n} · você tem ${S.orbs[k]}</small></button>`).join('');
   const card = $('#dcard'); card.style.setProperty('--rc', col);
   let base = '';
-  if(it.slot === 'bow') base = `${fmt(it.min)}–${fmt(it.max)} de dano · ${n1(it.aps)} ataques/s${it.bt >= .9 ? ' <span style="color:var(--r3)">◆</span>' : ''}`;
-  else if(it.armor) base = `${fmt(it.armor)} de armadura${it.bt >= .9 ? ' <span style="color:var(--r3)">◆</span>' : ''}`;
+  if(it.slot === 'bow') base = `${fmt(it.min)}–${fmt(it.max)} de dano · ${n1(it.aps)} ataques/s${it.bt >= .9 ? ' <span style="color:var(--perf)">◆</span>' : ''}`;
+  else if(it.armor) base = `${fmt(it.armor)} de armadura${it.bt >= .9 ? ' <span style="color:var(--perf)">◆</span>' : ''}`;
   const aff = it.affix.map(a => a.k === 'skill' ? `<li class="sk2">+${a.v} em ${SKD[a.s].n}${a.v === 2 ? ' ◆' : ''}</li>` : `<li class="${a.t >= .9 ? 'perf' : ''}">${AFX[a.k].n(a.v)}${a.t >= .9 ? ' ◆' : ''}</li>`).join('');
   const other = isEq ? calcStats({...S.eq, [it.slot]:null}) : calcStats({...S.eq, [it.slot]:it});
   const dd = isEq ? ST.dps - other.dps : other.dps - ST.dps, dl = isEq ? ST.life - other.life : other.life - ST.life;
@@ -324,7 +328,7 @@ function renderDlg(){
       ${isEq ? `<button class="btn" data-act="unequip" ${!invFull() ? '' : 'disabled'}>Guardar na mochila</button>` : !canUse(it) ? `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>` : S.lv < reqLv(it) ? `<button class="btn" disabled>Requer nível ${reqLv(it)}</button>` : `<button class="btn primary" data-act="equip">Equipar</button>`}
       ${isEq ? '' : `<button class="btn gold" data-act="sell" ${town ? '' : 'disabled'}>${town ? 'Vender' : 'Vender na vila'}<small>${fmt(sellPrice(it))} ouro</small></button>`}
       ${isEq ? '' : `<button class="btn warn" data-act="drop">Jogar fora</button>`}
-      ${!isEq ? `<button class="btn" data-act="stashPut" ${town && stash().length < STASH_MAX ? '' : 'disabled'}>Enviar para o armazém<small>${!town ? 'Só na vila' : stash().length >= STASH_MAX ? 'Armazém cheio' : stash().length + '/' + STASH_MAX}</small></button>` : ''}
+      ${!isEq ? `<button class="btn" data-act="stashPut" ${town && stashUsed() < STASH_MAX ? '' : 'disabled'}>Enviar para o armazém<small>${!town ? 'Só na vila' : stashUsed() >= STASH_MAX ? 'Armazém cheio' : stashUsed() + '/' + STASH_MAX}</small></button>` : ''}
       ${orbBtn}
       <button class="btn" data-act="dlgClose">Fechar</button>
     </div>`}`;
@@ -404,13 +408,13 @@ const ACT = {
     const from = RAR[it.rar].n;
     if(!upgradeItem(it, k)) return;
     refreshStats(); save(); dirtyPanel();
-    log(`${ORBS[k].n}: ${from} → ${RAR[it.rar].n} (${it.name})`, RAR[it.rar].c);
+    log(`${ORBS[k].n}: ${from} → ${RAR[it.rar].n} (${it.name})`, ORBS[k].rm ? ORBS[k].c : RAR[it.rar].c);
     ring(hero.x, hero.y, 40, ORBS[k].c, .5, 3);
     dlgItem = {where, id:it.id}; $('#dlg').hidden = false; renderDlg(); // mostra o item já melhorado
   },
   // Armazém (só na vila)
   stashPut: () => {
-    if(!inTown() || !dlgItem || stash().length >= STASH_MAX) return;
+    if(!inTown() || !dlgItem || stashUsed() >= STASH_MAX) return;
     const it = findItem('inv', dlgItem.id); if(!it) return;
     S.inv = S.inv.filter(i => i !== it); it.id = stashId(); stash().push(it);
     log(`Guardou ${it.name} no armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
@@ -420,6 +424,19 @@ const ACT = {
     const it = findItem('stash', dlgItem.id); if(!it) return;
     acct.stash = stash().filter(i => i !== it); S.inv.push(it);
     log(`Retirou ${it.name} do armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
+  },
+  // Pilha de orbes: mochila → armazém (só na vila) e armazém → mochila. Juntar numa pilha que já existe não ocupa espaço novo.
+  orbPut: k => {
+    const so = stashOrbs(), n = S.orbs[k] || 0;
+    if(!inTown() || !ORBS[k] || n <= 0 || (!(so[k] > 0) && stashUsed() >= STASH_MAX)) return;
+    so[k] = (so[k] || 0) + n; S.orbs[k] = 0;
+    log(`Guardou ${n} ${ORBS[k].n} no armazém`, ORBS[k].c); save(); dirtyPanel();
+  },
+  orbTake: k => {
+    const so = stashOrbs(), n = so[k] || 0;
+    if(!ORBS[k] || n <= 0 || (!(S.orbs[k] > 0) && invFull())) return;
+    S.orbs[k] = (S.orbs[k] || 0) + n; delete so[k];
+    log(`Retirou ${n} ${ORBS[k].n} do armazém`, ORBS[k].c); save(); dirtyPanel();
   },
   dlgClose: () => closeDlg(),
   equip: () => {

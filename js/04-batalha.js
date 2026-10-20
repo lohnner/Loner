@@ -70,7 +70,7 @@ function dropItem(m){
   const rar = rollRar(m.elite), it = genItem(m.ml + (m.elite ? 1 : 0), rar);
   drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), it, t:0, gone:false});
   if(rar >= 2) log(`${RAR[rar].n} caiu: ${it.name}`, RAR[rar].c);
-  if(rar === 3) ring(m.x, m.y, 90, '#ff8a2b', .9, 4);
+  if(rar >= 3) ring(m.x, m.y, 90, RAR[rar].c, .9, 4);
 }
 function gainXp(x){
   if(S.lv >= MAX_LV){ gainParagon(x); return; }

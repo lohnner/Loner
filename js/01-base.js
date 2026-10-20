@@ -15,7 +15,16 @@ const TAU = Math.PI * 2;
 const W_MAP = 1800, INV_MAX = 10, RANGE = 230, MAX_LV = 40, MELEE = 46;
 
 /* ---------- DADOS ---------- */
-const RAR = [{n:'Comum',c:'#d9d4c7'},{n:'Mágico',c:'#6f9cff'},{n:'Raro',c:'#f0d34f'},{n:'Lendário',c:'#ff8a2b'}];
+// Raridades: cada uma tem um número fixo de atributos (AFF_N). O Lendário ainda ganha +habilidade da classe.
+const RAR = [{n:'Comum',c:'#e6e2d8'},{n:'Incomum',c:'#5fd35f'},{n:'Raro',c:'#4f8dff'},{n:'Épico',c:'#b36bff'},{n:'Lendário',c:'#f5cf3a'}];
+const AFF_N = [0, 1, 2, 3, 4];
+const LEG_R = RAR.length - 1;
+// Saves de antes das 5 raridades (ver < 3): Lendário 3 → 4; Mágico/Raro viram a raridade do número de atributos
+function migrateItem(it){
+  if(!it || typeof it.rar !== 'number') return;
+  if(it.rar === 3){ it.rar = LEG_R; return; }
+  if(it.rar > 0) it.rar = clamp(it.affix.filter(a => a.k !== 'skill').length, 1, 3);
+}
 const MAPS = [
   {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['rato','espantalho','zumbi'],desc:'Plantação abandonada perto da vila. Bom lugar para a primeira caçada.'},
   {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','aranha','ent'],desc:'Lobos em bando e aranhas que cospem teia de longe.'},
@@ -99,10 +108,16 @@ const SKD = {
 const SK_MAX = 7;
 for(const id in SKD) SKD[id].max = Math.min(SKD[id].max, SK_MAX);
 // Orbes de melhoria: caem de qualquer criatura e ficam empilhados num espaço da mochila
+// Um orbe para cada melhoria de raridade (from → to) e o Orbe da Anulação (rm), que tira 1 atributo e baixa 1 raridade.
+// ok(it) diz em quais itens o orbe serve.
 const ORBS = {
-  desp:{n:'Orbe do Despertar', from:0, to:1, chance:.05, c:'#6f9cff', d:'Desperta a magia de um item Comum: ele vira Mágico e ganha 1 ou 2 atributos.'},
-  asc:{n:'Orbe da Ascensão', from:1, to:2, chance:.02, c:'#f0d34f', d:'Eleva um item Mágico a Raro: ganha novos atributos (até 3 ou 4), base melhor e nome novo.'},
+  desp:{n:'Orbe do Despertar', from:0, to:1, chance:.05, c:'#5fd35f', d:'Desperta um item Comum: ele vira Incomum e ganha 1 atributo.'},
+  asc:{n:'Orbe da Ascensão', from:1, to:2, chance:.025, c:'#4f8dff', d:'Eleva um item Incomum a Raro: ganha mais 1 atributo, base um pouco melhor e nome novo.'},
+  exa:{n:'Orbe da Exaltação', from:2, to:3, chance:.01, c:'#b36bff', d:'Exalta um item Raro a Épico: ganha mais 1 atributo e base melhor.'},
+  lenda:{n:'Orbe da Lenda', from:3, to:4, chance:.003, c:'#f5cf3a', d:'Transforma um item Épico em Lendário: ganha mais 1 atributo, +habilidade da sua classe, a melhor base e um nome lendário.'},
+  anul:{n:'Orbe da Anulação', rm:1, chance:.015, c:'#e05a5a', d:'Remove 1 atributo aleatório do item, que cai 1 raridade. Use para trocar um atributo ruim: depois melhore de novo com outro orbe. Num Lendário, ele perde também a +habilidade.'},
 };
+for(const k in ORBS){ const O = ORBS[k]; O.ok = O.rm ? it => it.rar >= 1 : it => it.rar === O.from; }
 const STASH_MAX = 10; // armazém da vila (só usa na vila), dividido entre os personagens da conta
 const CLASS_KIT = {
   arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
@@ -170,7 +185,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:2,shop:[]};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[]};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
@@ -185,7 +200,8 @@ function normalize(s){
   if(!Array.isArray(d.inv)) d.inv = [];
   if(!Array.isArray(d.shop)) d.shop = [];
   if(!d.char && (d.lv > 1 || d.kills > 0)) d.char = {name:'Víbora',cls:'arqueiro',build:'veneno',color:0};
-  d.ver = 2;
+  if((s.ver || 0) < 3){ d.inv.forEach(migrateItem); d.shop.forEach(migrateItem); for(const k in d.eq) migrateItem(d.eq[k]); }
+  d.ver = 3;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.
