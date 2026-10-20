@@ -56,6 +56,14 @@ function drawHero(){
   const h = hero; if(h.alpha <= 0 || h.scale <= 0) return;
   ctx.save(); ctx.translate(h.x, h.y); ctx.globalAlpha = h.alpha; ctx.scale(h.scale, h.scale);
   ctx.fillStyle = 'rgba(0,0,0,.42)'; ell(0, 3, 15, 5.5);
+  // Esquiva: o Mago some no meio do teleporte; o Arqueiro rola; o Guerreiro inclina para a frente
+  const dg = h.dodge;
+  if(dg){
+    const k = clamp(dg.t/dg.dur, 0, 1), fx = Math.cos(h.face) >= 0 ? 1 : -1;
+    if(isMage()) ctx.globalAlpha *= Math.abs(1 - 2*k)*.8 + .05;
+    else if(isWar()) ctx.rotate(fx*.3);
+    else { ctx.translate(0, -12); ctx.rotate(fx*k*TAU); ctx.translate(0, 12); }
+  } else if(h.invul > 0) ctx.globalAlpha *= .6 + .4*Math.sin(T*40);
   const war = isWar(), gc = war ? '224,87,74' : isMage() ? '255,150,50' : '155,216,74';
   if(h.cast){ const k = Math.sin(clamp(h.cast.t/h.cast.dur, 0, 1)*Math.PI); const g = ctx.createRadialGradient(0, -18, 4, 0, -18, 40); g.addColorStop(0, `rgba(${gc},${.45*k})`); g.addColorStop(1, `rgba(${gc},0)`); ctx.fillStyle = g; circ(0, -18, 40); }
   if(war) drawWarrior(h); else if(isMage()) drawMage(h); else drawArcher(h);
@@ -516,6 +524,14 @@ function render(){
     const g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, c.r*pul); g.addColorStop(0, `rgba(${C0},${.42*k})`); g.addColorStop(.7, `rgba(${C1},${.28*k})`); g.addColorStop(1, `rgba(${C2},0)`);
     ctx.fillStyle = g; ell(c.x, c.y, c.r*pul, c.r*.8*pul);
     ctx.strokeStyle = c.fire ? `rgba(255,200,120,${.5*k})` : `rgba(190,240,120,${.5*k})`; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Áreas marcadas pelas criaturas: contorno + miolo que cresce até a hora do golpe
+  for(const z of zones){
+    const k = clamp(z.t/z.dur, 0, 1), pul = .5 + .5*Math.sin(T*(8 + k*16));
+    ctx.globalAlpha = .14 + .1*k; ctx.fillStyle = z.c; ell(z.x, z.y, z.r, z.r*.75);
+    ctx.globalAlpha = .35 + .3*k; ell(z.x, z.y, z.r*k, z.r*.75*k);
+    ctx.globalAlpha = .55 + .35*pul; ctx.strokeStyle = z.c; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*.75, 0, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   for(const d of drops) if(vis(d)) drawItemDrop(d);
   for(const c of coins){ ctx.fillStyle = '#8a6420'; circ(c.x, c.y + 1, 3.6); ctx.fillStyle = '#e2ae4a'; circ(c.x, c.y, 3.4); ctx.fillStyle = '#ffe39a'; circ(c.x - 1, c.y - 1, 1.2); }

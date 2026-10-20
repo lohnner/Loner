@@ -18,9 +18,10 @@ resize();
 
 let scene = 'map', mode = 'hunt', mapDef = MAPS[0], WORLD = {w:W_MAP, h:W_MAP};
 // whirl = Giro de Lâmina em andamento, dash = Investida em andamento (Guerreiro)
-const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,alpha:1,atk:null,cast:null,kite:0,whirl:null,dash:null};
+const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,alpha:1,atk:null,cast:null,kite:0,whirl:null,dash:null,dodge:null,invul:0};
 let mons = [], projs = [], clouds = [], drops = [], coins = [], parts = [], texts = [], later = [], decor = [], rings = [];
-const cds = {}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
+const cds = {dodge:0}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
+let zones = []; // áreas marcadas no chão pelas criaturas (MON_AOE)
 let portal = null, trans = null, fade = 0, townWait = 0, deadT = 0, T = 0, spawnT = 0, groundPat = null, townPat = null;
 const cam = {x:900, y:900};
 const FOUNT = {x:350,y:400}, TPORT = {x:350,y:600};
@@ -110,7 +111,7 @@ function spawnPack(initial){
     mons.push(makeMon(t, x + rnd(-50,50), y + rnd(-50,50), rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx));
   }
 }
-function clearWorld(){ mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
+function clearWorld(){ zones = []; hero.dodge = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
 function enterMap(id){
   mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id;
   scene = 'map'; mode = 'hunt'; WORLD = {w:W_MAP, h:W_MAP}; clearWorld();

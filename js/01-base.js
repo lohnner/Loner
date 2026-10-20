@@ -87,6 +87,28 @@ const MON_EL = {aranha:'poison', sapo:'poison', bruxa:'chaos', aranhacav:'poison
   cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire'};
 for(const k in MON_EL) MONS[k].el = MON_EL[k];
 MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.ranged = '#9af0c8'; MONS.feiticeiro.ranged = '#ff8ae8';
+// Ataques em área: a criatura marca o chão onde o herói está e, depois de t segundos, causa m × o dano dela em quem estiver dentro (raio r).
+// cd = recarga; o ataque normal continua. Elites marcam uma área 20% maior.
+const MON_AOE = {
+  ent:{n:'Raízes', r:60, t:1.6, m:1.6, cd:7},
+  bruxa:{n:'Poça Maldita', r:55, t:1.3, m:1.5, cd:6},
+  golem:{n:'Tremor', r:75, t:1.8, m:2, cd:8},
+  ossudo:{n:'Chuva de Ossos', r:60, t:1.4, m:1.5, cd:7},
+  yeti:{n:'Bloco de Gelo', r:65, t:1.6, m:1.9, cd:7},
+  mumia:{n:'Praga Antiga', r:60, t:1.5, m:1.6, cd:7},
+  cultista:{n:'Coluna de Fogo', r:55, t:1.2, m:1.6, cd:6},
+  cavaleiro:{n:'Golpe Sombrio', r:65, t:1.1, m:1.8, cd:7},
+  feiticeiro:{n:'Colapso Mental', r:65, t:1.4, m:1.7, cd:6},
+  brutamonte:{n:'Meteoro Infernal', r:80, t:2, m:2.2, cd:8},
+};
+for(const k in MON_AOE) MONS[k].aoe = MON_AOE[k];
+// Esquiva de cada classe (botão à esquerda das habilidades ou Shift): avanço rápido sem levar dano.
+// len = distância, dur = duração (s), cd = recarga (s). O Mago se teletransporta.
+const DODGE = {
+  arqueiro:{n:'Rolamento', len:150, dur:.26, cd:3},
+  guerreiro:{n:'Avanço', len:140, dur:.2, cd:3.5},
+  mago:{n:'Teleporte', len:170, dur:.12, cd:4},
+};
 const ELITE_TAG =['Voraz','Colossal','Implacável','Feroz','Imortal'];
 
 const SKD = {

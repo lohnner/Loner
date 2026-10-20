@@ -55,8 +55,10 @@ const uiOpen = () => !$('#sheet').hidden || !$('#dlg').hidden || !$('#create').h
 const inTown = () => scene === 'town';
 function dirtyPanel(){ panelDirty = true; }
 
+const ICON_DODGE = SVG('<path d="M4 17c3-1 5-4 6-8M10 9l3 2 2-4"/><circle cx="16" cy="5" r="2" fill="currentColor"/><path d="M3 21h6M2 13h4M3 9h3" stroke-dasharray="2 2"/><path d="M13 11l4 3-2 6"/>');
 function buildSkillbar(){
-  $('#skillbar').innerHTML = ACTIVE.map(id => `<button class="sk" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
+  // Esquiva fica à esquerda das habilidades (Shift no PC)
+  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (Shift)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Shift</span></button>` + ACTIVE.map(id => `<button class="sk" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
@@ -77,6 +79,13 @@ function updateHud(){
   else { st = hero.hp < ST.life ? 'Na vila, curando na fonte' : 'Na vila, vida cheia'; dot = '#e2ae4a'; }
   setText('#stText', st); $('#stDot').style.background = dot;
   setText('#hpText', `Vida ${fmt(hero.hp)}/${fmt(ST.life)}`);
+  const dEl = $('#sb-dodge');
+  if(dEl){
+    const cdMax = DODGE[clsOf()].cd*(1 - ST.cdr/100), cd = cds.dodge;
+    dEl.classList.toggle('ready', cd <= 0 && mode === 'hunt' && scene === 'map');
+    dEl.style.setProperty('--cd', (cd/cdMax).toFixed(3));
+    dEl.querySelector('.cdn').textContent = cd > 0 ? Math.ceil(cd) : '';
+  }
   for(const id of ACTIVE){
     const el = $('#sb-' + id); if(!el) continue;
     const r = ST.rk(id), cdMax = SKD[id].cd*(1 - ST.cdr/100), cd = cds[id];
@@ -383,6 +392,7 @@ const ACT = {
   },
   go: () => depart(),
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
+  dodge: () => doDodge(false),
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;
     const pr = buyPrice(it); if(S.gold < pr || invFull()) return;
@@ -485,6 +495,7 @@ document.addEventListener('keydown', e => {
     manualCast(id);
   }
   if(e.key === 'Escape' && aim){ aim = null; return; }
+  if(e.key === 'Shift'){ if(!e.repeat) doDodge(true); return; }
   if(MOVE_KEY[e.key.toLowerCase()]){ moveKeys[e.key.toLowerCase()] = true; if(S.cfg.manual && e.key.startsWith('Arrow')) e.preventDefault(); return; }
   if(e.key.toLowerCase() === 't') ACT.goTown();
 });

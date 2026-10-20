@@ -104,8 +104,25 @@ const PARA = {
   ias:{n:'Agilidade', d:v => `+${n1(v*.5)}% de velocidade de ataque`, max:50},
 };
 const parFree = () => S.par - Object.values(S.pp).reduce((a, v) => a + v, 0);
+// Esquiva (DODGE em 01): direção = para onde o jogador manda andar; no PC sem WASD, para o mouse; senão, para longe da criatura mais perto.
+function doDodge(fromKey){
+  const D0 = DODGE[clsOf()];
+  if(scene !== 'map' || mode !== 'hunt' || cds.dodge > 0 || hero.dodge || hero.dash || hero.cast) return false;
+  let ang = manualDir();
+  if(ang === null && fromKey && mouse.on && mouse.x >= 0 && mouse.y >= 0 && mouse.x <= cw && mouse.y <= ch){ const w = toWorld(mouse.x, mouse.y); if(D(w, hero) > 10) ang = Math.atan2(w.y - hero.y, w.x - hero.x); }
+  if(ang === null){ const n = nearestMon(hero); ang = n && D(n, hero) < 300 ? Math.atan2(hero.y - n.y, hero.x - n.x) : hero.face; }
+  if(hero.atk && !hero.atk.rel) hero.atk = null;
+  hero.whirl = null;
+  const x1 = clamp(hero.x + Math.cos(ang)*D0.len, 20, WORLD.w - 20), y1 = clamp(hero.y + Math.sin(ang)*D0.len, 20, WORLD.h - 20);
+  hero.dodge = {x0:hero.x, y0:hero.y, x1, y1, t:0, dur:D0.dur};
+  hero.invul = D0.dur + .15; hero.face = ang;
+  cds.dodge = D0.cd*(1 - ST.cdr/100);
+  if(isMage()) for(let i = 0; i < 16; i++){ const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*10, y:hero.y - 18 + Math.sin(an)*14, vx:Math.cos(an)*80, vy:Math.sin(an)*80, life:.35, size:rnd(1.5,3), c:pick(['#ffb050','#ffe0a0'])}); }
+  return true;
+}
 function hurtHero(dmg, src){
   if(scene !== 'map' || mode === 'dead' || hero.scale < .6) return;
+  if(hero.invul > 0){ txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
   // Físico: armadura. Elemental (fogo, gelo, elétrico, caos, veneno): metade da armadura + resistência.
   const el = (src && src.d.el) || 'phys', arm = el === 'phys' ? ST.armor : ST.armor*.5;
   const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = el === 'phys' ? 0 : (ST.res[el] || 0)/100;

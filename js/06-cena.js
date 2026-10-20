@@ -20,8 +20,12 @@ function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
   if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
+  if(hero.dodge) return;
   if(hero.cast || hero.dash){ hero.moving = false; return; }
   if(S.cfg.manual){ manualAI(dt); return; }
+  // Automático: se está dentro de uma área marcada no chão, sai dela (reage com atraso, então às vezes não dá tempo)
+  const z = zones.find(z => z.t > z.dur*.45 && D(z, hero) < z.r + 12);
+  if(z){ const an = D(z, hero) > 2 ? Math.atan2(hero.y - z.y, hero.x - z.x) : hero.face + Math.PI/2; if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = an; moveDir(an, dt); return; }
   const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
   // Girando: anda até os inimigos sem atacar normalmente
   if(hero.whirl){ if(near && nd > 26 && nd < 400) moveDir(Math.atan2(near.y - hero.y, near.x - hero.x), dt, .75); else hero.moving = false; return; }
@@ -58,6 +62,7 @@ function heroAI(dt){
 // Andar manual (Regras): o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
 // Itens e orbes são pegos ao passar por cima.
 function manualAI(dt){
+  if(hero.dodge) return;
   const md = manualDir();
   if(hero.whirl){ if(md !== null) moveDir(md, dt, .75); else hero.moving = false; return; }
   if(md !== null){ if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = md; moveDir(md, dt); return; }
@@ -84,6 +89,14 @@ function dashBoom(d){
 }
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
+  hero.invul = Math.max(0, (hero.invul || 0) - dt);
+  if(hero.dodge){
+    // Esquiva: Arqueiro rola, Guerreiro avança, Mago some e reaparece (teleporte)
+    const g = hero.dodge; g.t += dt; const k = clamp(g.t/g.dur, 0, 1), e = 1 - (1 - k)*(1 - k);
+    hero.x = g.x0 + (g.x1 - g.x0)*e; hero.y = g.y0 + (g.y1 - g.y0)*e; hero.moving = true; hero.walkT += dt*2;
+    if(!isMage()) part({x:hero.x + rnd(-5,5), y:hero.y + rnd(-3,3), vy:-15, life:.3, size:rnd(2,3.5), c:'rgba(200,190,170,.6)'});
+    if(k >= 1){ hero.dodge = null; if(isMage()) for(let i = 0; i < 14; i++){ const an = Math.random()*TAU; part({x:hero.x + Math.cos(an)*24, y:hero.y - 18 + Math.sin(an)*24, vx:-Math.cos(an)*90, vy:-Math.sin(an)*90, life:.3, size:rnd(1.5,3), c:pick(['#ffb050','#ffe0a0'])}); } }
+  }
   hero.swing = Math.max(0, (hero.swing || 0) - dt);
   if(hero.dash){
     // Investida: corre em linha reta e acerta cada inimigo do caminho uma vez
@@ -143,6 +156,18 @@ function monUpdate(m, dt){
     }
     return;
   }
+  // Ataque em área (MON_AOE): marca o chão embaixo do herói; o dano sai quando a marca termina (updateZones)
+  const A = m.d.aoe;
+  if(A){
+    m.aoeT = (m.aoeT === undefined ? rnd(1.5, A.cd) : m.aoeT) - dt;
+    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < 300){
+      m.aoeT = A.cd*rnd(.85, 1.15); m.atkT = .36; m.fired = true; m.moving = false;
+      m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
+      zones.push({x:hero.x, y:hero.y, r:A.r*(m.elite ? 1.2 : 1), t:0, dur:A.t, dmg:m.dmg*A.m, mon:m, c:ELEM[m.d.el || 'phys'].c});
+      txt(m.x, m.y - m.r*3 - 10, A.n, ELEM[m.d.el || 'phys'].c, 11, -20);
+      return;
+    }
+  }
   if(m.aggro){
     m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
     const reach = m.d.ranged ? m.d.range : m.d.range + m.r;
@@ -155,6 +180,19 @@ function monUpdate(m, dt){
     if(wd > 6){ m.face = Math.atan2(m.wy - m.y, m.wx - m.x); m.x += Math.cos(m.face)*m.spd*.3*dt; m.y += Math.sin(m.face)*m.spd*.3*dt; m.moving = true; } else m.moving = false;
   }
   m.x = clamp(m.x, 20, W_MAP - 20); m.y = clamp(m.y, 20, W_MAP - 20);
+}
+// Áreas marcadas no chão: quando o tempo acaba, explodem e acertam o herói se ele ainda estiver dentro
+function updateZones(dt){
+  for(const z of zones){
+    z.t += dt;
+    if(z.t >= z.dur && !z.done){
+      z.done = true;
+      ring(z.x, z.y, z.r, z.c, .4, 4);
+      for(let i = 0; i < 18; i++){ const an = Math.random()*TAU, rr = Math.sqrt(Math.random())*z.r; part({x:z.x + Math.cos(an)*rr, y:z.y + Math.sin(an)*rr*.75, vy:rnd(-120,-40), life:.45, size:rnd(2,4), c:z.c}); }
+      if(mode === 'hunt' && D(z, hero) < z.r + 8) hurtHero(z.dmg, z.mon);
+    }
+  }
+  zones = zones.filter(z => !z.done);
 }
 function separate(){
   const L = mons.length;
@@ -185,6 +223,7 @@ function updateField(dt){
     if(deadT > 2.2) transition(() => { enterTown(); hero.hp = 1; });
   }
   for(const m of mons) monUpdate(m, dt);
+  updateZones(dt);
   separate();
   mons = mons.filter(m => !m.dead || m.deadT < 1.6);
   for(const p of projs){
