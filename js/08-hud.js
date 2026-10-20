@@ -278,7 +278,7 @@ function renderOrbDlg(k){
   const which = O.rm ? 'com atributos' : RAR[O.from].n.toLowerCase();
   card.innerHTML = `<h2 class="dname">${O.n}</h2><div class="dtype">Você tem ${S.orbs[k]}</div><p class="note" style="color:var(--fg)">${O.d}</p>
     ${list.length ? `<div class="sec"><h3>Toque num item ${which} para ${O.rm ? 'anular 1 atributo' : 'melhorar'}</h3><div class="inv-grid">${list.map(x => `<div class="slot"><button class="tile r${x.it.rar}" style="--rc:${RAR[x.it.rar].c}" data-act="useOrb" data-v="${k}:${x.w}:${x.it.id}" aria-label="${x.it.name}">${itemIcon(x.it)}<span class="il">${x.it.ilvl}</span>${x.w === 'eq' ? '<span class="cls-tag" style="color:var(--poison)">Eq</span>' : ''}</button></div>`).join('')}</div></div>` : `<p class="note">Nenhum item ${which} na mochila ou equipado.</p>`}
-    <div class="dact"><button class="btn full" data-act="dlgClose">Fechar</button></div>`;
+    <div class="dact">${inTown() ? `<button class="btn full" data-act="orbPut" data-v="${k}" ${S.orbs[k] > 0 && (stashOrbs()[k] > 0 || stashUsed() < STASH_MAX) ? '' : 'disabled'}>Guardar no armazém<small>${stashOrbs()[k] > 0 || stashUsed() < STASH_MAX ? `Todos os ${S.orbs[k]} · armazém ${stashUsed()}/${STASH_MAX}` : 'Armazém cheio'}</small></button>` : ''}<button class="btn full" data-act="dlgClose">Fechar</button></div>`;
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
@@ -430,7 +430,7 @@ const ACT = {
     const so = stashOrbs(), n = S.orbs[k] || 0;
     if(!inTown() || !ORBS[k] || n <= 0 || (!(so[k] > 0) && stashUsed() >= STASH_MAX)) return;
     so[k] = (so[k] || 0) + n; S.orbs[k] = 0;
-    log(`Guardou ${n} ${ORBS[k].n} no armazém`, ORBS[k].c); save(); dirtyPanel();
+    log(`Guardou ${n} ${ORBS[k].n} no armazém`, ORBS[k].c); if(!$('#dlg').hidden && !dlgItem) closeDlg(); save(); dirtyPanel();
   },
   orbTake: k => {
     const so = stashOrbs(), n = so[k] || 0;
