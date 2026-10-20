@@ -57,8 +57,8 @@ function dirtyPanel(){ panelDirty = true; }
 
 const ICON_DODGE = SVG('<path d="M4 17c3-1 5-4 6-8M10 9l3 2 2-4"/><circle cx="16" cy="5" r="2" fill="currentColor"/><path d="M3 21h6M2 13h4M3 9h3" stroke-dasharray="2 2"/><path d="M13 11l4 3-2 6"/>');
 function buildSkillbar(){
-  // Esquiva fica à esquerda das habilidades (Shift no PC)
-  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (Shift)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Shift</span></button>` + ACTIVE.map(id => `<button class="sk" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
+  // Esquiva fica à esquerda das habilidades (barra de espaço no PC)
+  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` + ACTIVE.map(id => `<button class="sk" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
@@ -109,6 +109,7 @@ function updateHud(){
     $('#tcSell').innerHTML = `Vender comuns<small>${commons.length} itens · ${fmt(commons.reduce((s, i) => s + sellPrice(i), 0))} ouro</small>`;
     $('#tcShop').innerHTML = `Mercador<small>${S.shop.length} ${S.shop.length === 1 ? 'oferta' : 'ofertas'}</small>`;
     $('#tcStash').innerHTML = `Armazém<small>${stashUsed()}/${STASH_MAX}</small>`;
+    $('#tcForge').innerHTML = `Forja<small>3 viram 1</small>`;
     $('#tcGo').innerHTML = `Partir<small>${mapDef.name}</small>`;
     let info = '';
     if(hero.hp < ST.life) info = `Curando ${pct}%`;
@@ -123,7 +124,7 @@ function updateHud(){
 
 function openTab(t){
   tab = t; $('#sheet').hidden = false;
-  $('#sheet').classList.toggle('center', t === 'bag' || t === 'stash'); // mochila e armazém abrem no meio da tela
+  $('#sheet').classList.toggle('center', t === 'bag' || t === 'stash' || t === 'forge'); // mochila, armazém e forja abrem no meio da tela
   $('#sheet').classList.toggle('full', t === 'rank'); // o ranking ocupa a tela toda
   if(t === 'rank') loadRank();
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === t));
@@ -132,9 +133,9 @@ function openTab(t){
 function closeSheet(){ $('#sheet').hidden = true; tab = null; document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on')); }
 function renderPanel(top){
   const body = $('#sheetBody'), sc = body.scrollTop;
-  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', stash:'Armazém'};
+  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', stash:'Armazém', forge:'Forja'};
   $('#sheetTitle').textContent = T2[tab];
-  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, stash:panelStash})[tab]();
+  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, stash:panelStash, forge:panelForge})[tab]();
   body.scrollTop = top ? 0 : sc;
 }
 function panelShop(){
@@ -284,6 +285,25 @@ function panelStash(){
   return `<p class="note">O armazém é da conta: o que você guarda aqui aparece para todos os seus personagens. Toque num item da mochila para guardar, ou num item do armazém para retirar. Tocar numa pilha de orbes move a pilha inteira.</p>
     <div class="sec"><h3>Armazém <span class="r">${n}/${STASH_MAX}</span></h3><div class="inv-grid">${slots.join('')}</div></div>
     <div class="sec"><h3>Mochila <span class="r">${invUsed()}/${INV_MAX}</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nada na mochila.</p>'}</div>`;
+}
+// Forja da vila: escolhe 3 itens da mochila (forgeSel = ids) e eles viram 1 (forgeItems em 02)
+let forgeSel = [];
+const forgeTile = (it, act) => tileHTML(it, 'inv').replace('data-act="item" data-v="inv:', `data-act="${act}" data-v="`);
+function panelForge(){
+  forgeSel = forgeSel.filter(id => S.inv.some(i => i.id === id));
+  const sel = forgeSel.map(id => S.inv.find(i => i.id === id)), town = inTown();
+  const slots = [0, 1, 2].map(i => `<div class="slot">${sel[i] ? forgeTile(sel[i], 'forgeDel') : ''}</div>`).join('');
+  const bag = S.inv.filter(i => !forgeSel.includes(i.id)).map(it => `<div class="slot">${forgeTile(it, 'forgeAdd')}</div>`).join('');
+  let what = 'Escolha 3 itens da mochila.';
+  if(sel.length === 3) what = forgeSame(sel)
+    ? `<span class="g-ok">3 itens iguais:</span> sai ${esc(sel[0].base)} de novo, com status novos, na melhor raridade (${RAR[Math.max(...sel.map(i => i.rar))].n}) e no maior ilvl (${Math.max(...sel.map(i => i.ilvl))}).`
+    : 'Itens diferentes: sai <b>um deles</b>, sorteado, com status novos (mesma raridade e ilvl dele).';
+  return `<p class="note">Coloque 3 itens na bigorna. Se forem iguais (mesmo tipo e mesma base), viram o mesmo item com status diferentes. Se forem diferentes, viram um deles, sorteado. Os 3 itens são gastos.</p>
+    ${town ? '' : '<p class="note" style="color:#ff8c80">A forja fica na vila.</p>'}
+    <div class="sec"><h3>Bigorna <span class="r">${sel.length}/3</span></h3><div class="inv-grid forge-grid">${slots}</div>
+    <p class="note" style="color:var(--fg)">${what}</p>
+    <button class="btn primary full" data-act="forge" ${town && sel.length === 3 ? '' : 'disabled'}>Forjar</button></div>
+    <div class="sec"><h3>Mochila <span class="r">toque para colocar</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nenhum item na mochila.</p>'}</div>`;
 }
 // Janela do orbe: explica e mostra os itens que ele pode melhorar
 function renderOrbDlg(k){
@@ -454,6 +474,18 @@ const ACT = {
     log(`Retirou ${n} ${ORBS[k].n} do armazém`, ORBS[k].c); save(); dirtyPanel();
   },
   dlgClose: () => closeDlg(),
+  // Forja (só na vila)
+  forgeAdd: v => { const id = +v; if(forgeSel.length < 3 && !forgeSel.includes(id)) forgeSel.push(id); dirtyPanel(); },
+  forgeDel: v => { forgeSel = forgeSel.filter(id => id !== +v); dirtyPanel(); },
+  forge: () => {
+    if(!inTown()) return;
+    const sel = forgeSel.map(id => S.inv.find(i => i.id === id)).filter(Boolean); if(sel.length !== 3) return;
+    const it = forgeItems(sel);
+    S.inv = S.inv.filter(i => !sel.includes(i)); S.inv.push(it); forgeSel = [];
+    log(`Forjou ${it.name}`, RAR[it.rar].c);
+    save(); dirtyPanel(); renderPanel();
+    dlgItem = {where:'inv', id:it.id}; $('#dlg').hidden = false; renderDlg(); // mostra o item novo
+  },
   equip: () => {
     const it = findItem('inv', dlgItem.id); if(!it || !canEquip(it)) return;
     const old = S.eq[it.slot]; S.eq[it.slot] = it; S.inv = S.inv.filter(i => i !== it); if(old) S.inv.push(old);
@@ -495,7 +527,7 @@ document.addEventListener('keydown', e => {
     manualCast(id);
   }
   if(e.key === 'Escape' && aim){ aim = null; return; }
-  if(e.key === 'Shift'){ if(!e.repeat) doDodge(true); return; }
+  if(e.code === 'Space'){ e.preventDefault(); if(!e.repeat) doDodge(true); return; }
   if(MOVE_KEY[e.key.toLowerCase()]){ moveKeys[e.key.toLowerCase()] = true; if(S.cfg.manual && e.key.startsWith('Arrow')) e.preventDefault(); return; }
   if(e.key.toLowerCase() === 't') ACT.goTown();
 });

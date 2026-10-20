@@ -142,7 +142,7 @@ function playChar(c){
   refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0;
   accountReady = true; renderLogin();
   closeDlg(); closeSheet(); $('#create').hidden = true;
-  enterMap(S.map); save(); rankDirty = true; lastScore = -1;
+  enterTown(); save(); rankDirty = true; lastScore = -1; // sempre começa na vila
 }
 function newChar(){ $('#login').hidden = true; showCreate(); }
 function switchChar(){ save(); cloudFlush(); leaveGame(); showChars(); }

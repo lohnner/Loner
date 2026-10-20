@@ -464,6 +464,17 @@ function drawTown(){
   ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(bx + 4, by + 16, 28, 8);
   ctx.fillStyle = '#6b4a2b'; ctx.fillRect(bx - 22, by - 6, 44, 22); ctx.fillStyle = '#7d5a35'; ctx.fillRect(bx - 22, by - 14, 44, 10);
   ctx.fillStyle = '#e2ae4a'; ctx.fillRect(bx - 3, by - 6, 6, 8);
+  // forja: fornalha de pedra com fogo e bigorna
+  const fx = 600, fy = 250, fl = .75 + .25*Math.sin(T*9) + .1*Math.sin(T*23);
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(fx + 6, fy + 34, 52, 12);
+  const fg = ctx.createRadialGradient(fx, fy + 6, 2, fx, fy + 6, 70); fg.addColorStop(0, `rgba(255,140,50,${.35*fl})`); fg.addColorStop(1, 'rgba(255,140,50,0)'); ctx.fillStyle = fg; circ(fx, fy + 6, 70);
+  ctx.fillStyle = cyl(fx - 28, fx + 28, '#5b554c'); rrect(fx - 28, fy - 26, 56, 46, 6);
+  ctx.fillStyle = '#3e3a34'; ctx.fillRect(fx - 9, fy - 50, 18, 26);
+  ctx.fillStyle = '#1a0f0a'; rrect(fx - 15, fy - 4, 30, 20, 8);
+  ctx.fillStyle = `rgba(255,${120 + 60*fl | 0},40,${.9*fl})`; ell(fx, fy + 10, 11, 6*fl); ctx.fillStyle = '#ffe9a0'; ell(fx, fy + 12, 5, 3*fl);
+  for(let i = 0; i < 3; i++){ const k = (T*.6 + i/3) % 1; ctx.globalAlpha = .4*(1 - k); ctx.fillStyle = '#6a625a'; circ(fx + Math.sin(T + i)*4, fy - 52 - k*30, 5 + k*6); } ctx.globalAlpha = 1;
+  // bigorna
+  ctx.fillStyle = '#2a2a2e'; ctx.fillRect(fx - 40, fy + 30, 8, 10); ctx.fillStyle = cyl(fx - 54, fx - 18, '#5a5c64'); ctx.beginPath(); ctx.moveTo(fx - 56, fy + 22); ctx.lineTo(fx - 20, fy + 22); ctx.lineTo(fx - 26, fy + 30); ctx.lineTo(fx - 48, fy + 30); ctx.closePath(); ctx.fill();
   // tochas
   for(const [tx, ty] of [[230,500],[470,500],[230,640],[470,640]]){
     const f = .8 + .2*Math.sin(T*14 + tx);

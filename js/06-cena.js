@@ -24,7 +24,7 @@ function heroAI(dt){
   if(hero.cast || hero.dash){ hero.moving = false; return; }
   if(S.cfg.manual){ manualAI(dt); return; }
   // Automático: se está dentro de uma área marcada no chão, sai dela (reage com atraso, então às vezes não dá tempo)
-  const z = zones.find(z => z.t > z.dur*.45 && D(z, hero) < z.r + 12);
+  const z = zones.find(z => z.t > z.dur*.3 && D(z, hero) < z.r + 12);
   if(z){ const an = D(z, hero) > 2 ? Math.atan2(hero.y - z.y, hero.x - z.x) : hero.face + Math.PI/2; if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = an; moveDir(an, dt); return; }
   const foc = getFocus(), near = foc || nearestMon(hero), nd = near ? D(near, hero) : 1e9;
   // Girando: anda até os inimigos sem atacar normalmente

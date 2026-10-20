@@ -77,6 +77,16 @@ function nameItem(it){
   if(it.rar < LEG_R) return `${pick(RA)} de ${pick(RB)}`;
   return pick(LEG[it.slot]);
 }
+// Forja da vila: 3 itens viram 1 com status novos.
+// Iguais (mesmo espaço, mesma base e mesma classe): sai o mesmo item, com a melhor raridade e o maior ilvl dos três.
+// Diferentes: sai um deles (sorteado), com a raridade e o ilvl dele.
+const forgeSame = list => list.every(i => i.slot === list[0].slot && i.base === list[0].base && (i.cls || '') === (list[0].cls || ''));
+function forgeItems(list){
+  const same = forgeSame(list);
+  const src = same ? list.reduce((a, b) => b.rar > a.rar || (b.rar === a.rar && b.ilvl > a.ilvl) ? b : a) : pick(list);
+  const ilvl = same ? Math.max(...list.map(i => i.ilvl)) : src.ilvl;
+  return genItem(ilvl, src.rar, src.slot, src.cls || clsOf());
+}
 function rollRar(elite){
   const r = Math.random(), m = elite ? 4 : 1;
   if(r < .003*m) return 4;

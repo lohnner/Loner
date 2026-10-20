@@ -42,7 +42,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .tc-name{font-family:var(--display);font-size:22px;line-height:1}
 #tcInfo{margin-left:auto;font-size:13px;color:var(--muted);text-align:right}
 .tc-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-#tcGo{grid-column:1/-1}
+#tcGo{grid-column:span 2}
 
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700;font-size:15px;line-height:1.15}
 .btn.primary{background:var(--poison-d);border-color:var(--poison);color:#f2ffe2}
@@ -61,6 +61,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .sk.dodge{color:#a9c4ff;background:radial-gradient(circle at 50% 35%,#1f2838,var(--panel2));margin-right:6px}
 .sk.dodge.ready{border-color:#3c5a8a;box-shadow:0 0 10px rgba(130,170,255,.3)}
 @media (hover:none){.sk.dodge .rk{display:none}}
+.forge-grid{grid-template-columns:repeat(3,minmax(0,84px));justify-content:center}
 .sk.locked{opacity:.32}
 .sk.disabled{filter:grayscale(1);opacity:.55}
 .sk.ready{border-color:var(--poison-d);box-shadow:0 0 10px rgba(155,216,74,.3)}
