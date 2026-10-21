@@ -427,8 +427,7 @@ function renderOrbDlg(k){
     <div class="dact"><button class="btn full" data-act="dlgClose">Fechar</button></div>`;
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
-// Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
-const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado', rf:'% de resistência a fogo', rc:'% de resistência a gelo', rl:'% de resistência a raio', rp:'% de resistência a veneno', rall:'% de resistência a todos os elementos'};
+// Janela do item: comparação status a status entre o item clicado e o equipado no mesmo espaço (chaves de itemVals; DIFF_DEC = mostra com 1 casa)
 const DIFF_DEC = {aps:1, crit:1, ls:1};
 function itemVals(it){
   const v = {}; if(!it) return v;
@@ -437,17 +436,37 @@ function itemVals(it){
   for(const a of it.affix){ const k = a.k === 'skill' ? 'sk:' + a.s : a.k; v[k] = (v[k] || 0) + a.v; }
   return v;
 }
-function itemDiff(it, cur){
-  const a = itemVals(it), b = itemVals(cur), gain = [], lose = [];
-  const keys = [...Object.keys(DIFF_L), ...ACTIVE.concat(PASSIVE).map(s => 'sk:' + s)].filter(k => k in a || k in b);
-  for(const k of keys){
-    const d = (a[k] || 0) - (b[k] || 0); if(Math.abs(d) < .05) continue;
-    const num = DIFF_DEC[k] ? n1(Math.abs(d)) : fmt(Math.abs(d));
-    const lab = k.startsWith('sk:') ? `${num} em ${SKD[k.slice(3)].n}` : DIFF_L[k].startsWith('%') ? num + DIFF_L[k] : `${num} ${DIFF_L[k]}`;
-    (d > 0 ? gain : lose).push(lab);
-  }
-  const li = (arr, s) => arr.length ? arr.map(x => `<li>${s}${x}</li>`).join('') : '<li class="none">Nada</li>';
-  return `<div class="diff"><div class="dg"><h4>Vai ganhar</h4><ul>${li(gain, '+')}</ul></div><div class="dl"><h4>Vai perder</h4><ul>${li(lose, '−')}</ul></div></div>`;
+// Todos os status de um item (base + atributos), cada um com a chave usada para comparar (a mesma de itemVals)
+function itemRows(it){
+  const r = [];
+  if(it.slot === 'bow'){ r.push({k:'wdmg', v:(it.min + it.max)/2, txt:`${fmt(it.min)}–${fmt(it.max)} de dano`, perf:it.bt >= .9}); r.push({k:'aps', v:it.aps, txt:`${n1(it.aps)} ataques/s`}); }
+  else if(it.armor) r.push({k:'barmor', v:it.armor, txt:`${fmt(it.armor)} de armadura`, perf:it.bt >= .9});
+  for(const a of it.affix) r.push(a.k === 'skill' ? {k:'sk:' + a.s, v:a.v, txt:`+${a.v} em ${SKD[a.s].n}`, sk:1, perf:a.v === 2} : {k:a.k, v:a.v, txt:AFX[a.k].n(a.v), perf:a.t >= .9});
+  return r;
+}
+// Ficha de um item com todos os status. vs = valores do outro item para comparar:
+//  mode 'new' (item clicado): verde ▲ = melhor que o equipado (quanto a mais), vermelho ▼ = pior; '=' igual
+//  mode 'cur' (equipado): vermelho = o que você perde trocando (o item novo não tem ou tem menos)
+function statCard(it, title, vs, mode, extra){
+  const rows = itemRows(it).map(r => {
+    let cls = '', tag = '';
+    if(vs){
+      const d = r.v - (vs[r.k] || 0), num = DIFF_DEC[r.k] ? n1(Math.abs(d)) : fmt(Math.abs(d));
+      if(Math.abs(d) < .05) tag = mode === 'new' ? '=' : '';
+      else if(mode === 'new'){ cls = d > 0 ? 'up' : 'down'; tag = (d > 0 ? '▲ +' : '▼ −') + num; }
+      else if(d > 0){ cls = 'down'; tag = '−' + num + ' ao trocar'; }
+    }
+    return `<li class="${cls}${r.sk ? ' sk' : ''}"><span>${r.txt}${r.perf ? ' <b class="pf">◆</b>' : ''}</span>${tag ? `<em>${tag}</em>` : ''}</li>`;
+  }).join('');
+  return `<div class="scard" style="--rc:${RAR[it.rar].c}"><div class="sh">${title}</div><div class="sn">${it.name}</div>
+    <div class="st">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}${extra || ''}</div>
+    <ul class="slist">${rows || '<li class="none">Sem atributos</li>'}</ul></div>`;
+}
+// Resumo da troca: quantos status melhoram e pioram (contando tudo dos dois itens)
+function cmpSummary(it, cur){
+  const a = itemVals(it), b = itemVals(cur); let up = 0, down = 0;
+  for(const k of new Set([...Object.keys(a), ...Object.keys(b)])){ const d = (a[k] || 0) - (b[k] || 0); if(d > .05) up++; else if(d < -.05) down++; }
+  return `<div class="ssum"><span class="up">▲ ${up} melhor${up === 1 ? '' : 'es'}</span><span class="down">▼ ${down} pior${down === 1 ? '' : 'es'}</span></div>`;
 }
 function renderDlg(){
   const it = findItem(dlgItem.where, dlgItem.id); if(!it){ closeDlg(); return; }
@@ -456,20 +475,13 @@ function renderDlg(){
   const oks = Object.keys(ORBS).filter(k => ORBS[k].ok(it) && (!ORBS[k].rm || S.orbs[k] > 0));
   const orbBtn = isShop ? '' : oks.map(k => `<button class="btn full" data-act="useOrb" data-v="${k}:${dlgItem.where}:${it.id}" ${S.orbs[k] > 0 ? '' : 'disabled'} style="border-color:${ORBS[k].c};color:${ORBS[k].c}">Usar ${ORBS[k].n}<small>${ORBS[k].rm ? 'Tira 1 atributo, vira ' + RAR[it.rar - 1].n : 'Vira ' + RAR[ORBS[k].to].n} · você tem ${S.orbs[k]}</small></button>`).join('');
   const card = $('#dcard'); card.style.setProperty('--rc', col);
-  let base = '';
-  if(it.slot === 'bow') base = `${fmt(it.min)}–${fmt(it.max)} de dano · ${n1(it.aps)} ataques/s${it.bt >= .9 ? ' <span style="color:var(--perf)">◆</span>' : ''}`;
-  else if(it.armor) base = `${fmt(it.armor)} de armadura${it.bt >= .9 ? ' <span style="color:var(--perf)">◆</span>' : ''}`;
-  const aff = it.affix.map(a => a.k === 'skill' ? `<li class="sk2">+${a.v} em ${SKD[a.s].n}${a.v === 2 ? ' ◆' : ''}</li>` : `<li class="${a.t >= .9 ? 'perf' : ''}">${AFX[a.k].n(a.v)}${a.t >= .9 ? ' ◆' : ''}</li>`).join('');
-  const other = isEq ? calcStats({...S.eq, [it.slot]:null}) : calcStats({...S.eq, [it.slot]:it});
-  const dd = isEq ? ST.dps - other.dps : other.dps - ST.dps, dl = isEq ? ST.life - other.life : other.life - ST.life;
-  const sg = (v, lab) => `<span class="${v > .05 ? 'p' : v < -.05 ? 'n' : ''}">${lab} ${v > 0 ? '+' : ''}${n1(v)} ${v > .05 ? '▲' : v < -.05 ? '▼' : ''}</span>`;
   const cur = S.eq[it.slot];
-  card.innerHTML = `<h2 class="dname">${it.name}</h2>
-    <div class="dtype">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}${isEq ? ' · equipado' : ''}${it.cls ? ` · <span style="color:${canUse(it) ? 'var(--muted)' : '#ff8c80'}">só ${clsName(it.cls)}</span>` : ''} · <span style="color:${S.lv >= reqLv(it) ? 'var(--muted)' : '#ff8c80'}">requer nível ${reqLv(it)}</span></div>
-    ${base ? `<div class="dbase">${base}</div>` : ''}
-    ${aff ? `<ul class="daff">${aff}</ul>` : ''}
-    <div class="cmp"><span style="color:var(--muted)">${isEq ? 'Este item te dá' : cur ? 'Trocando por ' + cur.name : 'Equipando'}:</span>${sg(dd, 'Dano/s')}${sg(dl, 'Vida')}</div>
-    ${isEq ? '' : itemDiff(it, cur)}
+  const req = `${it.cls ? ` · <span style="color:${canUse(it) ? 'var(--muted)' : '#ff8c80'}">só ${clsName(it.cls)}</span>` : ''} · <span style="color:${S.lv >= reqLv(it) ? 'var(--muted)' : '#ff8c80'}">requer nível ${reqLv(it)}</span>`;
+  // Item equipado: só a ficha dele. Mochila/mercador: ficha do item clicado comparada com a do equipado embaixo (todos os status)
+  const cards = isEq ? statCard(it, 'Equipado', null, '', req)
+    : cmpSummary(it, cur) + statCard(it, isShop ? 'À venda' : 'Na mochila', itemVals(cur), 'new', req)
+      + (cur ? statCard(cur, 'Equipado agora', itemVals(it), 'cur') : `<div class="scard none-eq">Nada equipado em ${itemSlotN(it)} — todos os status são ganho.</div>`);
+  card.innerHTML = `${cards}
     ${isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && !invFull() ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
       ${isEq ? `<button class="btn" data-act="unequip" ${!invFull() ? '' : 'disabled'}>Guardar na mochila</button>` : !canUse(it) ? `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>` : S.lv < reqLv(it) ? `<button class="btn" disabled>Requer nível ${reqLv(it)}</button>` : `<button class="btn primary" data-act="equip">Equipar</button>`}
       ${isEq ? '' : `<button class="btn gold" data-act="sell" ${town ? '' : 'disabled'}>${town ? 'Vender' : 'Vender na vila'}<small>${fmt(sellPrice(it))} ouro</small></button>`}

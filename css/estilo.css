@@ -212,6 +212,22 @@ input[type=range]{width:100%;accent-color:var(--life);height:28px}
 .daff{display:grid;gap:3px;font-size:14px;color:#c7d2ff;margin:0;padding:0;list-style:none}
 .daff .perf{color:var(--perf)}
 .daff .sk2{color:var(--r4);font-weight:700}
+/* Janela do item: fichas com todos os status (item clicado em cima, equipado embaixo) */
+.scard{border:1px solid var(--rc,var(--line));border-radius:12px;padding:10px 12px;background:linear-gradient(160deg,color-mix(in srgb,var(--rc) 10%,transparent),transparent 60%);display:grid;gap:4px}
+.scard .sh{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.scard .sn{font-family:var(--display);font-size:22px;line-height:1.05;color:var(--rc)}
+.scard .st{font-size:12px;color:var(--muted)}
+.slist{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:3px;font-size:14px;color:#c7d2ff}
+.slist li{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.slist li em{font-style:normal;font-weight:800;font-size:12px;white-space:nowrap;color:var(--muted)}
+.slist li.up,.slist li.up em{color:var(--poison)}
+.slist li.down,.slist li.down em{color:#ff8c80}
+.slist li.sk span{color:var(--r4);font-weight:700}
+.slist li.none{color:var(--muted)}
+.slist .pf{color:var(--perf)}
+.scard.none-eq{color:var(--muted);font-size:13px;border-style:dashed}
+.ssum{display:flex;gap:14px;font-size:14px;font-weight:800}
+.ssum .up{color:var(--poison)} .ssum .down{color:#ff8c80}
 .cmp{display:flex;gap:14px;font-size:13px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px}
 .cmp .p{color:var(--poison);font-weight:700}
 .cmp .n{color:#ff8c80;font-weight:700}
