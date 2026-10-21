@@ -17,8 +17,8 @@ function moveTo(p, dt, mul){
   const d = D(hero, p); if(d < 5){ hero.moving = false; return true; }
   hero.face = Math.atan2(p.y - hero.y, p.x - hero.x); moveDir(hero.face, dt, mul); return false;
 }
-// Dá para pegar? Orbe entra na pilha (se já existe ou se há espaço); item precisa de espaço e da raridade mínima das Regras.
-const canPick = d => d.orb ? (S.orbs[d.orb] > 0 || !invFull()) : d.it.rar >= S.cfg.minPick && !invFull();
+// Dá para pegar? Orbe sempre (vai para a aba Orbes); item precisa de espaço na mochila e da raridade mínima das Regras.
+const canPick = d => d.orb ? true : d.it.rar >= S.cfg.minPick && !invFull(); // orbe sempre cabe (aba Orbes sem limite)
 function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
@@ -164,7 +164,9 @@ function monUpdate(m, dt){
   const A = m.d.aoe;
   if(A){
     m.aoeT = (m.aoeT === undefined ? rnd(1.5, A.cd) : m.aoeT) - dt;
-    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < A.reach && losClear(m, hero)){
+    // cone e pisão são golpes de perto: só começam encostada no herói (senão ele escapa fácil); os outros usam o alcance do golpe
+    const reach = A.k === 'cone' || A.k === 'slam' ? m.d.range + m.r + 6 : A.reach;
+    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < reach && losClear(m, hero)){
       // pronto e ao alcance: 40% de chance de usar; se não usar, tenta de novo em 1 s
       if(Math.random() < AOE_CHANCE){ monAoe(m, A); return; }
       m.aoeT = 1;

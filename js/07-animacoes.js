@@ -667,12 +667,12 @@ function townProps(){
   add(FOUNT.y, drawFountain);
   for(const [x, y, s] of [[60,170,1],[350,160,.9],[760,165,.95],[1045,175,1],[45,420,1.05],[1060,430,1],[40,690,.95],[1065,690,1],[420,935,.9],[690,940,.95],[60,935,1],[1050,935,.95]]) add(y, () => drawTree(x, y, s));
   for(const [x, y] of [[400,420],[700,420],[400,640],[700,640],[440,850],[660,850]]) add(y, () => drawLamp(x, y));
-  const sh = TOWN_B.find(b => b.id === 'shop'), fo = TOWN_B.find(b => b.id === 'forge'), st = TOWN_B.find(b => b.id === 'stash');
+  const sh = TOWN_B.find(b => b.id === 'shop'), fo = TOWN_B.find(b => b.id === 'forge'), st = TOWN_B.find(b => b.id === 'celeiro');
   add(sh.y + 18, () => drawNPC(sh.x + 52, sh.y + 18, '#4a2f4a', 0, '#6a3a22'));
   add(sh.y + 14, () => drawCrate(sh.x - 88, sh.y + 14)); add(sh.y + 24, () => drawBarrel(sh.x - 64, sh.y + 24));
   add(fo.y + 26, () => drawAnvil(fo.x - 62, fo.y + 26)); add(fo.y + 24, () => drawNPC(fo.x - 88, fo.y + 24, '#3a3430', 0, 0, 1));
   add(fo.y + 18, () => drawBarrel(fo.x + 70, fo.y + 18));
-  add(st.y + 20, () => drawChest(st.x + 58, st.y + 20)); add(st.y + 16, () => drawCrate(st.x - 78, st.y + 16)); add(st.y + 26, () => drawCrate(st.x - 60, st.y + 26, .8)); add(st.y + 22, () => drawBarrel(st.x + 92, st.y + 22));
+  add(st.y + 20, () => drawBarrel(st.x + 58, st.y + 20)); add(st.y + 16, () => drawCrate(st.x - 78, st.y + 16)); add(st.y + 26, () => drawCrate(st.x - 60, st.y + 26, .8)); add(st.y + 22, () => drawBarrel(st.x + 92, st.y + 22));
   add(DPORT.y, () => { if(S.lv >= MAX_LV) drawDunPortal(); });
   // Tobias (Baú de Visuais): manto roxo com bordas douradas, ao lado de um baú brilhante
   add(NPC_CHEST.y, () => {

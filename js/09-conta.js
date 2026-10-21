@@ -144,7 +144,7 @@ function playChar(c){
   refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0;
   accountReady = true; renderLogin();
   closeDlg(); closeSheet(); $('#create').hidden = true;
-  enterTown(); save(); rankDirty = true; lastScore = -1; // sempre começa na vila
+  enterTown(); emptyOldStash(); save(); rankDirty = true; lastScore = -1; // sempre começa na vila
 }
 function newChar(){ $('#login').hidden = true; showCreate(); }
 function switchChar(){ save(); cloudFlush(); leaveGame(); showChars(); }
@@ -163,15 +163,22 @@ function accountStore(){
   if(i >= 0) acct.chars[i] = S; else acct.chars.push(S);
   acct.savedAt = Date.now(); storeLocal(); cloudDirty = true;
 }
-// Armazém da conta: itens guardados na vila, visíveis para todos os personagens. Ids únicos para não colidir com os de cada personagem.
-const stash = () => acct ? (acct.stash || (acct.stash = [])) : [];
-const stashId = () => Date.now()*1000 + Math.floor(Math.random()*1000);
-// Orbes no armazém: {tipo: quantidade}, cada tipo é uma pilha que ocupa 1 espaço (como na mochila)
-const stashOrbs = () => acct ? (acct.orbs || (acct.orbs = {})) : {};
-const stashMax = () => STASH_BASE + ((acct && acct.stashX) || 0);
+// O armazém da vila não existe mais. O que sobrou nele (acct.stash = itens, acct.orbs = orbes) vai para a mochila do primeiro personagem
+// que entrar, e o ouro gasto nos espaços comprados (acct.stashX) é devolvido a ele. Itens além do limite aparecem em vermelho na mochila.
+function emptyOldStash(){
+  if(!acct) return;
+  const items = Array.isArray(acct.stash) ? acct.stash : [], orbs = acct.orbs || {}, bought = acct.stashX || 0;
+  const nOrbs = Object.keys(ORBS).reduce((t, k) => t + (orbs[k] || 0), 0);
+  if(!items.length && !nOrbs && !bought) return;
+  for(const it of items) S.inv.push(it);
+  for(const k in ORBS) if(orbs[k] > 0) S.orbs[k] = (S.orbs[k] || 0) + orbs[k];
+  let refund = 0; for(let i = 0; i < bought; i++) refund += stashSlotPrice(i);
+  S.gold += refund;
+  acct.stash = []; acct.orbs = {}; acct.stashX = 0;
+  log(`O armazém foi fechado: ${items.length} ${items.length === 1 ? 'item foi' : 'itens foram'} e ${nOrbs} ${nOrbs === 1 ? 'orbe foi' : 'orbes foram'} para a mochila${refund ? ` · +${fmt(refund)} ouro dos espaços do armazém` : ''}.`, '#f5cf3a');
+}
 // Visuais da conta (comprados no Baú de Visuais): lista de ids de COS, valem para todos os personagens
 const cosOwned = () => acct ? (acct.cos || (acct.cos = [])) : [];
-const stashUsed = () => stash().length + Object.keys(ORBS).filter(k => stashOrbs()[k] > 0).length;
 function storeLocal(){ try{ localStorage.setItem(KEY + ':' + fbUser.uid, JSON.stringify(acct)); }catch(e){} }
 function cloudFlush(){
   if(!fb || !fbUser || !acct || cloudBusy || !cloudDirty) return Promise.resolve();

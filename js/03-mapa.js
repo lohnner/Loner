@@ -39,7 +39,7 @@ const TOWN_B = [
   {id:'casa2', x:910, y:250, w:150, h:88, dep:70, wall:'#a99478', roof:'#5a6a3a'},
   {id:'shop', x:205, y:540, w:160, h:92, dep:72, wall:'#c2a27a', roof:'#8a2f2a', tab:'shop', n:'Mercador', stall:1},
   {id:'forge', x:890, y:540, w:170, h:96, dep:76, wall:'#7a7068', roof:'#3a3430', tab:'forge', n:'Forja', smithy:1},
-  {id:'stash', x:205, y:830, w:150, h:80, dep:66, wall:'#8a6a48', roof:'#5a3a22', tab:'stash', n:'Armazém', barn:1},
+  {id:'celeiro', x:205, y:830, w:150, h:80, dep:66, wall:'#8a6a48', roof:'#5a3a22', barn:1}, // só enfeite (o armazém não existe mais)
 ];
 // Zonas de entrada: porta de cada prédio com painel, mais o portal da Masmorra (nível 40)
 const townZones = () => {

@@ -137,6 +137,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 /* Orbe empilhado na mochila */
 .tile.orb{background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--rc) 25%,transparent),var(--panel2));border-color:var(--rc)}
 .tile.orb svg{width:62%;height:62%}
+.tile.empty-orb{opacity:.35;filter:grayscale(.6)}
+.orb-names{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:13px}
 .tile .qty{position:absolute;right:4px;bottom:2px;font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
 .slot.over{border-color:#7a2d26;background:linear-gradient(145deg,#2a1513,#160c0b)}
 .sec{display:grid;gap:8px}

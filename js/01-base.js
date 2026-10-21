@@ -226,12 +226,13 @@ const ORBS = {
 // Forja de orbes: ORB_UP_N orbes iguais viram 1 do próximo da lista (a Anulação não entra)
 const ORB_UP = {desp:'asc', asc:'exa', exa:'lenda'}, ORB_UP_N = 10;
 for(const k in ORBS){ const O = ORBS[k]; O.ok = O.rm ? it => it.rar >= 1 : it => it.rar === O.from; }
-// Espaços: a mochila (por personagem, S.invX comprados) começa com 10 e vai até 20; o armazém da vila (da conta, acct.stashX) começa com 10 e vai até 50.
-// Cada espaço comprado fica mais caro (slotPrice). stashMax() fica em 09-conta.js.
+// Mochila (por personagem): começa com INV_BASE (10) espaços de itens e dá para comprar mais na vila (S.invX), até INV_CAP.
+// Preço: 5 mil o 11º, 10 mil o 12º, 15 mil o 13º... (+5 mil a cada um). Os orbes não ocupam espaço: ficam na aba Orbes, sem limite.
+// Não existe mais armazém: STASH_BASE/STASH_CAP/stashSlotPrice só servem para levar o armazém antigo para a mochila e devolver o ouro (09).
 const INV_BASE = 10, INV_CAP = 20, STASH_BASE = 10, STASH_CAP = 50;
 const invMax = () => INV_BASE + (S.invX || 0);
-const invSlotPrice = () => 5000 + 5000*(S.invX || 0);        // 5 mil, 10 mil, ... 50 mil
-const stashSlotPrice = n => 5000 + 2500*n;                     // n = espaços já comprados: 5 mil ... 102,5 mil
+const invSlotPrice = () => 5000 + 5000*(S.invX || 0);        // 5 mil, 10 mil, 15 mil, ...
+const stashSlotPrice = n => 5000 + 2500*n;                     // preço antigo dos espaços do armazém (para devolver)
 const CLASS_KIT = {
   arqueiro:{active:['arrow','fan','rain','burst'], passive:['tip','potency','agility','hide','contagion']},
   guerreiro:{active:['cleave','charge','whirl','rupture'], passive:['serrated','brutality','fury','iron','bloodlust']},
@@ -249,9 +250,8 @@ const dotT = () => DOT_INFO[clsOf()].t;
 const dotDe = () => DOT_INFO[clsOf()].de;
 
 const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
-// Espaços usados na mochila: itens + uma pilha por tipo de orbe
-const orbStacks = () => Object.keys(ORBS).filter(k => (S.orbs && S.orbs[k]) > 0).length;
-const invUsed = () => S.inv.length + orbStacks();
+// Espaços usados na mochila: só os itens (os orbes ficam na aba Orbes, sem limite)
+const invUsed = () => S.inv.length;
 const invFull = () => invUsed() >= invMax();
 // O espaço da arma se chama 'bow' por compatibilidade com saves antigos; o nome muda com a classe
 const WEAPON_N = {arqueiro:'Arco', guerreiro:'Arma', mago:'Cajado'};

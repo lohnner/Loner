@@ -116,7 +116,7 @@ function updateHud(){
   else if(mode === 'townLeave'){ st = 'Saindo pelo portal…'; dot = '#8ab4ff'; }
   else {
     dot = '#e2ae4a';
-    st = hero.hp < ST.life ? `Na vila, curando ${pct}%` : 'Na vila · ande até o Mercador, a Forja ou o Armazém';
+    st = hero.hp < ST.life ? `Na vila, curando ${pct}%` : 'Na vila · ande até o Mercador ou a Forja';
   }
   setText('#stText', st); $('#stDot').style.background = dot;
   setText('#hpText', `Vida ${fmt(hero.hp)}/${fmt(ST.life)}`);
@@ -155,7 +155,7 @@ function updateHud(){
 function openTab(t){
   tab = t; $('#sheet').hidden = false;
   if(inTown()) townIdle = false; // mexeu em algo na vila: não parte sozinho
-  $('#sheet').classList.toggle('center', t === 'bag' || t === 'stash' || t === 'forge' || t === 'dun' || t === 'chest'); // mochila, armazém, forja, masmorra e Tobias abrem no meio da tela
+  $('#sheet').classList.toggle('center', t === 'bag' || t === 'forge' || t === 'dun' || t === 'chest'); // mochila, forja, masmorra e Tobias abrem no meio da tela
   $('#sheet').classList.toggle('full', t === 'rank'); // o ranking ocupa a tela toda
   if(t === 'rank') loadRank();
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === t));
@@ -164,9 +164,9 @@ function openTab(t){
 function closeSheet(){ $('#sheet').hidden = true; tab = null; document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on')); }
 function renderPanel(top){
   const body = $('#sheetBody'), sc = body.scrollTop;
-  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', stash:'Armazém', forge:'Forja', dun:'Masmorra', chest:NPC_CHEST.n + ', o colecionador'};
+  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', forge:'Forja', dun:'Masmorra', chest:NPC_CHEST.n + ', o colecionador'};
   $('#sheetTitle').textContent = T2[tab];
-  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, stash:panelStash, forge:panelForge, dun:panelDun, chest:panelChest})[tab]();
+  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, forge:panelForge, dun:panelDun, chest:panelChest})[tab]();
   body.scrollTop = top ? 0 : sc;
 }
 // Baú de Visuais (vendido pelo mercador): mostra o preço e quantos visuais a conta já tem
@@ -303,16 +303,26 @@ function slotBuyBtn(act, cur, cap, price, what){
   const town = inTown(), can = town && S.gold >= price;
   return `<button class="btn gold full" data-act="${act}" ${can ? '' : 'disabled'}>Comprar +1 espaço ${what}<small>${fmt(price)} ouro · ${cur}/${cap}${town ? '' : ' · só na vila'}${town && S.gold < price ? ' · ouro insuficiente' : ''}</small></button>`;
 }
+// Mochila com duas abas: Itens (invMax() espaços) e Orbes (um espaço fixo para cada tipo, sem limite de quantidade)
+let bagTab = 'items';
 function panelBag(){
-  const town = inTown(), orbs = Object.keys(ORBS).filter(k => S.orbs[k] > 0), n = invUsed(), over = n > invMax();
-  const cells = [...orbs.map(orbTile), ...S.inv.map(it => tileHTML(it, 'inv'))];
-  const slots = [];
-  for(let i = 0; i < Math.max(invMax(), n); i++) slots.push(`<div class="slot${i >= invMax() ? ' over' : ''}">${cells[i] || ''}</div>`);
-  let h = `<div class="sec"><h3>Itens <span class="r" style="${over || n === invMax() ? 'color:#ff8c80' : ''}">${n}/${invMax()}</span></h3>
+  const nOrbs = Object.keys(ORBS).reduce((t, k) => t + (S.orbs[k] || 0), 0);
+  const tabs = `<div class="rk-tabs rk-main"><button class="${bagTab === 'items' ? 'on' : ''}" data-act="bagTab" data-v="items">${ICON_ITEM.chest}Itens <small style="font-weight:600;color:var(--muted)">${invUsed()}/${invMax()}</small></button><button class="${bagTab === 'orbs' ? 'on' : ''}" data-act="bagTab" data-v="orbs">${ICON_ORB}Orbes <small style="font-weight:600;color:var(--muted)">${fmt(nOrbs)}</small></button></div>`;
+  if(bagTab === 'orbs'){
+    // um espaço para cada tipo de orbe, sempre na mesma ordem (mesmo vazio)
+    const cells = Object.keys(ORBS).map(k => { const n = S.orbs[k] || 0;
+      return `<div class="slot">${n ? orbTile(k) : `<div class="tile orb empty-orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" aria-label="${ORBS[k].n}, nenhum">${ICON_ORB}<span class="qty">0</span></div>`}</div>`; }).join('');
+    return tabs + `<div class="sec"><h3>Orbes <span class="r">sem limite</span></h3><div class="inv-grid">${cells}</div>
+      <div class="orb-names">${Object.keys(ORBS).map(k => `<span style="color:${ORBS[k].c}">${ORBS[k].n}: <b>${fmt(S.orbs[k] || 0)}</b></span>`).join('')}</div>
+      <p class="legend">Cada tipo de orbe tem o seu espaço e cabe quantos você quiser — não ocupam os espaços de itens. Toque num orbe para usar.</p></div>`;
+  }
+  const n = invUsed(), over = n > invMax(), slots = [];
+  for(let i = 0; i < Math.max(invMax(), n); i++) slots.push(`<div class="slot${i >= invMax() ? ' over' : ''}">${S.inv[i] ? tileHTML(S.inv[i], 'inv') : ''}</div>`);
+  let h = tabs + `<div class="sec"><h3>Itens <span class="r" style="${over || n === invMax() ? 'color:#ff8c80' : ''}">${n}/${invMax()}</span></h3>
     <div class="inv-grid">${slots.join('')}</div>`;
-  if(over) h += `<p class="note" style="color:#ff8c80">A mochila agora tem ${invMax()} espaços. Venda ou jogue fora ${n - invMax()} ${n - invMax() === 1 ? 'item' : 'itens'} para voltar a recolher do chão.</p>`;
-  else if(!n) h += `<p class="note">A mochila está vazia. Os itens do chão são recolhidos sozinhos durante a caçada.</p>`;
-  h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo. Orbes ficam empilhados num espaço só: toque neles para usar.</p>`;
+  if(over) h += `<p class="note" style="color:#ff8c80">A mochila tem ${invMax()} espaços. Venda ou jogue fora ${n - invMax()} ${n - invMax() === 1 ? 'item' : 'itens'} para voltar a recolher do chão.</p>`;
+  else if(!n) h += `<p class="note">A mochila está vazia. Ande por cima dos itens no chão para pegar.</p>`;
+  h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo.</p>`;
   h += slotBuyBtn('buyInvSlot', invMax(), INV_CAP, invSlotPrice(), 'na mochila') + `</div>`;
   return h + bulkSellHTML();
 }
@@ -339,21 +349,7 @@ function panelRules(){
     <div class="sec"><h3>Registro</h3><div class="stats"><div class="stat"><span>Criaturas abatidas</span><b>${fmt(S.kills)}</b></div><div class="stat"><span>Masmorra (melhor fase)</span><b>${S.dun.best}</b></div></div></div>
     <button class="btn" data-act="switchChar">Trocar de personagem<small>Volta para a lista de personagens da conta</small></button>`;
 }
-function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'stash') return stash().find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
-// Armazém da vila: janela no meio com stashMax() espaços; dividido entre os personagens da conta (fica em acct.stash, 09-conta.js)
-// Pilha de orbes no armazém ou na mochila dentro do painel do armazém: tocar move a pilha inteira
-const orbMoveTile = (k, n, act) => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="${act}" data-v="${k}" aria-label="${ORBS[k].n}, ${n}">${ICON_ORB}<span class="qty">${n}</span></button>`;
-function panelStash(){
-  const st = stash(), so = stashOrbs(), n = stashUsed(), slots = [];
-  const cells = [...Object.keys(ORBS).filter(k => so[k] > 0).map(k => orbMoveTile(k, so[k], 'orbTake')), ...st.map(it => tileHTML(it, 'stash'))];
-  // Itens além do limite (armazém antigo maior) aparecem em vermelho e continuam podendo ser retirados
-  for(let i = 0; i < Math.max(stashMax(), n); i++) slots.push(`<div class="slot${i >= stashMax() ? ' over' : ''}">${cells[i] || ''}</div>`);
-  const bag = [...Object.keys(ORBS).filter(k => S.orbs[k] > 0).map(k => orbMoveTile(k, S.orbs[k], 'orbPut')), ...S.inv.map(it => tileHTML(it, 'inv'))].map(c => `<div class="slot">${c}</div>`).join('');
-  return `<p class="note">O armazém é da conta: o que você guarda aqui aparece para todos os seus personagens. Toque num item da mochila para guardar, ou num item do armazém para retirar. Tocar numa pilha de orbes move a pilha inteira.</p>
-    <div class="sec"><h3>Armazém <span class="r">${n}/${stashMax()}</span></h3><div class="inv-grid">${slots.join('')}</div>
-    ${slotBuyBtn('buyStashSlot', stashMax(), STASH_CAP, stashSlotPrice(stashMax() - STASH_BASE), 'no armazém (vale para a conta toda)')}</div>
-    <div class="sec"><h3>Mochila <span class="r">${invUsed()}/${invMax()}</span></h3>${bag ? `<div class="inv-grid">${bag}</div>` : '<p class="note">Nada na mochila.</p>'}</div>`;
-}
+function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
 // Masmorra (nível 40): escolhe a fase inicial (1 até a melhor concluída + 1) e entra pelo portal da vila
 function panelDun(){
   const D0 = S.dun, max = D0.best + 1; D0.start = clamp(D0.start || 1, 1, max);
@@ -396,9 +392,7 @@ function forgeOrbsHTML(){
 function orbUpBlock(k, times){
   if(!inTown()) return 'Só na vila';
   if((S.orbs[k] || 0) < ORB_UP_N*times) return 'Orbes insuficientes';
-  const to = ORB_UP[k], freesSlot = (S.orbs[k] || 0) - ORB_UP_N*times <= 0;
-  if(!(S.orbs[to] > 0) && !freesSlot && invFull()) return 'Mochila cheia';
-  return '';
+  return ''; // orbes não ocupam espaço da mochila
 }
 function forgeItemsHTML(){
   forgeSel = forgeSel.filter(id => S.inv.some(i => i.id === id));
@@ -424,7 +418,7 @@ function renderOrbDlg(k){
   const which = O.rm ? 'com atributos' : RAR[O.from].n.toLowerCase();
   card.innerHTML = `<h2 class="dname">${O.n}</h2><div class="dtype">Você tem ${S.orbs[k]}</div><p class="note" style="color:var(--fg)">${O.d}</p>
     ${list.length ? `<div class="sec"><h3>Toque num item ${which} para ${O.rm ? 'anular 1 atributo' : 'melhorar'}</h3><div class="inv-grid">${list.map(x => `<div class="slot"><button class="tile r${x.it.rar}" style="--rc:${RAR[x.it.rar].c}" data-act="useOrb" data-v="${k}:${x.w}:${x.it.id}" aria-label="${x.it.name}">${itemIcon(x.it)}<span class="il">${x.it.ilvl}</span>${x.w === 'eq' ? '<span class="cls-tag" style="color:var(--poison)">Eq</span>' : ''}</button></div>`).join('')}</div></div>` : `<p class="note">Nenhum item ${which} na mochila ou equipado.</p>`}
-    <div class="dact">${inTown() ? `<button class="btn full" data-act="orbPut" data-v="${k}" ${S.orbs[k] > 0 && (stashOrbs()[k] > 0 || stashUsed() < stashMax()) ? '' : 'disabled'}>Guardar no armazém<small>${stashOrbs()[k] > 0 || stashUsed() < stashMax() ? `Todos os ${S.orbs[k]} · armazém ${stashUsed()}/${stashMax()}` : 'Armazém cheio'}</small></button>` : ''}<button class="btn full" data-act="dlgClose">Fechar</button></div>`;
+    <div class="dact"><button class="btn full" data-act="dlgClose">Fechar</button></div>`;
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
@@ -451,10 +445,10 @@ function itemDiff(it, cur){
 }
 function renderDlg(){
   const it = findItem(dlgItem.where, dlgItem.id); if(!it){ closeDlg(); return; }
-  const isEq = dlgItem.where === 'eq', isShop = dlgItem.where === 'shop', isStash = dlgItem.where === 'stash', town = inTown(), col = RAR[it.rar].c;
+  const isEq = dlgItem.where === 'eq', isShop = dlgItem.where === 'shop', town = inTown(), col = RAR[it.rar].c;
   // Orbes que servem neste item: o de melhoria da raridade dele e a Anulação (só aparece se tiver)
   const oks = Object.keys(ORBS).filter(k => ORBS[k].ok(it) && (!ORBS[k].rm || S.orbs[k] > 0));
-  const orbBtn = isShop || isStash ? '' : oks.map(k => `<button class="btn full" data-act="useOrb" data-v="${k}:${dlgItem.where}:${it.id}" ${S.orbs[k] > 0 ? '' : 'disabled'} style="border-color:${ORBS[k].c};color:${ORBS[k].c}">Usar ${ORBS[k].n}<small>${ORBS[k].rm ? 'Tira 1 atributo, vira ' + RAR[it.rar - 1].n : 'Vira ' + RAR[ORBS[k].to].n} · você tem ${S.orbs[k]}</small></button>`).join('');
+  const orbBtn = isShop ? '' : oks.map(k => `<button class="btn full" data-act="useOrb" data-v="${k}:${dlgItem.where}:${it.id}" ${S.orbs[k] > 0 ? '' : 'disabled'} style="border-color:${ORBS[k].c};color:${ORBS[k].c}">Usar ${ORBS[k].n}<small>${ORBS[k].rm ? 'Tira 1 atributo, vira ' + RAR[it.rar - 1].n : 'Vira ' + RAR[ORBS[k].to].n} · você tem ${S.orbs[k]}</small></button>`).join('');
   const card = $('#dcard'); card.style.setProperty('--rc', col);
   let base = '';
   if(it.slot === 'bow') base = `${fmt(it.min)}–${fmt(it.max)} de dano · ${n1(it.aps)} ataques/s${it.bt >= .9 ? ' <span style="color:var(--perf)">◆</span>' : ''}`;
@@ -470,11 +464,10 @@ function renderDlg(){
     ${aff ? `<ul class="daff">${aff}</ul>` : ''}
     <div class="cmp"><span style="color:var(--muted)">${isEq ? 'Este item te dá' : cur ? 'Trocando por ' + cur.name : 'Equipando'}:</span>${sg(dd, 'Dano/s')}${sg(dl, 'Vida')}</div>
     ${isEq ? '' : itemDiff(it, cur)}
-    ${isStash ? `<div class="dact"><button class="btn primary full" data-act="stashTake" ${!invFull() ? '' : 'disabled'}>Retirar para a mochila<small>${invFull() ? 'Mochila cheia' : 'Mochila ' + invUsed() + '/' + invMax()}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && !invFull() ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
+    ${isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && !invFull() ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
       ${isEq ? `<button class="btn" data-act="unequip" ${!invFull() ? '' : 'disabled'}>Guardar na mochila</button>` : !canUse(it) ? `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>` : S.lv < reqLv(it) ? `<button class="btn" disabled>Requer nível ${reqLv(it)}</button>` : `<button class="btn primary" data-act="equip">Equipar</button>`}
       ${isEq ? '' : `<button class="btn gold" data-act="sell" ${town ? '' : 'disabled'}>${town ? 'Vender' : 'Vender na vila'}<small>${fmt(sellPrice(it))} ouro</small></button>`}
       ${isEq ? '' : `<button class="btn warn" data-act="drop">Jogar fora</button>`}
-      ${!isEq ? `<button class="btn" data-act="stashPut" ${town && stashUsed() < stashMax() ? '' : 'disabled'}>Enviar para o armazém<small>${!town ? 'Só na vila' : stashUsed() >= stashMax() ? 'Armazém cheio' : stashUsed() + '/' + stashMax()}</small></button>` : ''}
       ${orbBtn}
       <button class="btn" data-act="dlgClose">Fechar</button>
     </div>`}`;
@@ -559,41 +552,12 @@ const ACT = {
     ring(hero.x, hero.y, 40, ORBS[k].c, .5, 3);
     dlgItem = {where, id:it.id}; $('#dlg').hidden = false; renderDlg(); // mostra o item já melhorado
   },
-  // Armazém (só na vila)
-  stashPut: () => {
-    if(!inTown() || !dlgItem || stashUsed() >= stashMax()) return;
-    const it = findItem('inv', dlgItem.id); if(!it) return;
-    S.inv = S.inv.filter(i => i !== it); it.id = stashId(); stash().push(it);
-    log(`Guardou ${it.name} no armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
-  },
-  stashTake: () => {
-    if(!dlgItem || invFull()) return;
-    const it = findItem('stash', dlgItem.id); if(!it) return;
-    acct.stash = stash().filter(i => i !== it); S.inv.push(it);
-    log(`Retirou ${it.name} do armazém`, RAR[it.rar].c); closeDlg(); save(); dirtyPanel();
-  },
-  // Pilha de orbes: mochila → armazém (só na vila) e armazém → mochila. Juntar numa pilha que já existe não ocupa espaço novo.
-  orbPut: k => {
-    const so = stashOrbs(), n = S.orbs[k] || 0;
-    if(!inTown() || !ORBS[k] || n <= 0 || (!(so[k] > 0) && stashUsed() >= stashMax())) return;
-    so[k] = (so[k] || 0) + n; S.orbs[k] = 0;
-    log(`Guardou ${n} ${ORBS[k].n} no armazém`, ORBS[k].c); if(!$('#dlg').hidden && !dlgItem) closeDlg(); save(); dirtyPanel();
-  },
-  orbTake: k => {
-    const so = stashOrbs(), n = so[k] || 0;
-    if(!ORBS[k] || n <= 0 || (!(S.orbs[k] > 0) && invFull())) return;
-    S.orbs[k] = (S.orbs[k] || 0) + n; delete so[k];
-    log(`Retirou ${n} ${ORBS[k].n} do armazém`, ORBS[k].c); save(); dirtyPanel();
-  },
   dlgClose: () => closeDlg(),
+  bagTab: v => { bagTab = v === 'orbs' ? 'orbs' : 'items'; dirtyPanel(); },
   // Comprar espaços (só na vila)
   buyInvSlot: () => {
     const p = invSlotPrice(); if(!inTown() || invMax() >= INV_CAP || S.gold < p) return;
     S.gold -= p; S.invX = (S.invX || 0) + 1; log(`Mochila agora tem ${invMax()} espaços (−${fmt(p)} ouro)`, '#e2ae4a'); save(); dirtyPanel();
-  },
-  buyStashSlot: () => {
-    const p = stashSlotPrice(stashMax() - STASH_BASE); if(!inTown() || !acct || stashMax() >= STASH_CAP || S.gold < p) return;
-    S.gold -= p; acct.stashX = (acct.stashX || 0) + 1; log(`Armazém agora tem ${stashMax()} espaços (−${fmt(p)} ouro)`, '#e2ae4a'); save(); dirtyPanel();
   },
   // Baú de Visuais (no mercador) e trocar visual (painel do Herói)
   buyChest: () => {
