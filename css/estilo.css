@@ -53,7 +53,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .btn:disabled{opacity:.38;cursor:default}
 .btn small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
 
-.skillbar{display:flex;gap:10px;justify-content:center;padding-block:8px;background:var(--panel);border-top:1px solid var(--line)}
+.skillbar{display:flex;gap:10px;justify-content:center;padding-block:8px;background:var(--panel);border-top:1px solid var(--line);touch-action:none;-webkit-user-select:none;user-select:none}
 .sk{touch-action:none;-webkit-touch-callout:none;position:relative;width:58px;height:58px;border-radius:14px;border:1px solid var(--line);background:radial-gradient(circle at 50% 35%,#24301f,var(--panel2));display:grid;place-items:center;color:var(--poison);padding:0;overflow:hidden}
 .sk svg{width:30px;height:30px}
 .sk::after{content:"";position:absolute;inset:0;background:conic-gradient(rgba(0,0,0,.7) calc(var(--cd,0)*360deg),transparent 0)}

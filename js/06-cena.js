@@ -24,7 +24,9 @@ function heroAI(dt){
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
   if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
   if(hero.dodge) return;
-  if(hero.cast || hero.dash){ hero.moving = false; return; }
+  if(hero.dash){ hero.moving = false; return; }
+  // lançando uma habilidade: continua andando (mais devagar) se o jogador estiver mexendo o joystick — não trava o movimento
+  if(hero.cast){ const md = manualDir(); if(md !== null) moveDir(md, dt, .7); else hero.moving = false; return; }
   manualAI(dt);
 }
 // Andar é sempre manual: o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
@@ -90,10 +92,12 @@ function heroTimers(dt){
     if(c.t >= c.dur){ hero.cast = null; if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
   }
 }
+// Velocidade dos tiros das criaturas de longe (px/s) — rápido para ser difícil de desviar
+const MON_SHOT = 380;
 // Começa o golpe em área da criatura (ver MON_AOE em 01)
 function monAoe(m, A){
-  const ec = ELEM[m.el || m.d.el || 'phys'].c, R = A.r*(m.elite ? 1.2 : 1), dmg = m.dmg*A.m;
-  m.aoeT = A.cd*rnd(.85, 1.15); m.moving = false; m.fired = true;
+  const ec = ELEM[m.el || m.d.el || 'phys'].c, R = A.r*(m.elite ? 1.2 : 1), dmg = m.dmg*A.m*AOE_DMG;
+  m.aoeT = A.cd; m.moving = false; m.fired = true;
   m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
   const z = {x:hero.x, y:hero.y, r:R, t:0, dur:A.t, dmg, mon:m, c:ec, k:A.k};
   if(A.k === 'cone' || A.k === 'slam'){
@@ -151,7 +155,7 @@ function monUpdate(m, dt){
     m.atkT -= dt; m.moving = false;
     if(!m.fired && m.atkT <= .18){
       m.fired = true;
-      if(m.d.ranged){ const an = Math.atan2(hero.y - m.y, hero.x - m.x); projs.push({x:m.x, y:m.y, vx:Math.cos(an)*260, vy:Math.sin(an)*260, a:an, life:1.6, hostile:true, mon:m, dmg:m.dmg, c:m.el ? ELEM[m.el].c : m.d.ranged}); }
+      if(m.d.ranged){ const an = Math.atan2(hero.y - m.y, hero.x - m.x); projs.push({x:m.x, y:m.y, vx:Math.cos(an)*MON_SHOT, vy:Math.sin(an)*MON_SHOT, a:an, life:1.1, hostile:true, mon:m, dmg:m.dmg, c:m.el ? ELEM[m.el].c : m.d.ranged}); }
       else if(d < m.d.range + m.r + 18) hurtHero(m.dmg, m);
     }
     return;
@@ -160,19 +164,24 @@ function monUpdate(m, dt){
   const A = m.d.aoe;
   if(A){
     m.aoeT = (m.aoeT === undefined ? rnd(1.5, A.cd) : m.aoeT) - dt;
-    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < A.reach && losClear(m, hero)){ monAoe(m, A); return; }
+    if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < A.reach && losClear(m, hero)){
+      // pronto e ao alcance: 40% de chance de usar; se não usar, tenta de novo em 1 s
+      if(Math.random() < AOE_CHANCE){ monAoe(m, A); return; }
+      m.aoeT = 1;
+    }
   }
   if(m.aggro){
     m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
     const reach = m.d.ranged ? m.d.range : m.d.range + m.r;
     const see = losClear(m, hero);
-    if(d > reach || !see){ monStep(m, see ? m.face : monChaseAng(m, fl), m.spd, dt); m.moving = true; }
+    if(d > reach || !see){ monChase(m, fl, dt); m.moving = true; }
     else { m.moving = false; if(m.acd <= 0){ m.atkT = .36; m.fired = false; m.acd = m.d.acd; } }
   } else {
     m.wt -= dt;
     if(m.wt <= 0){ m.wx = m.x + rnd(-90,90); m.wy = m.y + rnd(-90,90); m.wt = rnd(2,5); }
     const wd = Math.hypot(m.wx - m.x, m.wy - m.y);
-    if(wd > 6){ m.face = Math.atan2(m.wy - m.y, m.wx - m.x); if(!monStep(m, m.face, m.spd*.3, dt)) m.wt = 0; m.moving = true; } else m.moving = false;
+    // passeando: se bater em parede/obstáculo, escolhe outro destino
+    if(wd > 6){ m.face = Math.atan2(m.wy - m.y, m.wx - m.x); if(!monStep(m, m.face, m.spd*.3, dt)){ m.wx = m.x + rnd(-90,90); m.wy = m.y + rnd(-90,90); } m.moving = true; } else m.moving = false;
   }
   m.x = clamp(m.x, 20, WORLD.w - 20); m.y = clamp(m.y, 20, WORLD.h - 20);
 }
@@ -191,12 +200,45 @@ function monStep(m, ang, sp, dt){
   if(walkable(m.x, ny, r)){ m.y = ny; return true; }
   return false;
 }
-// Direção para chegar no herói: perto (mesmo ladrilho ou vizinho) vai reto; longe, segue o ladrilho vizinho com caminho menor
+// Caminho reto livre para o corpo da criatura (sem parede nem obstáculo no meio)?
+function bodyPathClear(m, to){
+  const r = Math.min(14, m.r*.7), d = D(m, to), n = Math.ceil(d/12);
+  for(let i = 1; i < n; i++) if(!walkable(m.x + (to.x - m.x)*i/n, m.y + (to.y - m.y)*i/n, r)) return false;
+  return true;
+}
+// Direção pela rota até o herói: vai para o vizinho (8 direções) com caminho menor; diagonal só se não raspar em parede/obstáculo.
+// Se o ladrilho depois desse também estiver livre em linha reta, já mira nele (anda mais suave, sem zigue-zague).
 function monChaseAng(m, fl){
   if(!LV || fl < 0 || fl === 0) return Math.atan2(hero.y - m.y, hero.x - m.x);
-  const tx = Math.floor(m.x/TILE), ty = Math.floor(m.y/TILE); let best = null, bv = fl;
-  for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const v = LV.flow[(ty + dy)*LV_N + tx + dx]; if(v >= 0 && v < bv){ bv = v; best = [tx + dx, ty + dy]; } }
-  return best ? Math.atan2((best[1] + .5)*TILE - m.y, (best[0] + .5)*TILE - m.x) : Math.atan2(hero.y - m.y, hero.x - m.x);
+  const N = LV_N, g = LV.g, f = LV.flow, step = (tx, ty, cur) => {
+    let best = null, bv = cur;
+    for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+      const nx = tx + dx, ny = ty + dy, v = f[ny*N + nx];
+      if(nx < 0 || ny < 0 || nx >= N || ny >= N || !(v >= 0) || v >= bv) continue;
+      if(dx && dy && (g[ty*N + nx] !== 1 || g[ny*N + tx] !== 1)) continue; // não corta quina
+      bv = v; best = [nx, ny, v];
+    }
+    return best;
+  };
+  const tx = Math.floor(m.x/TILE), ty = Math.floor(m.y/TILE), a = step(tx, ty, fl);
+  if(!a) return Math.atan2(hero.y - m.y, hero.x - m.x);
+  let goal = {x:(a[0] + .5)*TILE, y:(a[1] + .5)*TILE};
+  const b = step(a[0], a[1], a[2]); if(b){ const g2 = {x:(b[0] + .5)*TILE, y:(b[1] + .5)*TILE}; if(bodyPathClear(m, g2)) goal = g2; }
+  return Math.atan2(goal.y - m.y, goal.x - m.x);
+}
+// Persegue o herói: reto se o caminho estiver livre; senão pela rota. Se travar (não andou), desvia para um lado por um instante.
+function monChase(m, fl, dt){
+  let ang = bodyPathClear(m, hero) ? m.face : monChaseAng(m, fl);
+  if(m.detourT > 0){ m.detourT -= dt; ang = m.detourA; }
+  const x0 = m.x, y0 = m.y;
+  monStep(m, ang, m.spd, dt);
+  const moved = Math.hypot(m.x - x0, m.y - y0), want = m.spd*dt;
+  m.stuckT = moved < want*.35 ? (m.stuckT || 0) + dt : 0;
+  if(m.stuckT > .3){
+    // escolhe o lado que está livre (90° para a esquerda ou direita do caminho)
+    const r = Math.min(14, m.r*.7), side = [1, -1].sort(() => Math.random() - .5).find(sd => walkable(m.x + Math.cos(ang + sd*Math.PI/2)*18, m.y + Math.sin(ang + sd*Math.PI/2)*18, r)) || 1;
+    m.detourA = ang + side*Math.PI/2*.85; m.detourT = .45; m.stuckT = 0;
+  }
 }
 // O herói está dentro da área? Círculo (raio) ou cone (raio + abertura a partir da criatura)
 function zoneHits(z){

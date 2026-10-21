@@ -245,7 +245,9 @@ function drawWarrior(h){
 // Detalhe de cada criatura (chapéu, chifres, ossos...): MON_DECO[tipo]
 const MON_DECO = {rato:'rat', espantalho:'straw', zumbi:'zombie', lobo:'wolf', ent:'tree', sapo:'frog', sanguessuga:'leech', bruxa:'witch', esqueleto:'bones', ossudo:'bones',
   carnical:'ghoul', diabrete:'imp', brutamonte:'horns', cao:'wolf', goblin:'goblin', golem:'rock', lobogelo:'wolf', yeti:'fur', espirito:'ghost', escorpiao:'scorp',
-  mumia:'wrap', cultista:'hood', cavaleiro:'knight', gargula:'wings', feiticeiro:'hood'};
+  mumia:'wrap', cultista:'hood', cavaleiro:'knight', gargula:'wings', feiticeiro:'hood',
+  javali:'ghoul', lavrador:'straw', urso:'wolf', fada:'ghost', crocodilo:'ghoul', afogado:'zombie', morcego:'wings', escavador:'goblin',
+  fantasma:'ghost', harpia:'wings', mamute:'wolf', chacal:'wolf', serpente:'leech', servo:'hood', elemental:'ghost', carrasco:'horns'};
 // Altura do desenho em múltiplos do raio (barra de vida e brilho dos efeitos)
 const MON_H = {biped:3.5, quad:2.2, spider:1.6, blob:1.9, ghost:2.6, scorp:2.6, wings:2.6};
 const monH = m => (MON_H[MON_DECO[m.type]] || MON_H[m.d.kind] || 2.2)*m.r;
@@ -807,6 +809,7 @@ function render(){
     if(b.type === 'goblin'){ sphere(x, y, 6, '#3a3a40'); ctx.strokeStyle = '#c9a24a'; ctx.lineWidth = 1.5; line(x + 3, y - 4, x + 7, y - 9); ctx.fillStyle = `rgba(255,${200 + 55*Math.random() | 0},80,1)`; circ(x + 7, y - 10, 2.5); }
     else if(b.type === 'yeti'){ ctx.save(); ctx.translate(x, y); ctx.rotate(T*6); ctx.fillStyle = vgrad(-10, 10, '#f0f8ff', '#8fc8e8'); rrect(-10, -10, 20, 20, 4); ctx.restore(); }
     else if(b.type === 'aranhacav'){ ctx.fillStyle = '#e8e2f0'; circ(x, y, 7); ctx.strokeStyle = 'rgba(230,226,240,.6)'; ctx.lineWidth = 1; for(let i = 0; i < 4; i++){ const a = i*Math.PI/4; line(x - Math.cos(a)*9, y - Math.sin(a)*9, x + Math.cos(a)*9, y + Math.sin(a)*9); } }
+    else if(b.type === 'lavrador'){ sphere(x, y, 7, '#e07a20'); ctx.strokeStyle = '#8a4a10'; ctx.lineWidth = 1; line(x - 3, y - 6, x - 3, y + 6); line(x + 3, y - 6, x + 3, y + 6); ctx.fillStyle = '#3a6a20'; ctx.fillRect(x - 1, y - 10, 2, 4); } // abóbora
     else { sphere(x, y, 6, '#6a3a8a'); ctx.fillStyle = z.c; circ(x, y - 7, 2.5); } // poção
   }
   const FX = fxLook();

@@ -523,7 +523,7 @@ const ACT = {
   },
   go: () => depart(),
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
-  dodge: () => doDodge(false),
+  dodge: () => { if(performance.now() < skipClickT) return; doDodge(false); },
   mmToggle: () => { minimapBig = !minimapBig; drawMinimap(); },
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;
@@ -710,7 +710,7 @@ cv.addEventListener('pointerdown', e => {
     if(now - tapT < 320 && Math.hypot(x - tapX, y - tapY) < 70){ tapT = 0; const md = manualDir(); doDodge(false, md !== null ? md : hero.face); return; }
     tapT = now; tapX = x; tapY = y;
   }
-  if(e.pointerType !== 'mouse' && !joy && !aim){
+  if(e.pointerType !== 'mouse' && !joy){ // um dedo anda, outro pode estar mirando uma habilidade ao mesmo tempo
     joy = {pid:e.pointerId, ox:x, oy:y, dx:0, dy:0, moved:false};
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
     return;
@@ -733,11 +733,21 @@ const joyEnd = e => {
 window.addEventListener('pointerup', joyEnd);
 window.addEventListener('pointercancel', joyEnd);
 // Mira por toque: segura no botão, arrasta e solta
+// Celular (multitoque): cada dedo é independente — um no joystick, outro na barra. Habilidade com mira: segura, arrasta e solta.
+// As outras (e a esquiva) saem no próprio toque, sem esperar o "click" (que o navegador às vezes não manda com outro dedo na tela).
 $('#skillbar').addEventListener('pointerdown', e => {
-  if(e.pointerType === 'mouse' || aim) return;
-  const b = e.target.closest('.sk'); if(!b || !canAim(b.dataset.v)) return;
-  aim = {id:b.dataset.v, src:'touch', pid:e.pointerId, ox:e.clientX, oy:e.clientY, dx:0, dy:0, moved:false};
-  try{ b.setPointerCapture(e.pointerId); }catch(_){}
+  if(e.pointerType === 'mouse') return;
+  const b = e.target.closest('.sk'); if(!b) return;
+  e.preventDefault();
+  skipClickT = performance.now() + 600; // o click que viria depois não repete a ação
+  if(b.dataset.act === 'dodge'){ doDodge(false); return; }
+  const id = b.dataset.v;
+  if(!aim && canAim(id)){
+    aim = {id, src:'touch', pid:e.pointerId, ox:e.clientX, oy:e.clientY, dx:0, dy:0, moved:false};
+    try{ b.setPointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
+  manualCast(id);
 });
 window.addEventListener('pointermove', e => {
   if(!aim || aim.src !== 'touch' || e.pointerId !== aim.pid) return;

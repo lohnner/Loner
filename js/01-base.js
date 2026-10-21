@@ -26,16 +26,17 @@ function migrateItem(it){
   if(it.rar > 0) it.rar = clamp(it.affix.filter(a => a.k !== 'skill').length, 1, 3);
 }
 const MAPS = [
-  {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['rato','espantalho','zumbi'],desc:'Plantação abandonada perto da vila. Bom lugar para a primeira caçada.'},
-  {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','aranha','ent'],desc:'Lobos em bando e aranhas que cospem teia de longe.'},
-  {id:'pantano',name:'Pântano Pútrido',lv:[12,16],req:11,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa'],desc:'Sanguessugas roubam vida a cada mordida. Bruxas atacam de longe.'},
-  {id:'mina',name:'Mina Abandonada',lv:[16,20],req:15,seed:43,ground:['#2e2620','#3a3028','#221c17'],decor:'mine',tuft:'#4a3e30',mons:['goblin','aranhacav','golem'],desc:'Túneis escuros onde goblins mineradores cavam. Golens de pedra aguentam muito dano.'},
-  {id:'catacumbas',name:'Catacumbas',lv:[20,24],req:19,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical'],desc:'Corredores de pedra cheios de mortos-vivos e arqueiros de osso.'},
-  {id:'picos',name:'Picos Gélidos',lv:[24,28],req:23,seed:61,ground:['#a9b6c2','#c3ced8','#8e9caa'],decor:'ice',tuft:'#d8e4ee',mons:['lobogelo','yeti','espirito'],desc:'Neve e vento cortante. Espíritos de gelo atacam de longe e yetis batem forte.'},
-  {id:'deserto',name:'Deserto de Cinzas',lv:[28,32],req:27,seed:67,ground:['#5a4a38','#6b5842','#47392a'],decor:'desert',tuft:'#8a7452',mons:['escorpiao','mumia','cultista'],desc:'Dunas cinzentas e ruínas. Cultistas lançam magias de longe, escorpiões são rápidos.'},
-  {id:'cidadela',name:'Cidadela Profana',lv:[32,36],req:31,seed:71,ground:['#2a2233','#352b40','#1e1826'],decor:'citadel',tuft:'#4a3e58',mons:['cavaleiro','gargula','feiticeiro'],desc:'Fortaleza tomada pelas trevas. Cavaleiros negros resistem a tudo e gárgulas voam rápido.'},
-  {id:'abismo',name:'Abismo Ardente',lv:[36,40],req:35,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['diabrete','brutamonte','cao'],desc:'Fendas de lava e demônios. Os melhores itens caem aqui.'},
+  {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['espantalho','javali','lavrador','rato','zumbi'],desc:'Plantação abandonada perto da vila. Bom lugar para a primeira caçada.'},
+  {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','ent','urso','aranha','fada'],desc:'Lobos em bando, ursos e aranhas que cospem teia de longe.'},
+  {id:'pantano',name:'Pântano Pútrido',lv:[12,16],req:11,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa','crocodilo','afogado'],desc:'Sanguessugas roubam vida a cada mordida. Bruxas atacam de longe e crocodilos espreitam na lama.'},
+  {id:'mina',name:'Mina Abandonada',lv:[16,20],req:15,seed:43,ground:['#2e2620','#3a3028','#221c17'],decor:'mine',tuft:'#4a3e30',mons:['goblin','aranhacav','golem','morcego','escavador'],desc:'Túneis escuros onde goblins mineradores cavam. Golens de pedra aguentam muito dano.'},
+  {id:'catacumbas',name:'Catacumbas',lv:[20,24],req:19,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical','fantasma','zumbi'],desc:'Corredores de pedra cheios de mortos-vivos, fantasmas e arqueiros de osso.'},
+  {id:'picos',name:'Picos Gélidos',lv:[24,28],req:23,seed:61,ground:['#a9b6c2','#c3ced8','#8e9caa'],decor:'ice',tuft:'#d8e4ee',mons:['lobogelo','yeti','espirito','harpia','mamute'],desc:'Neve e vento cortante. Espíritos de gelo atacam de longe, yetis e mamutes batem forte.'},
+  {id:'deserto',name:'Deserto de Cinzas',lv:[28,32],req:27,seed:67,ground:['#5a4a38','#6b5842','#47392a'],decor:'desert',tuft:'#8a7452',mons:['escorpiao','mumia','cultista','chacal','serpente'],desc:'Dunas cinzentas e ruínas. Cultistas lançam magias de longe, escorpiões e chacais são rápidos.'},
+  {id:'cidadela',name:'Cidadela Profana',lv:[32,36],req:31,seed:71,ground:['#2a2233','#352b40','#1e1826'],decor:'citadel',tuft:'#4a3e58',mons:['cavaleiro','gargula','feiticeiro','servo','aranhasombria'],desc:'Fortaleza tomada pelas trevas. Cavaleiros negros resistem a tudo e gárgulas voam rápido.'},
+  {id:'abismo',name:'Abismo Ardente',lv:[36,40],req:35,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['brutamonte','cao','elemental','diabrete','carrasco'],desc:'Fendas de lava e demônios. Os melhores itens caem aqui.'},
 ];
+// Cada mapa tem 5 criaturas: as 3 primeiras têm golpe em área (MON_AOE) e as 2 últimas não.
 const MONS = {
   rato:{n:'Rato Gigante',kind:'quad',c1:'#6e5238',c2:'#a07e62',r:10,hp:.7,dmg:.7,spd:95,range:20,acd:1.0,tail:1},
   espantalho:{n:'Espantalho Maldito',kind:'biped',c1:'#8a6d33',c2:'#d8c27a',r:13,hp:1,dmg:1,spd:60,range:24,acd:1.3,eye:'#ff7a2a'},
@@ -68,6 +69,24 @@ const MONS = {
   cavaleiro:{n:'Cavaleiro Negro',kind:'biped',c1:'#2a2833',c2:'#5a5868',r:16,hp:2.3,dmg:1.5,spd:52,range:28,acd:1.6,eye:'#d24aff'},
   gargula:{n:'Gárgula',kind:'quad',c1:'#4a4652',c2:'#7a7684',r:13,hp:1.1,dmg:1.15,spd:145,range:22,acd:.95,tail:1,eye:'#ff5a5a'},
   feiticeiro:{n:'Feiticeiro Sombrio',kind:'biped',c1:'#2a1f3a',c2:'#7a5aa8',r:12,hp:.9,dmg:1.35,spd:55,range:210,acd:1.9,ranged:'#c08aff',eye:'#e0b0ff'},
+  // Criaturas novas (5 por mapa: 3 com golpe em área + 2 sem)
+  javali:{n:'Javali Raivoso',kind:'quad',c1:'#5a3e2a',c2:'#8a6a4a',r:13,hp:1,dmg:1,spd:100,range:22,acd:1.1,tail:1,eye:'#ff7a3a'},
+  lavrador:{n:'Lavrador Possuído',kind:'biped',c1:'#5a4a3a',c2:'#c8a070',r:13,hp:1,dmg:1,spd:55,range:24,acd:1.4,eye:'#ffaa3a'},
+  urso:{n:'Urso Pardo',kind:'quad',c1:'#3e2a1c',c2:'#6a4a32',r:18,hp:2.2,dmg:1.4,spd:60,range:28,acd:1.6,eye:'#ffcc5a'},
+  fada:{n:'Fada Venenosa',kind:'blob',c1:'#3a8a5a',c2:'#c8ffb0',r:9,hp:.6,dmg:.9,spd:80,range:180,acd:1.6,ranged:'#c8ffb0',eye:'#ffffff'},
+  crocodilo:{n:'Crocodilo do Lodo',kind:'quad',c1:'#3a4a26',c2:'#7a8a4a',r:15,hp:1.6,dmg:1.3,spd:70,range:26,acd:1.3,tail:1,eye:'#e0ff5a'},
+  afogado:{n:'Afogado',kind:'biped',c1:'#3a5a5a',c2:'#7aa0a0',r:13,hp:1.3,dmg:1.1,spd:50,range:24,acd:1.4,eye:'#9affea'},
+  morcego:{n:'Morcego da Mina',kind:'quad',c1:'#2e2630',c2:'#5a4a5a',r:9,hp:.55,dmg:.8,spd:150,range:20,acd:.8,eye:'#ff4a4a'},
+  escavador:{n:'Escavador Kobold',kind:'biped',c1:'#5a4a2a',c2:'#a08a5a',r:11,hp:.9,dmg:1,spd:80,range:180,acd:1.6,ranged:'#c9a24a',eye:'#ffe14a'},
+  fantasma:{n:'Fantasma',kind:'blob',c1:'#8a8aa0',c2:'#e8e8ff',r:11,hp:.8,dmg:1.1,spd:75,range:190,acd:1.7,ranged:'#d8e0ff',eye:'#9ab4ff'},
+  harpia:{n:'Harpia das Neves',kind:'quad',c1:'#6a7a8a',c2:'#c8d4e0',r:12,hp:.85,dmg:1,spd:150,range:22,acd:.9,eye:'#ffcc33'},
+  mamute:{n:'Mamute',kind:'quad',c1:'#5a4636',c2:'#8a7058',r:20,hp:2.6,dmg:1.5,spd:40,range:32,acd:2,eye:'#2a1a10'},
+  chacal:{n:'Chacal das Cinzas',kind:'quad',c1:'#8a7050',c2:'#c8aa78',r:11,hp:.8,dmg:1,spd:140,range:22,acd:.85,tail:1,eye:'#ffd24a'},
+  serpente:{n:'Serpente das Areias',kind:'blob',c1:'#7a6a3a',c2:'#c8b070',r:11,hp:1,dmg:1.2,spd:95,range:22,acd:1,eye:'#ff6a2a'},
+  servo:{n:'Servo das Trevas',kind:'biped',c1:'#1e1828',c2:'#4a3a5a',r:12,hp:1,dmg:1.25,spd:65,range:24,acd:1.2,eye:'#d24aff'},
+  aranhasombria:{n:'Aranha Sombria',kind:'spider',c1:'#1e1626',c2:'#5a3a7a',r:13,hp:1.1,dmg:1.2,spd:100,range:22,acd:1,eye:'#e0b0ff'},
+  elemental:{n:'Elemental de Fogo',kind:'blob',c1:'#c8401a',c2:'#ffd24a',r:13,hp:1.2,dmg:1.4,spd:60,range:200,acd:1.8,ranged:'#ffb040',eye:'#ffffff'},
+  carrasco:{n:'Carrasco Infernal',kind:'biped',c1:'#3a1410',c2:'#8a2a1e',r:16,hp:2,dmg:1.5,spd:55,range:28,acd:1.5,eye:'#ffcc33'},
 };
 // Tipos de dano das criaturas. Físico é reduzido pela armadura; os outros pela resistência (st.res, máximo RES_MAX) e só pela metade da armadura.
 const ELEM = {
@@ -84,7 +103,8 @@ const RES_MAX = 75, RES_KEYS = ['fire','cold','light','chaos','poison','necro','
 // Criaturas que causam dano não físico (as outras batem físico)
 const MON_EL = {aranha:'poison', sapo:'poison', bruxa:'chaos', aranhacav:'poison', golem:'light', carnical:'necro', ossudo:'necro',
   lobogelo:'cold', yeti:'cold', espirito:'cold', escorpiao:'poison', mumia:'necro', cultista:'fire',
-  cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire'};
+  cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire',
+  fada:'poison', afogado:'necro', fantasma:'necro', harpia:'cold', mamute:'cold', serpente:'poison', servo:'chaos', aranhasombria:'chaos', elemental:'fire', carrasco:'fire'};
 for(const k in MON_EL) MONS[k].el = MON_EL[k];
 MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.ranged = '#9af0c8'; MONS.feiticeiro.ranged = '#ff8ae8';
 // Masmorra (fim de jogo): o portal abre na vila no nível 40. Fases de DUN_KILLS abates com criaturas de todos os mapas no nível 40;
@@ -97,15 +117,18 @@ const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
 // Todas as criaturas da fase causam esse dano — o jogador precisa da resistência certa.
 const DUN_ELEMS = ['fire','cold','light','poison','chaos','necro','psy'], DUN_ELEM_SPAN = 5;
 const dunElem = p => DUN_ELEMS[Math.floor((Math.max(1, p) - 1)/DUN_ELEM_SPAN) % DUN_ELEMS.length];
-// Golpes em área: a criatura marca o chão e, depois de AOE_T (1 s), o golpe acerta quem ainda estiver dentro (m × o dano dela).
+// Golpes em área: a criatura marca o chão e, depois de AOE_T (0,7 s), o golpe acerta quem ainda estiver dentro (m × AOE_DMG × o dano dela).
 // Cada um tem um jeito (k) que combina com a criatura:
 //   leap  = pula e cai na marca (onde o herói estava): lobos, cães, sapo, carniçal, gárgula, brutamonte
 //   cone  = golpe em cone à frente dela (spread = abertura em radianos): espada, ferrão, baforada
 //   slam  = pisão/tremor em volta dela mesma
 //   bomb  = arremessa algo que cai na marca (bomba, poção, bloco de gelo, teia)
 //   spell = magia que surge embaixo do herói (raízes, coluna de fogo, chuva de ossos...)
-// reach = distância máxima para começar o golpe. cd = recarga; o ataque normal continua. Elites: área 20% maior. Campos de Trigo não têm.
-const AOE_T = 1;
+// reach = distância máxima para começar o golpe. O ataque normal continua. Elites: área 20% maior.
+// AOE_T = tempo entre marcar e acertar (0,7 s). AOE_DMG = penalidade extra: ser pego pela área dói muito (multiplica o m de cada golpe).
+const AOE_T = .7, AOE_DMG = 2.5;
+// AOE_CD = recarga de todo golpe em área (5 s). Com ele pronto e o herói ao alcance, a criatura tenta a cada 1 s com AOE_CHANCE (40%) de usar.
+const AOE_CD = 5, AOE_CHANCE = .4;
 const MON_AOE = {
   // à distância
   bruxa:{n:'Poção Maldita', k:'bomb', r:55, m:1.5, cd:6, reach:300},
@@ -131,8 +154,14 @@ const MON_AOE = {
   yeti:{n:'Bloco de Gelo', k:'bomb', r:65, m:1.9, cd:7, reach:280},
   ent:{n:'Raízes', k:'spell', r:60, m:1.6, cd:7, reach:280},
   mumia:{n:'Praga Antiga', k:'spell', r:60, m:1.6, cd:7, reach:260},
+  // criaturas novas
+  espantalho:{n:'Foiçada', k:'cone', r:95, spread:1.3, m:1.3, reach:90},
+  javali:{n:'Investida', k:'leap', r:48, m:1.3, reach:240},
+  lavrador:{n:'Abóbora Podre', k:'bomb', r:52, m:1.3, reach:260},
+  urso:{n:'Patada', k:'slam', r:85, m:1.8, reach:100},
+  elemental:{n:'Erupção', k:'spell', r:65, m:1.8, reach:320},
 };
-for(const k in MON_AOE){ MON_AOE[k].t = AOE_T; MONS[k].aoe = MON_AOE[k]; }
+for(const k in MON_AOE){ MON_AOE[k].t = AOE_T; MON_AOE[k].cd = AOE_CD; if(MONS[k]) MONS[k].aoe = MON_AOE[k]; }
 // Esquiva de cada classe (botão à esquerda das habilidades ou barra de espaço): avanço rápido sem levar dano.
 // len = distância, dur = duração (s), cd = recarga (s). O Mago se teletransporta.
 const DODGE = {
@@ -278,7 +307,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:3,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:4,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
@@ -295,7 +324,9 @@ function normalize(s){
   if(!d.char && (d.lv > 1 || d.kills > 0)) d.char = {name:'Víbora',cls:'arqueiro',build:'veneno',color:0};
   d.speed = 1; // não existe mais escolha de velocidade: sempre 1x
   if((s.ver || 0) < 3){ d.inv.forEach(migrateItem); d.shop.forEach(migrateItem); for(const k in d.eq) migrateItem(d.eq[k]); }
-  d.ver = 3;
+  // ver 4: balanceamento de out/2026 (Épico e Lendário mais fracos) — recalcula os itens que o personagem já tem
+  if((s.ver || 0) < 4){ d.inv.forEach(rebalanceItem); d.shop.forEach(rebalanceItem); for(const k in d.eq) rebalanceItem(d.eq[k]); }
+  d.ver = 4;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.

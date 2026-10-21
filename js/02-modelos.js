@@ -13,7 +13,23 @@ const reqLv = it => clamp(it.ilvl - [3, 2, 2, 1, 0][it.rar], 1, MAX_LV);
 const canEquip = it => canUse(it) && S.lv >= reqLv(it);
 const clsName = id => (CLASSES.find(c => c.id === id) || CLASSES[0]).n;
 // Força da base (dano da arma / armadura) e dos atributos por raridade
-const RAR_F = [1, 1, 1.08, 1.18, 1.35];
+const RAR_F = [1, 1, 1.06, 1.12, 1.22];
+// Antes do balanceamento de out/2026 era [1, 1, 1.08, 1.18, 1.35]: itens salvos antes disso são recalculados por rebalanceItem()
+const RAR_F_OLD = [1, 1, 1.08, 1.18, 1.35];
+// Refaz a força de um item salvo com a regra atual: base pela razão nova/antiga e cada atributo pela própria qualidade (t) já sorteada
+function rebalanceItem(it){
+  if(!it || typeof it.rar !== 'number') return;
+  const f = RAR_F[it.rar] / RAR_F_OLD[it.rar];
+  if(f !== 1){
+    if(it.min){ it.min = Math.max(1, Math.round(it.min*f)); it.max = Math.max(it.min + 1, Math.round(it.max*f)); }
+    if(it.armor) it.armor = Math.max(1, Math.round(it.armor*f));
+  }
+  for(const a of it.affix){
+    const A = AFX[a.k]; if(!A || typeof a.t !== 'number') continue;
+    const lo = A.lo(it.ilvl), hi = A.hi(it.ilvl)*RAR_F[it.rar];
+    let v = lo + (hi - lo)*a.t; a.v = A.dec ? Math.round(v*10)/10 : Math.max(1, Math.round(v));
+  }
+}
 // +habilidade do Lendário (uma ativa ou passiva da classe do item)
 function addSkill(it, cls){
   const K = CLASS_KIT[cls] || CLASS_KIT.arqueiro, s = pick([...K.active, ...K.passive]), v = Math.random() < .12 ? 2 : 1;

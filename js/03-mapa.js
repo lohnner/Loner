@@ -96,17 +96,26 @@ function makeGround(md){
 // ligadas por uma árvore pelo caminho mais curto + 2–4 ligações extras (voltas); corredores curvos de largura 2 a 5.
 // Depois as bordas são suavizadas e tudo que ficou sem acesso vira parede.
 // LV.g: 0 = parede/vazio, 1 = chão, 2 = chão com obstáculo (bloqueia). LV.seen = ladrilhos já vistos (minimapa).
-const TILE = 40, LV_N = 60;
+const TILE = 40, LV_N = 76, RING_W = 4.2; // RING_W = largura do caminho em volta da ilha dos anéis
 let LV = null;
 // Obstáculos (bloqueiam) e enfeites do chão (não bloqueiam) por tipo de mapa — desenhados por drawDecor (07)
 const LV_SOLID = {field:['rock','tree'], forest:['tree','tree','rock'], swamp:['deadtree','rock'], mine:['crystal','rock'], crypt:['pillar','tomb'], ice:['pine','rock'], desert:['rock','pillar','deadtree'], citadel:['pillar','crystal'], hell:['rock','pillar']};
 const LV_DECO = {field:['wheat','tuft','wheat'], forest:['bush','tuft'], swamp:['puddle','reed','tuft'], mine:['bones','tuft'], crypt:['bones','skull'], ice:['tuft'], desert:['skull','bones'], citadel:['skull','bones'], hell:['lava','skull']};
 const tileAt = (x, y) => { const tx = Math.floor(x/TILE), ty = Math.floor(y/TILE); return tx < 0 || ty < 0 || tx >= LV_N || ty >= LV_N ? 0 : LV.g[ty*LV_N + tx]; };
-// Dá para ficar em (x, y)? Confere uma caixinha em volta dos pés (r = meia largura)
+// Dá para ficar em (x, y)? Paredes: confere uma caixinha em volta dos pés (r = meia largura).
+// Obstáculos: só a base deles bloqueia (círculo de raio o.cr no pé do objeto) — dá para passar atrás e ele fica desenhado por cima.
+const SOLID_R = {rock:13, tree:9, pine:9, deadtree:7, pillar:15, tomb:11, crystal:12};
 function walkable(x, y, r){
   if(!LV || scene !== 'map') return true;
   r = r || 10;
-  return tileAt(x - r, y - r*.6) === 1 && tileAt(x + r, y - r*.6) === 1 && tileAt(x - r, y + r*.4) === 1 && tileAt(x + r, y + r*.4) === 1;
+  if(!tileAt(x - r, y - r*.6) || !tileAt(x + r, y - r*.6) || !tileAt(x - r, y + r*.4) || !tileAt(x + r, y + r*.4)) return false;
+  const tx = Math.floor(x/TILE), ty = Math.floor(y/TILE);
+  for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){
+    const o = LV.sol[(ty + j)*LV_N + tx + i]; if(!o) continue;
+    const dx = x - o.x, dy = (y - (o.y - 3))*1.5; // base achatada (vista de cima em 3/4)
+    if(dx*dx + dy*dy < (o.cr + r*.6)*(o.cr + r*.6)) return false;
+  }
+  return true;
 }
 // Último ponto livre andando em linha reta de (x0,y0) até (x1,y1) — usado em esquiva, Investida e avanços
 function rayEnd(x0, y0, x1, y1, r){
@@ -122,10 +131,10 @@ function genLevel(md){
   const box = (x0, y0, x1, y1) => { for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++) set(x, y); };
   const wall = (cx, cy, r) => { for(let y = Math.floor(cy - r); y <= cy + r; y++) for(let x = Math.floor(cx - r); x <= cx + r; x++) if((x - cx)*(x - cx) + (y - cy)*(y - cy) <= r*r && inb(x, y)) g[y*N + x] = 0; };
   // 1) áreas espalhadas com distância mínima entre elas
-  const nodes = [], want = rint(9, 13);
-  for(let tries = 0; nodes.length < want && tries < 600; tries++){
-    const x = rnd(M + 6, N - M - 7), y = rnd(M + 6, N - M - 7);
-    if(nodes.every(n => Math.hypot(n.x - x, n.y - y) > 10)) nodes.push({x, y});
+  const nodes = [], want = rint(11, 15);
+  for(let tries = 0; nodes.length < want && tries < 800; tries++){
+    const x = rnd(M + 9, N - M - 10), y = rnd(M + 9, N - M - 10);
+    if(nodes.every(n => Math.hypot(n.x - x, n.y - y) > 13)) nodes.push({x, y});
   }
   // 2) formato de cada área (sorteado)
   const SHAPES = ['rect','rect','circle','oval','cave','cave','ring','arena','cross'];
@@ -133,13 +142,13 @@ function genLevel(md){
   for(const n of nodes){
     let s = pick(SHAPES); if(s === 'arena' && arenas++) s = 'circle';
     n.shape = s;
-    if(s === 'rect'){ const w = rint(3, 6), h = rint(3, 5); box(Math.round(n.x - w), Math.round(n.y - h), Math.round(n.x + w), Math.round(n.y + h)); }
-    else if(s === 'circle') disc(n.x, n.y, rnd(3.5, 5.5));
-    else if(s === 'oval') Math.random() < .5 ? disc(n.x, n.y, rnd(6, 8), rnd(3, 4)) : disc(n.x, n.y, rnd(3, 4), rnd(5.5, 7));
-    else if(s === 'cave'){ for(let i = 0; i < rint(4, 7); i++) disc(n.x + rnd(-4, 4), n.y + rnd(-3, 3), rnd(2, 3.6)); }
-    else if(s === 'ring'){ const r = rnd(6, 7.5); disc(n.x, n.y, r); wall(n.x, n.y, r - 3.2); n.ring = r; } // anel: ilha no meio para dar a volta
-    else if(s === 'arena') disc(n.x, n.y, rnd(8, 9.5), rnd(7, 8));
-    else { const a = rint(4, 6), b = rint(1, 2); box(Math.round(n.x - a), Math.round(n.y - b), Math.round(n.x + a), Math.round(n.y + b)); box(Math.round(n.x - b), Math.round(n.y - a), Math.round(n.x + b), Math.round(n.y + a)); }
+    if(s === 'rect'){ const w = rint(5, 8), h = rint(4, 7); box(Math.round(n.x - w), Math.round(n.y - h), Math.round(n.x + w), Math.round(n.y + h)); }
+    else if(s === 'circle') disc(n.x, n.y, rnd(5, 7.5));
+    else if(s === 'oval') Math.random() < .5 ? disc(n.x, n.y, rnd(8, 10.5), rnd(4.5, 6)) : disc(n.x, n.y, rnd(4.5, 6), rnd(7.5, 9.5));
+    else if(s === 'cave'){ for(let i = 0; i < rint(5, 8); i++) disc(n.x + rnd(-5.5, 5.5), n.y + rnd(-4.5, 4.5), rnd(3, 4.8)); }
+    else if(s === 'ring'){ const r = rnd(8.5, 10.5); disc(n.x, n.y, r); wall(n.x, n.y, r - RING_W); n.ring = r; } // anel: ilha no meio para dar a volta
+    else if(s === 'arena') disc(n.x, n.y, rnd(11, 13), rnd(9, 10.5));
+    else { const a = rint(6, 9), b = rint(2, 3); box(Math.round(n.x - a), Math.round(n.y - b), Math.round(n.x + a), Math.round(n.y + b)); box(Math.round(n.x - b), Math.round(n.y - a), Math.round(n.x + b), Math.round(n.y + a)); }
   }
   // 3) ligações: árvore pelo menor caminho (Prim) + algumas voltas extras
   const edges = [], inT = [nodes[0]];
@@ -149,17 +158,17 @@ function genLevel(md){
     edges.push(best); inT.push(best[1]);
   }
   for(let i = 0, extra = rint(2, 4); i < 40 && extra > 0; i++){
-    const a = pick(nodes), b = pick(nodes); if(a === b || Math.hypot(a.x - b.x, a.y - b.y) > 26 || edges.some(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) continue;
+    const a = pick(nodes), b = pick(nodes); if(a === b || Math.hypot(a.x - b.x, a.y - b.y) > 34 || edges.some(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) continue;
     edges.push([a, b]); extra--;
   }
   // 4) corredores curvos: pincel redondo andando numa curva entre as áreas (largura 2 a 5)
   for(const [a, b] of edges){
-    const w = pick([2, 2.5, 3, 3, 3.5, 4, 5]) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const w = pick([3, 3.5, 4, 4, 4.5, 5, 6]) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
     const bend = rnd(-.35, .35)*len, mx = (a.x + b.x)/2 - dy/len*bend, my = (a.y + b.y)/2 + dx/len*bend;
     // começa na borda do anel (não atravessa a ilha)
     for(let t = 0; t <= 1; t += .5/len){
       const x = (1 - t)*(1 - t)*a.x + 2*(1 - t)*t*mx + t*t*b.x, y = (1 - t)*(1 - t)*a.y + 2*(1 - t)*t*my + t*t*b.y;
-      const insideRing = [a, b].some(n => n.ring && Math.hypot(x - n.x, y - n.y) < n.ring - 3.2);
+      const insideRing = [a, b].some(n => n.ring && Math.hypot(x - n.x, y - n.y) < n.ring - RING_W);
       if(!insideRing) disc(x, y, w);
     }
   }
@@ -184,8 +193,10 @@ function genLevel(md){
     if(g[k] !== 1 || cnt(x, y) < 8 || dist[k] < 6) continue;
     g[k] = 2;
     const r = bfs(); if(r.n < floorN - solids.length - 1){ g[k] = 1; continue; } // fecharia algum lugar: desiste
-    solids.push({t:pick(ST2), x:x*TILE + TILE/2, y:y*TILE + TILE*.8, s:rnd(.75, 1.05), v:Math.random()});
+    const t = pick(ST2), s = rnd(.75, 1.05);
+    solids.push({t, x:x*TILE + TILE/2, y:y*TILE + TILE*.8, s, v:Math.random(), cr:(SOLID_R[t] || 12)*s, k});
   }
+  const sol = {}; for(const o of solids) sol[o.k] = o; // obstáculo por ladrilho (colisão em walkable)
   ({dist} = bfs());
   // 8) enfeites no chão
   for(let i = 0; i < floorN/9; i++){
@@ -194,7 +205,7 @@ function genLevel(md){
     if(o.t === 'lava'){ o.pts = []; let px = 0, py = 0; for(let j = 0; j < 5; j++){ o.pts.push([px, py]); px += rnd(-25, 25); py += rnd(-25, 25); } }
     deco.push(o);
   }
-  return {N, g, seen:new Uint8Array(N*N), dist, startPos:{x:(sx + .5)*TILE, y:(sy + .5)*TILE}, solids, deco, flow:new Int16Array(N*N).fill(-1), flowFrom:-1, flowT:0};
+  return {N, g, seen:new Uint8Array(N*N), dist, startPos:{x:(sx + .5)*TILE, y:(sy + .5)*TILE}, solids, sol, deco, flow:new Int16Array(N*N).fill(-1), flowFrom:-1, flowT:0};
 }
 // Caminho até o herói (busca em largura na grade, refeita quando ele troca de ladrilho): as criaturas seguem o número menor
 function updateFlow(){
@@ -204,7 +215,7 @@ function updateFlow(){
   const q = [k];
   for(let qi = 0; qi < q.length; qi++){
     const c = q[qi], cx = c % N, cy = (c / N) | 0, d = f[c];
-    if(d > 36) continue;
+    if(d > 44) continue;
     for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = cx + dx, ny = cy + dy; if(nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const n = ny*N + nx; if(f[n] < 0 && LV.g[n] === 1){ f[n] = d + 1; q.push(n); } }
   }
 }
@@ -233,13 +244,13 @@ function makeMon(type, x, y, ml, elite){
 // Criaturas do mapa: MAP_MONS por mapa (Masmorra: DUN_KILLS), espalhadas pelas salas (menos a de início). Não nascem mais:
 // matou todas, o mapa está limpo e o jogador volta para a vila.
 // Primeiro mapa: criaturas sozinhas. Demais: sozinha (35%), dupla (30%) ou grupo de 3 a 5 (35%).
-const SOLO_MAP = 'campos', MAP_MONS = 60;
+const SOLO_MAP = 'campos', MAP_MONS = 80;
 const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; const r = Math.random(); return r < .35 ? 1 : r < .65 ? 2 : rint(3, 5); };
 let mapTotal = 0, mapCleared = false;
 function spawnLevel(){
   const total = mapDef === DUN ? DUN_KILLS : MAP_MONS;
   // lugares possíveis: chão a pelo menos 9 ladrilhos (pelo caminho) do início
-  const spots = []; for(let i = 0; i < LV_N*LV_N; i++) if(LV.g[i] === 1 && LV.dist[i] >= 9) spots.push(i);
+  const spots = []; for(let i = 0; i < LV_N*LV_N; i++) if(LV.g[i] === 1 && LV.dist[i] >= 12) spots.push(i);
   let left = total, guard = 0;
   while(left > 0 && guard++ < 500 && spots.length){
     const s = pick(spots), p = {x:(s % LV_N + .5)*TILE, y:(((s / LV_N) | 0) + .5)*TILE}, n = Math.min(left, packSize()), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
