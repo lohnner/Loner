@@ -214,14 +214,16 @@ function panelMaps(){
     const lock = S.lv < m.req, here = S.map === m.id;
     const xm = xpMult(m), rec = mapRec(m), gq = my >= rec ? 'ok' : my >= rec - 5 ? 'mid' : 'bad';
     const xpChip = xm < 1 ? `<span class="chip bad">XP −${Math.round((1 - xm)*100)}%</span>` : `<span class="chip">XP 100%</span>`;
-    const mons = m.mons.map(k => { const E = ELEM[MONS[k].el || 'phys']; return `${MONS[k].n} <span style="color:${E.c}">(${E.n.toLowerCase()})</span>`; }).join(', ');
+    const mons = m.mons.map(k => { const E = ELEM[MONS[k].el || 'poison']; return `${MONS[k].n} <span style="color:${E.c}">(${E.n.toLowerCase()})</span>`; }).join(', ');
     let btn;
     if(lock) btn = `<button class="btn" disabled>Requer nível ${m.req}</button>`;
     else if(here && scene === 'map' && !inDun()) btn = `<span class="chip">Caçando aqui</span>`;
     else btn = `<button class="btn primary" data-act="map" data-v="${m.id}">${here ? 'Partir para cá' : 'Caçar aqui'}</button>`;
     return `<div class="mapc${here ? ' here' : ''}${lock ? ' lock' : ''}"><span class="swatch" style="background:${m.ground[1]}"></span>
       <div class="mh"><span class="mn">${m.name}</span><span class="ml">Nv ${m.lv[0]}–${m.lv[1]}</span></div>
-      <div class="mm">${m.desc}</div><div class="mm">Criaturas: ${mons}</div>
+      <div class="mm">${m.desc}</div>
+      <div class="mm">Dano: ${[...new Set(m.mons.map(k => MONS[k].el))].map(e => `<b style="color:${ELEM[e].c}">${ELEM[e].n}</b> <span style="color:var(--muted)">(sua resistência ${ST.res[e]}%)</span>`).join(' · ')}</div>
+      <div class="mm">Criaturas: ${mons}</div>
       <div class="mi"><span>Itens que caem: ilvl ${m.lv[0]}–${m.lv[1] + 1}</span><span>Recomendado: ${rec ? `ilvl ${rec}+` : 'qualquer item'}</span><span class="g-${gq}">Seu equipamento: ilvl ${my}</span></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${btn}${xpChip}</div></div>`;
   }).join('') + `</div>`;
@@ -255,7 +257,7 @@ function panelHero(){
   </div></div>
   <div class="sec"><h3>Resistências <span class="r">máx. ${RES_MAX}%</span></h3><div class="stats">
     ${RES_KEYS.map(k => `<div class="stat"><span style="color:${ELEM[k].c}">${ELEM[k].n}</span><b>${st.res[k]}%</b></div>`).join('')}
-  </div><p class="note">Dano físico é reduzido pela armadura. Os outros tipos usam só metade da armadura e são reduzidos pela resistência.</p></div>`;
+  </div><p class="note">As criaturas causam 4 tipos de dano: Fogo, Raio, Gelo e Veneno. Todo dano é reduzido pela armadura e pela resistência do tipo. Veja no painel de Mapas o que cada criatura causa.</p></div>`;
   if(S.lv >= MAX_LV){
     const pf = parFree();
     h += `<div class="sec"><h3>Paragon ${S.par} <span class="r">${pf} ${pf === 1 ? 'ponto livre' : 'pontos livres'}</span></h3>
@@ -295,8 +297,12 @@ const respecCost = () => 25*S.lv;
 // Pilha de orbes: um espaço da mochila com a quantidade no canto
 const ICON_DUN = SVG('<path d="M5 21V10a7 7 0 0 1 14 0v11"/><path d="M9 21v-9a3 3 0 0 1 6 0v9" fill="currentColor" fill-opacity=".3"/><path d="M3 21h18"/>'); // portal (aba Masmorra do ranking)
 const ICON_RANK = SVG('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/>'); // troféu (aba Geral do ranking)
-const ICON_ORB = SVG('<circle cx="12" cy="12" r="7" fill="currentColor" fill-opacity=".35"/><circle cx="9.5" cy="9.5" r="2" fill="currentColor"/>');
-const orbTile = k => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="orb" data-v="${k}" aria-label="${ORBS[k].n}, ${S.orbs[k]}">${ICON_ORB}<span class="qty">${S.orbs[k]}</span></button>`;
+// Orbes de melhoria: esfera com um redemoinho de energia dentro e um brilho. A Anulação (cristal partido) tem a mesma altura (16 de 24).
+const ICON_ORB = SVG('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".28"/><path d="M8 12.6a4 4 0 0 1 6.6-3.3M16 11.4a4 4 0 0 1-6.6 3.3" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="8.5" r="1.3" fill="#fff" fill-opacity=".75" stroke="none"/>');
+// Orbe da Anulação: cristal partido ao meio (duas metades separadas por uma rachadura) — diferente dos orbes redondos
+const ICON_ANUL = SVG('<path d="M10.6 4L5 12l5.6 8-1.3-4 1.6-4-1.6-4z" fill="currentColor" fill-opacity=".4"/><path d="M13.4 4L19 12l-5.6 8 1.3-4-1.6-4 1.6-4z" fill="currentColor" fill-opacity=".4"/><circle cx="12" cy="6.5" r=".7" fill="currentColor"/><circle cx="12" cy="17.5" r=".7" fill="currentColor"/>');
+const orbIcon = k => k === 'anul' ? ICON_ANUL : ICON_ORB;
+const orbTile = k => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="orb" data-v="${k}" aria-label="${ORBS[k].n}, ${S.orbs[k]}">${orbIcon(k)}<span class="qty">${S.orbs[k]}</span></button>`;
 // Botão de comprar +1 espaço (só na vila; preço sobe a cada compra)
 function slotBuyBtn(act, cur, cap, price, what){
   if(cur >= cap) return `<p class="note">Espaços no máximo (${cap}).</p>`;
@@ -311,7 +317,7 @@ function panelBag(){
   if(bagTab === 'orbs'){
     // um espaço para cada tipo de orbe, sempre na mesma ordem (mesmo vazio)
     const cells = Object.keys(ORBS).map(k => { const n = S.orbs[k] || 0;
-      return `<div class="slot">${n ? orbTile(k) : `<div class="tile orb empty-orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" aria-label="${ORBS[k].n}, nenhum">${ICON_ORB}<span class="qty">0</span></div>`}</div>`; }).join('');
+      return `<div class="slot">${n ? orbTile(k) : `<div class="tile orb empty-orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" aria-label="${ORBS[k].n}, nenhum">${orbIcon(k)}<span class="qty">0</span></div>`}</div>`; }).join('');
     return tabs + `<div class="sec"><h3>Orbes <span class="r">sem limite</span></h3><div class="inv-grid">${cells}</div>
       <div class="orb-names">${Object.keys(ORBS).map(k => `<span style="color:${ORBS[k].c}">${ORBS[k].n}: <b>${fmt(S.orbs[k] || 0)}</b></span>`).join('')}</div>
       <p class="legend">Cada tipo de orbe tem o seu espaço e cabe quantos você quiser — não ocupam os espaços de itens. Toque num orbe para usar.</p></div>`;
@@ -380,7 +386,7 @@ function forgeOrbsHTML(){
   const town = inTown();
   const rows = Object.keys(ORB_UP).map(k => {
     const to = ORB_UP[k], n = S.orbs[k] || 0, can = Math.floor(n / ORB_UP_N), why = orbUpBlock(k, 1);
-    return `<div class="skill"><div class="ico" style="color:${ORBS[k].c}">${ICON_ORB}</div>
+    return `<div class="skill"><div class="ico" style="color:${ORBS[k].c}">${orbIcon(k)}</div>
       <div><div class="sn" style="color:${ORBS[k].c}">${ORBS[k].n} <em>você tem ${n}</em></div><div class="sd">${ORB_UP_N} viram 1 <span style="color:${ORBS[to].c}">${ORBS[to].n}</span> (você tem ${S.orbs[to] || 0})</div></div>
       <div class="ctl" style="flex-direction:column;gap:6px"><button class="btn" data-act="orbUp" data-v="${k}:1" ${why ? 'disabled' : ''}>Juntar ${ORB_UP_N}</button>
       <button class="btn" data-act="orbUp" data-v="${k}:all" ${why || can < 2 ? 'disabled' : ''}>Todos (${can})</button></div></div>`;
@@ -422,7 +428,7 @@ function renderOrbDlg(k){
 }
 function openItem(v){ const [where, id] = v.split(':'); const it = findItem(where, id); if(!it) return; dlgItem = {where, id:+id}; $('#dlg').hidden = false; renderDlg(); }
 // Comparação atributo por atributo entre o item clicado e o equipado no mesmo espaço
-const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado', rf:'% de resistência a fogo', rc:'% de resistência a gelo', rl:'% de resistência elétrica', rx:'% de resistência a caos', rp:'% de resistência a veneno', rn:'% de resistência necrótica', rs:'% de resistência psíquica', rall:'% de resistência a fogo, gelo e elétrico'};
+const DIFF_L = {wdmg:'de dano médio da arma', aps:'ataques/s', barmor:'de armadura base', life:'de vida', get pois(){ return '% de dano de ' + dotN(); }, ias:'% de velocidade de ataque', crit:'% de chance de crítico', critd:'% de dano crítico', ms:'% de velocidade de movimento', armor:'de armadura', ls:'% do dano vira vida', cdr:'% de redução de recarga', get pdur(){ return '% de duração ' + dotDe(); }, gf:'% de ouro encontrado', rf:'% de resistência a fogo', rc:'% de resistência a gelo', rl:'% de resistência a raio', rp:'% de resistência a veneno', rall:'% de resistência a todos os elementos'};
 const DIFF_DEC = {aps:1, crit:1, ls:1};
 function itemVals(it){
   const v = {}; if(!it) return v;

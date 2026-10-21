@@ -142,13 +142,13 @@ function doDodge(fromKey, ang){
 function hurtHero(dmg, src){
   if(scene !== 'map' || mode === 'dead' || hero.scale < .6) return;
   if(hero.invul > 0){ txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
-  // Físico: armadura. Elemental (fogo, gelo, elétrico, caos, veneno): metade da armadura + resistência.
-  const el = (src && (src.el || src.d.el)) || 'phys', arm = el === 'phys' ? ST.armor : ST.armor*.5;
-  const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = el === 'phys' ? 0 : (ST.res[el] || 0)/100;
+  // Todo dano é de um dos 4 tipos (Fogo, Raio, Gelo, Veneno): reduzido pela armadura e pela resistência do tipo.
+  const el = (src && (src.el || src.d.el)) || 'poison', arm = ST.armor;
+  const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = (ST.res[el] || 0)/100;
   const d = dmg * (1 - red) * (1 - res) * (1 - (ST.dr || 0));
   hero.hp -= d; hero.hit = .14; hero.lastHit = T;
   txt(hero.x + rnd(-6,6), hero.y - 28, fmt(d), ELEM[el].c, 14);
-  if(el !== 'phys') for(let i = 0; i < 5; i++) part({x:hero.x + rnd(-8,8), y:hero.y - rnd(8,30), vx:rnd(-50,50), vy:rnd(-70,-10), life:.4, size:rnd(1.5,3), c:ELEM[el].c});
+  for(let i = 0; i < 5; i++) part({x:hero.x + rnd(-8,8), y:hero.y - rnd(8,30), vx:rnd(-50,50), vy:rnd(-70,-10), life:.4, size:rnd(1.5,3), c:ELEM[el].c});
   if(src && src.d.leech) src.hp = Math.min(src.hpMax, src.hp + d*.6);
   if(hero.hp <= 0) die();
 }

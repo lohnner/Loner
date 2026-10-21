@@ -115,10 +115,11 @@ const parseJSON = txt => { try{ return JSON.parse(txt); }catch(e){ return null; 
 function toAcct(o){
   if(!o) return null;
   if(Array.isArray(o.chars)){
-    const a = {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), stash: Array.isArray(o.stash) ? o.stash : [], orbs: o.orbs && typeof o.orbs === 'object' ? o.orbs : {}, savedAt: o.savedAt || 0, rv: 4,
+    const a = {chars: o.chars.filter(c => c && c.char && typeof c.lv === 'number'), stash: Array.isArray(o.stash) ? o.stash : [], orbs: o.orbs && typeof o.orbs === 'object' ? o.orbs : {}, savedAt: o.savedAt || 0, rv: 5,
       stashX: Math.max(0, Math.min(STASH_CAP - STASH_BASE, +o.stashX || 0)), cos: Array.isArray(o.cos) ? o.cos.filter(id => COS[id]) : []};
     if(!o.rv) a.stash.forEach(migrateItem); // armazém de antes das 5 raridades
     if((o.rv || 0) < 4) a.stash.forEach(rebalanceItem); // balanceamento de out/2026
+    if((o.rv || 0) < 5) a.stash.forEach(migrateElemItem); // só 4 tipos de dano
     return a;
   }
   if(typeof o.lv === 'number' && o.char) return {chars: [o], savedAt: o.savedAt || 0};
@@ -129,7 +130,7 @@ function toAcct(o){
 // Usa o mais novo entre a nuvem e a cópia local; o save antigo sem conta (de antes do login) vira um personagem da conta.
 function loadAccount(cloudRaw){
   const cloud = toAcct(cloudRaw), local = toAcct(readLocal(KEY + ':' + fbUser.uid)), legacy = toAcct(readLocal(KEY));
-  acct = cloud || {chars: [], stash: [], orbs: {}, savedAt: 0, rv: 4, stashX: 0, cos: []};
+  acct = cloud || {chars: [], stash: [], orbs: {}, savedAt: 0, rv: 5, stashX: 0, cos: []};
   if(local && local.savedAt > acct.savedAt) acct = local;
   let changed = acct !== cloud;
   if(legacy && legacy.chars.length && acct.chars.length < MAX_CHARS){ acct.chars.push(legacy.chars[0]); changed = true; try{ localStorage.removeItem(KEY); }catch(e){} }

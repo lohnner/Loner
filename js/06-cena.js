@@ -96,7 +96,7 @@ function heroTimers(dt){
 const MON_SHOT = 380;
 // Começa o golpe em área da criatura (ver MON_AOE em 01)
 function monAoe(m, A){
-  const ec = ELEM[m.el || m.d.el || 'phys'].c, R = A.r*(m.elite ? 1.2 : 1), dmg = m.dmg*A.m*AOE_DMG;
+  const ec = ELEM[m.el || m.d.el || 'poison'].c, R = A.r*(m.elite ? 1.2 : 1), dmg = m.dmg*A.m*AOE_DMG;
   m.aoeT = A.cd; m.moving = false; m.fired = true;
   m.face = Math.atan2(hero.y - m.y, hero.x - m.x);
   const z = {x:hero.x, y:hero.y, r:R, t:0, dur:A.t, dmg, mon:m, c:ec, k:A.k};

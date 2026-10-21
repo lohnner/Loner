@@ -26,15 +26,15 @@ function migrateItem(it){
   if(it.rar > 0) it.rar = clamp(it.affix.filter(a => a.k !== 'skill').length, 1, 3);
 }
 const MAPS = [
-  {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['espantalho','javali','lavrador','rato','zumbi'],desc:'Plantação abandonada perto da vila. Bom lugar para a primeira caçada.'},
-  {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','ent','urso','aranha','fada'],desc:'Lobos em bando, ursos e aranhas que cospem teia de longe.'},
-  {id:'pantano',name:'Pântano Pútrido',lv:[12,16],req:11,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa','crocodilo','afogado'],desc:'Sanguessugas roubam vida a cada mordida. Bruxas atacam de longe e crocodilos espreitam na lama.'},
-  {id:'mina',name:'Mina Abandonada',lv:[16,20],req:15,seed:43,ground:['#2e2620','#3a3028','#221c17'],decor:'mine',tuft:'#4a3e30',mons:['goblin','aranhacav','golem','morcego','escavador'],desc:'Túneis escuros onde goblins mineradores cavam. Golens de pedra aguentam muito dano.'},
-  {id:'catacumbas',name:'Catacumbas',lv:[20,24],req:19,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical','fantasma','zumbi'],desc:'Corredores de pedra cheios de mortos-vivos, fantasmas e arqueiros de osso.'},
-  {id:'picos',name:'Picos Gélidos',lv:[24,28],req:23,seed:61,ground:['#a9b6c2','#c3ced8','#8e9caa'],decor:'ice',tuft:'#d8e4ee',mons:['lobogelo','yeti','espirito','harpia','mamute'],desc:'Neve e vento cortante. Espíritos de gelo atacam de longe, yetis e mamutes batem forte.'},
-  {id:'deserto',name:'Deserto de Cinzas',lv:[28,32],req:27,seed:67,ground:['#5a4a38','#6b5842','#47392a'],decor:'desert',tuft:'#8a7452',mons:['escorpiao','mumia','cultista','chacal','serpente'],desc:'Dunas cinzentas e ruínas. Cultistas lançam magias de longe, escorpiões e chacais são rápidos.'},
-  {id:'cidadela',name:'Cidadela Profana',lv:[32,36],req:31,seed:71,ground:['#2a2233','#352b40','#1e1826'],decor:'citadel',tuft:'#4a3e58',mons:['cavaleiro','gargula','feiticeiro','servo','aranhasombria'],desc:'Fortaleza tomada pelas trevas. Cavaleiros negros resistem a tudo e gárgulas voam rápido.'},
-  {id:'abismo',name:'Abismo Ardente',lv:[36,40],req:35,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['brutamonte','cao','elemental','diabrete','carrasco'],desc:'Fendas de lava e demônios. Os melhores itens caem aqui.'},
+  {id:'campos',name:'Campos de Trigo',lv:[1,5],req:1,seed:11,ground:['#3d4a27','#4b5a2e','#2f3b1e'],decor:'field',tuft:'#6c8a38',mons:['espantalho','javali','lavrador','rato','zumbi'],desc:'Plantação abandonada perto da vila, sob tempestades. Bom lugar para a primeira caçada.'},
+  {id:'floresta',name:'Floresta Sombria',lv:[5,11],req:4,seed:23,ground:['#1e3022','#273d2b','#152218'],decor:'forest',tuft:'#3f6a3a',mons:['lobo','ent','urso','aranha','fada'],desc:'Floresta fria e venenosa: lobos e ursos do frio, aranhas e fadas que cospem veneno.'},
+  {id:'pantano',name:'Pântano Pútrido',lv:[12,16],req:11,seed:37,ground:['#2a3322','#35402a','#1d2418'],decor:'swamp',tuft:'#6b7a3a',mons:['sapo','sanguessuga','bruxa','crocodilo','afogado'],desc:'Só veneno: lama tóxica, sanguessugas que roubam vida, bruxas e crocodilos.'},
+  {id:'mina',name:'Mina Abandonada',lv:[16,20],req:15,seed:43,ground:['#2e2620','#3a3028','#221c17'],decor:'mine',tuft:'#4a3e30',mons:['goblin','aranhacav','golem','morcego','escavador'],desc:'Túneis quentes e carregados: goblins com dinamite e golens de pedra cheios de raios.'},
+  {id:'catacumbas',name:'Catacumbas',lv:[20,24],req:19,seed:41,ground:['#2a292d','#343338','#1f1e22'],decor:'crypt',tuft:'#4a4850',mons:['esqueleto','ossudo','carnical','fantasma','zumbi'],desc:'Corredores gelados e podres: esqueletos e fantasmas do frio, carniçais venenosos.'},
+  {id:'picos',name:'Picos Gélidos',lv:[24,28],req:23,seed:61,ground:['#a9b6c2','#c3ced8','#8e9caa'],decor:'ice',tuft:'#d8e4ee',mons:['lobogelo','yeti','espirito','harpia','mamute'],desc:'Neve e tempestade: espíritos, yetis e mamutes de gelo, harpias que trazem raios.'},
+  {id:'deserto',name:'Deserto de Cinzas',lv:[28,32],req:27,seed:67,ground:['#5a4a38','#6b5842','#47392a'],decor:'desert',tuft:'#8a7452',mons:['escorpiao','mumia','cultista','chacal','serpente'],desc:'Dunas em brasa e ruínas: cultistas e chacais de fogo, escorpiões, múmias e serpentes venenosas.'},
+  {id:'cidadela',name:'Cidadela Profana',lv:[32,36],req:31,seed:71,ground:['#2a2233','#352b40','#1e1826'],decor:'citadel',tuft:'#4a3e58',mons:['cavaleiro','gargula','feiticeiro','servo','aranhasombria'],desc:'Fortaleza sob relâmpagos e gelo: cavaleiros congelados, gárgulas e feiticeiros de raio.'},
+  {id:'abismo',name:'Abismo Ardente',lv:[36,40],req:35,seed:53,ground:['#2c1611','#391c14','#200f0b'],decor:'hell',tuft:'#5a2a18',mons:['brutamonte','cao','elemental','diabrete','carrasco'],desc:'Só fogo: fendas de lava e demônios. Os melhores itens caem aqui.'},
 ];
 // Cada mapa tem 5 criaturas: as 3 primeiras têm golpe em área (MON_AOE) e as 2 últimas não.
 const MONS = {
@@ -88,34 +88,39 @@ const MONS = {
   elemental:{n:'Elemental de Fogo',kind:'blob',c1:'#c8401a',c2:'#ffd24a',r:13,hp:1.2,dmg:1.4,spd:60,range:200,acd:1.8,ranged:'#ffb040',eye:'#ffffff'},
   carrasco:{n:'Carrasco Infernal',kind:'biped',c1:'#3a1410',c2:'#8a2a1e',r:16,hp:2,dmg:1.5,spd:55,range:28,acd:1.5,eye:'#ffcc33'},
 };
-// Tipos de dano das criaturas. Físico é reduzido pela armadura; os outros pela resistência (st.res, máximo RES_MAX) e só pela metade da armadura.
+// Só existem 4 tipos de dano: Fogo, Raio, Gelo e Veneno. Toda criatura causa um deles (MON_EL).
+// Em hurtHero (04) o dano é reduzido pela armadura e pela resistência do tipo (st.res, máximo RES_MAX).
 const ELEM = {
-  phys:{n:'Físico', c:'#ff6a5a'},
   fire:{n:'Fogo', c:'#ff8a2b'},
+  light:{n:'Raio', c:'#f4e66a'},
   cold:{n:'Gelo', c:'#8fd8ff'},
-  light:{n:'Elétrico', c:'#f4e66a'},
-  chaos:{n:'Caos', c:'#c08aff'},
   poison:{n:'Veneno', c:'#9bd84a'},
-  necro:{n:'Necrótico', c:'#7fe0b0'},
-  psy:{n:'Psíquico', c:'#ff7ae0'},
 };
-const RES_MAX = 75, RES_KEYS = ['fire','cold','light','chaos','poison','necro','psy'];
-// Criaturas que causam dano não físico (as outras batem físico)
-const MON_EL = {aranha:'poison', sapo:'poison', bruxa:'chaos', aranhacav:'poison', golem:'light', carnical:'necro', ossudo:'necro',
-  lobogelo:'cold', yeti:'cold', espirito:'cold', escorpiao:'poison', mumia:'necro', cultista:'fire',
-  cavaleiro:'chaos', gargula:'light', feiticeiro:'psy', diabrete:'fire', brutamonte:'fire', cao:'fire',
-  fada:'poison', afogado:'necro', fantasma:'necro', harpia:'cold', mamute:'cold', serpente:'poison', servo:'chaos', aranhasombria:'chaos', elemental:'fire', carrasco:'fire'};
-for(const k in MON_EL) MONS[k].el = MON_EL[k];
-MONS.aranha.ranged = '#b8e070'; MONS.bruxa.ranged = '#c890ff'; MONS.ossudo.ranged = '#9af0c8'; MONS.feiticeiro.ranged = '#ff8ae8';
+const RES_MAX = 75, RES_KEYS = ['fire','light','cold','poison'];
+// Elemento de cada criatura, pensado por mapa:
+//   Campos de Trigo: Raio + Veneno · Floresta: Gelo + Veneno · Pântano: só Veneno · Mina: Fogo + Raio · Catacumbas: Gelo + Veneno
+//   Picos Gélidos: Gelo + Raio · Deserto: Fogo + Veneno · Cidadela: Raio + Gelo · Abismo: só Fogo
+const MON_EL = {
+  espantalho:'light', javali:'light', lavrador:'poison', rato:'poison', zumbi:'poison',
+  lobo:'cold', ent:'poison', urso:'cold', aranha:'poison', fada:'poison',
+  sapo:'poison', sanguessuga:'poison', bruxa:'poison', crocodilo:'poison', afogado:'poison',
+  goblin:'fire', aranhacav:'fire', golem:'light', morcego:'light', escavador:'fire',
+  esqueleto:'cold', ossudo:'cold', carnical:'poison', fantasma:'cold',
+  lobogelo:'cold', yeti:'cold', espirito:'cold', harpia:'light', mamute:'cold',
+  escorpiao:'poison', mumia:'poison', cultista:'fire', chacal:'fire', serpente:'poison',
+  cavaleiro:'cold', gargula:'light', feiticeiro:'light', servo:'cold', aranhasombria:'light',
+  brutamonte:'fire', cao:'fire', elemental:'fire', diabrete:'fire', carrasco:'fire'};
+// toda criatura tem elemento; tiro de quem ataca de longe fica da cor do elemento
+for(const k in MONS){ MONS[k].el = MON_EL[k] || 'poison'; if(MONS[k].ranged) MONS[k].ranged = ELEM[MONS[k].el].c; }
 // Masmorra (fim de jogo): o portal abre na vila no nível 40. Fases de DUN_KILLS abates com criaturas de todos os mapas no nível 40;
 // cada fase deixa as criaturas DUN_STEP vezes mais fortes que a anterior (vida e dano): fase N = 1,25^(N−1).
 // Morrer ou voltar para a vila encerra a corrida; a próxima pode começar em qualquer fase até a melhor concluída + 1. S.dun.best vai para o ranking.
 const DUN_KILLS = 50, DUN_STEP = 1.25;
 const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada fase mais forte.'};
 const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
-// Elemento das fases: muda a cada DUN_ELEM_SPAN fases, passando pelos 7 tipos sem repetir, e depois recomeça.
+// Elemento das fases: muda a cada DUN_ELEM_SPAN fases, passando pelos 4 tipos sem repetir, e depois recomeça.
 // Todas as criaturas da fase causam esse dano — o jogador precisa da resistência certa.
-const DUN_ELEMS = ['fire','cold','light','poison','chaos','necro','psy'], DUN_ELEM_SPAN = 5;
+const DUN_ELEMS = ['fire','cold','light','poison'], DUN_ELEM_SPAN = 5;
 const dunElem = p => DUN_ELEMS[Math.floor((Math.max(1, p) - 1)/DUN_ELEM_SPAN) % DUN_ELEMS.length];
 // Golpes em área: a criatura marca o chão e, depois de AOE_T (0,7 s), o golpe acerta quem ainda estiver dentro (m × AOE_DMG × o dano dela).
 // Cada um tem um jeito (k) que combina com a criatura:
@@ -282,17 +287,26 @@ const AFX = {
   cdr:{n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
   pdur:{n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
   gf:{n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
-  // Resistências (fogo, gelo e elétrico também vêm de "todas as elementais")
+  // Resistências aos 4 tipos de dano (Fogo, Raio, Gelo, Veneno); "todos os elementos" vale para os 4
   rf:{n:v=>`+${v}% de resistência a fogo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
+  rl:{n:v=>`+${v}% de resistência a raio`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
   rc:{n:v=>`+${v}% de resistência a gelo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rl:{n:v=>`+${v}% de resistência elétrica`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rx:{n:v=>`+${v}% de resistência a caos`,lo:()=>4,hi:l=>9+l*.45,slots:['chest','boots','ring','amulet']},
   rp:{n:v=>`+${v}% de resistência a veneno`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rn:{n:v=>`+${v}% de resistência necrótica`,lo:()=>4,hi:l=>9+l*.45,slots:['helm','chest','ring','amulet']},
-  rs:{n:v=>`+${v}% de resistência psíquica`,lo:()=>4,hi:l=>9+l*.45,slots:['helm','ring','amulet']},
-  rall:{n:v=>`+${v}% de resistência a fogo, gelo e elétrico`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
+  rall:{n:v=>`+${v}% de resistência a todos os elementos`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
 };
-const SUF = {rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rx:'do Vazio',rp:'do Antídoto',rn:'da Cripta',rs:'da Mente',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
+// Resistências que deixaram de existir (caos, necrótica, psíquica): itens antigos trocam cada uma por uma das 4 que o item ainda não tem (migrateElemItem)
+const OLD_RES = ['rx','rn','rs'], NEW_RES = ['rf','rl','rc','rp'];
+function migrateElemItem(it){
+  if(!it || !Array.isArray(it.affix)) return;
+  for(const a of it.affix){
+    if(!OLD_RES.includes(a.k)) continue;
+    const have = it.affix.map(x => x.k), free = NEW_RES.filter(k => !have.includes(k));
+    a.k = free.length ? free[Math.floor(Math.random()*free.length)] : 'rall';
+    const A = AFX[a.k], lo = A.lo(it.ilvl), hi = A.hi(it.ilvl)*(RAR_F[it.rar] || 1); // RAR_F vem do 02 (a função só roda depois)
+    a.v = Math.max(1, Math.round(lo + (hi - lo)*(typeof a.t === 'number' ? a.t : .5)));
+  }
+}
+const SUF = {rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rp:'do Antídoto',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
 const RA = ['Presa','Sussurro','Agouro','Espinho','Mordida','Lamento','Véu','Garra','Sombra','Sopro','Ferrão','Prece'];
 const RB = ['Fel','Cinzas','Musgo','Ossos','Víbora','Cripta','Névoa','Peste','Corvo','Brejo','Cicuta','Lodo'];
 const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do Pântano','Capuz da Mamba'],chest:['Pele da Hidra','Manto da Cicuta'],gloves:['Toque Pestilento','Dedos de Áspide'],boots:['Passos do Charco','Botas da Naja'],ring:['Olho da Serpente','Aliança Verde'],amulet:['Coração de Peçonha','Lágrima de Cobra']};
@@ -307,7 +321,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:4,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:5,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
@@ -326,7 +340,9 @@ function normalize(s){
   if((s.ver || 0) < 3){ d.inv.forEach(migrateItem); d.shop.forEach(migrateItem); for(const k in d.eq) migrateItem(d.eq[k]); }
   // ver 4: balanceamento de out/2026 (Épico e Lendário mais fracos) — recalcula os itens que o personagem já tem
   if((s.ver || 0) < 4){ d.inv.forEach(rebalanceItem); d.shop.forEach(rebalanceItem); for(const k in d.eq) rebalanceItem(d.eq[k]); }
-  d.ver = 4;
+  // ver 5: só 4 tipos de dano — resistências a caos/necrótico/psíquico viram fogo/raio/gelo/veneno
+  if((s.ver || 0) < 5){ d.inv.forEach(migrateElemItem); d.shop.forEach(migrateElemItem); for(const k in d.eq) migrateElemItem(d.eq[k]); }
+  d.ver = 5;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.

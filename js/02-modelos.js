@@ -127,7 +127,7 @@ const sellPrice = it => Math.round((4 + it.ilvl*2) * [1,3,6,14,40][it.rar]);
 
 /* ---------- STATUS ---------- */
 function calcStats(eq = S.eq){
-  const a = {life:0,armor:0,pois:0,ias:0,crit:0,critd:0,ms:0,ls:0,cdr:0,pdur:0,gf:0,rf:0,rc:0,rl:0,rx:0,rp:0,rn:0,rs:0,rall:0}, bonus = {};
+  const a = {life:0,armor:0,pois:0,ias:0,crit:0,critd:0,ms:0,ls:0,cdr:0,pdur:0,gf:0,rf:0,rc:0,rl:0,rp:0,rall:0}, bonus = {};
   let wmin = 1, wmax = 2, aps = 1.1;
   for(const slot of SLOTS){
     const it = eq[slot]; if(!it) continue;
@@ -154,7 +154,7 @@ function calcStats(eq = S.eq){
   st.ls = a.ls + (war ? 1.5 : 0); st.cdr = Math.min(40, a.cdr); st.gf = a.gf;
   // Resistências (máx. RES_MAX). Inatas: o Arqueiro resiste a veneno, o Mago a fogo.
   const cls = clsOf();
-  st.res = {fire:a.rf + a.rall + (cls === 'mago' ? 20 : 0), cold:a.rc + a.rall, light:a.rl + a.rall, chaos:a.rx, poison:a.rp + (cls === 'arqueiro' ? 20 : 0), necro:a.rn, psy:a.rs};
+  st.res = {fire:a.rf + a.rall + (cls === 'mago' ? 20 : 0), light:a.rl + a.rall, cold:a.rc + a.rall, poison:a.rp + a.rall + (cls === 'arqueiro' ? 20 : 0)};
   for(const k in st.res) st.res[k] = Math.min(RES_MAX, Math.round(st.res[k]));
   const critF = 1 + st.crit/100 * (st.critd/100 - 1), cdm = 1 - st.cdr/100, A = st.avg, P = st.pois;
   // Dano por segundo estimado (só para comparar itens): ataque normal + cada ativa dividida pela recarga; 2,5 = alvos médios em área

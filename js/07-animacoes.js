@@ -728,13 +728,32 @@ function drawPortal(x, y, k){
   ctx.strokeStyle = '#a9c4ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, y - 22, 16*k, 28*k, 0, 0, TAU); ctx.stroke();
   for(let i = 0; i < 4; i++){ const a = T*3 + i*TAU/4; ctx.fillStyle = '#dfe8ff'; circ(x + Math.cos(a)*14*k, y - 22 + Math.sin(a)*24*k, 1.6); }
 }
+// Orbe da Anulação no chão: cristal partido em duas metades que se afastam e voltam devagar, com faísca na rachadura
+function drawAnulShard(x, y, c){
+  const gap = 1.6 + Math.sin(T*3)*1.1, tilt = Math.sin(T*1.7)*.12;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(.78, .78); // mesma altura dos orbes redondos
+  for(const sd of [-1, 1]){
+    const ox = sd*gap, g = ctx.createLinearGradient(ox - 6*sd, -8, ox + 6*sd, 8); g.addColorStop(0, shade(c, .45)); g.addColorStop(1, shade(c, -.45));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ox, -9); ctx.lineTo(ox + sd*7, 0); ctx.lineTo(ox, 9); ctx.lineTo(ox + sd*1.4, 4); ctx.lineTo(ox - sd*.6, 0); ctx.lineTo(ox + sd*1.4, -4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(c, .6); ctx.lineWidth = .8; ctx.stroke();
+  }
+  ctx.globalAlpha *= .5 + .5*Math.sin(T*8); ctx.fillStyle = '#ffffff'; circ(0, Math.sin(T*5)*5, 1.3);
+  ctx.restore();
+}
 // Orbe no chão: esfera brilhante com coluna de luz e nome
 function drawOrbDrop(d){
   const O = ORBS[d.orb], b = Math.sin(T*3 + d.x)*2, y = d.y - 8 + b;
   const g = ctx.createLinearGradient(0, d.y - 80, 0, d.y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, O.c + '88'); ctx.fillStyle = g; ctx.fillRect(d.x - 4, d.y - 80, 8, 80);
   ctx.fillStyle = 'rgba(0,0,0,.4)'; ell(d.x, d.y + 3, 7, 3);
   const h = ctx.createRadialGradient(d.x, y, 1, d.x, y, 14); h.addColorStop(0, O.c + 'aa'); h.addColorStop(1, O.c + '00'); ctx.fillStyle = h; circ(d.x, y, 14);
-  sphere(d.x, y, 5.5, O.c);
+  if(d.orb === 'anul') drawAnulShard(d.x, y, O.c);
+  else {
+    // orbe redondo: esfera um pouco maior com redemoinho de energia girando dentro
+    sphere(d.x, y, 7, O.c);
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.1;
+    for(let i = 0; i < 2; i++){ const a = T*4 + i*Math.PI; ctx.beginPath(); ctx.arc(d.x, y, 3.8, a, a + 1.9); ctx.stroke(); }
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha *= .7 + .3*Math.sin(T*6); circ(d.x, y, 1.4); ctx.globalAlpha = 1;
+  }
   ctx.font = '700 11px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
   const tw = ctx.measureText(O.n).width;
   ctx.fillStyle = 'rgba(6,8,7,.85)'; ctx.fillRect(d.x - tw/2 - 4, d.y - 32, tw + 8, 15);
