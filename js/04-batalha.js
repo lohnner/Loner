@@ -35,9 +35,10 @@ function dealHit(m, dmg, crit, color){
 function kill(m){
   if(m.dead) return;
   m.dead = true; m.deadT = 0; S.kills++;
-  let xp = (6 + m.ml*4.5) * (m.elite ? 3.5 : 1);
+  let xp = (8 + m.ml*6) * (m.elite ? 3.5 : 1); // ~35% a mais que antes (era 6 + nível × 4,5)
   xp *= xpMult(mapDef);
-  if(inDun()){ xp *= dunMult(S.dun.phase); dunKill(); }
+  if(inDun()){ xp *= dunMult(S.dun.phase) * (m.boss ? 6 : 1); if(m.boss) dunBossDown(m); else if(!m.minion) dunKill(); }
+  dropStone(m);
   gainXp(xp);
   for(let i = 0; i < 10; i++) part({x:m.x, y:m.y, vx:rnd(-90,90), vy:rnd(-110,40), grav:240, life:rnd(.4,.8), size:rnd(1.5,3.5), c:m.d.c1});
   const cr = ST.rk('contagion');
@@ -70,18 +71,36 @@ function kill(m){
   for(const k in ORBS) if(Math.random() < ORBS[k].chance){ drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), orb:k, t:0, gone:false}); log(`${ORBS[k].n} caiu!`, ORBS[k].c); ring(m.x, m.y, 50, ORBS[k].c, .6, 3); }
   if(Math.random() < (m.elite ? .75 : .12)) dropItem(m);
   if(m.elite && Math.random() < .35) dropItem(m);
+  if(m.boss) for(let i = 0; i < 3; i++) dropItem(m); // Chefe: mais 3 itens (sorteio de elite)
 }
-// Masmorra: conta o abate; com DUN_KILLS a fase é concluída (vai para o ranking) e começa a próxima, 25% mais forte
+// Pedras da Masmorra: só caem com a Fenda aberta (nível 40, depois da cena do Ezequiel). No último mapa, chance de Pedra 1;
+// na corrida da Pedra N, chance de Pedra N (ou N−1, menos comum). Elite 3×.
+function dropStone(m){
+  const last = mapDef === MAPS[MAPS.length - 1];
+  if(m.boss || !dunOpen() || (!last && !inDun())) return;
+  if(Math.random() >= (last ? STONE_MAP_CH : STONE_DUN_CH) * (m.elite ? 3 : 1)) return;
+  const N = inDun() ? S.dun.phase : 1, lv = N > 1 && Math.random() < STONE_LOW_CH ? N - 1 : N;
+  spawnStone(m.x, m.y, lv);
+}
+function spawnStone(x, y, lv){
+  drops.push({x:x + rnd(-16,16), y:y + rnd(-16,16), stone:lv, t:0, gone:false});
+  log(`Pedra da Masmorra ${lv} caiu!`, STONE_C); ring(x, y, 70, STONE_C, .8, 4);
+}
+// Masmorra: conta os abates da corrida; com DUN_KILLS aparece o Chefe (spawnBoss em 03)
 function dunKill(){
   const D0 = S.dun; D0.kills++;
-  if(D0.kills < DUN_KILLS) return;
+  if(D0.kills >= DUN_KILLS && !D0.boss) spawnBoss();
+  dirtyPanel();
+}
+// Chefe morto: Pedra concluída (ranking), Pedra do mesmo nível garantida e o mapa fica "limpo" (volte para a vila)
+function dunBossDown(m){
+  const D0 = S.dun; D0.boss = 2; mapCleared = true; tutStep(4, 5);
   if(D0.phase > D0.best){ D0.best = D0.phase; rankDirty = true; }
-  const ne = dunElem(D0.phase + 1);
-  log(`Fase ${D0.phase} concluída! Fase ${D0.phase + 1} (${ELEM[ne].n}): criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes`, ELEM[ne].c);
-  ring(hero.x, hero.y, 120, '#c08aff', .9, 5); txt(hero.x, hero.y - 60, `Fase ${D0.phase + 1}`, '#e0b0ff', 22, -20);
-  D0.phase++; D0.kills = 0; save(); dirtyPanel();
-  // a próxima fase é um mapa novo (sorteado de novo)
-  later.push({t:2.5, fn:() => { if(inDun() && mode === 'hunt') transition(() => enterMap(DUN.id)); }});
+  spawnStone(m.x, m.y, D0.phase);
+  ring(m.x, m.y, 160, STONE_C, 1.1, 6); ring(m.x, m.y, 100, '#f5cf3a', .9, 4);
+  txt(hero.x, hero.y - 70, `PEDRA ${D0.phase} CONCLUÍDA!`, '#f5cf3a', 20, -16);
+  log(`Chefe derrotado! Pedra ${D0.phase} concluída (melhor: ${D0.best}). Pegue a Pedra e volte para a vila.`, '#f5cf3a');
+  save(); dirtyPanel();
 }
 function dropItem(m){
   const rar = rollRar(m.elite), it = genItem(m.ml + (m.elite ? 1 : 0), rar);
@@ -97,7 +116,8 @@ function gainXp(x){
     ring(hero.x, hero.y, 80, '#e2ae4a', .9, 4); ring(hero.x, hero.y, 50, '#ffe39a', .7, 2);
     txt(hero.x, hero.y - 46, 'NÍVEL ' + S.lv, '#e2ae4a', 20, -24);
     log(S.lv === MAX_LV ? `Nível máximo ${MAX_LV}! A XP agora vira níveis de Paragon.` : `Nível ${S.lv}! Ponto de habilidade para gastar no Herói.`, '#e2ae4a');
-    if(S.lv === MAX_LV){ buildSkillbar(); log(`Habilidade suprema liberada: ${SKD[ULT[clsOf()]].n} (tecla 5)!`, '#ffd24a'); txt(hero.x, hero.y - 74, SKD[ULT[clsOf()]].n, '#ffd24a', 18, -18); }
+    if(S.lv === MAX_LV){ buildSkillbar(); log(`Habilidade suprema liberada: ${SKD[ULT[clsOf()]].n} (tecla 5)!`, '#ffd24a'); txt(hero.x, hero.y - 74, SKD[ULT[clsOf()]].n, '#ffd24a', 18, -18);
+      if(!S.riftIntro) log('Alguém espera por você na vila…', '#c9a8ff'); }
     dirtyPanel(); rankDirty = true;
   }
   if(S.lv >= MAX_LV && S.xp > 0){ const rest = S.xp; S.xp = 0; gainParagon(rest); }

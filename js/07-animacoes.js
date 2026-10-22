@@ -109,7 +109,7 @@ function drawLevelFloor(vis){
   ctx.globalAlpha = 1;
   for(const o of decor) if(vis(o)) drawDecor(o);
   // Masmorra: o chão fica com a cor do elemento da fase
-  if(inDun()){ ctx.globalAlpha = .1; ctx.fillStyle = ELEM[dunElem(S.dun.phase)].c; ctx.fill(LV.prep.floor); ctx.globalAlpha = 1; }
+  if(inDun()){ ctx.globalAlpha = .1; ctx.fillStyle = ELEM[dunEl()].c; ctx.fill(LV.prep.floor); ctx.globalAlpha = 1; }
 }
 // Paredes e obstáculos visíveis entram na ordenação por y junto com o herói e as criaturas
 function levelProps(vis, out){
@@ -617,10 +617,13 @@ function drawBars(vis){
   ctx.font = '700 10px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
   for(const m of mons){
     if(m.dead || !vis(m)) continue;
-    const w = m.elite ? 44 : 32, y = m.y + m.r*.6 - monH(m) - 8;
+    const w = m.boss ? 84 : m.elite ? 44 : 32, y = m.y + m.r*.6 - monH(m) - 8;
     const bl = bleedLeft(m), fl = burnLeft(m);
-    bar(m.x, y, w, 4, m.hp/m.hpMax, '#d4473b', Math.min(1, (poisonLeft(m) + bl + fl)/m.hpMax), undefined, fl > 0 ? '#ffb040' : bl > 0 ? '#ff9a7a' : '#9bd84a');
-    if(m.elite){ ctx.fillStyle = '#9fbaff'; ctx.fillText(m.name, m.x, y - 5); }
+    // Chefe da Masmorra: anel do elemento no chão, barra maior e nome em laranja
+    if(m.boss){ ctx.strokeStyle = ELEM[m.el || 'fire'].c; ctx.globalAlpha = .5 + .3*Math.sin(T*4); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(m.x, m.y + m.r*.6, m.r*1.5, m.r*.6, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
+    bar(m.x, y, w, m.boss ? 6 : 4, m.hp/m.hpMax, '#d4473b', Math.min(1, (poisonLeft(m) + bl + fl)/m.hpMax), undefined, fl > 0 ? '#ffb040' : bl > 0 ? '#ff9a7a' : '#9bd84a');
+    if(m.boss){ ctx.font = '800 12px "Alegreya Sans", sans-serif'; ctx.fillStyle = '#ffb070'; ctx.fillText(m.name, m.x, y - 6); ctx.font = '700 10px "Alegreya Sans", sans-serif'; }
+    else if(m.elite){ ctx.fillStyle = '#9fbaff'; ctx.fillText(m.name, m.x, y - 5); }
   }
   if(hero.scale > .3 && hero.alpha > .1){
     const p = hero.hp/ST.life;
@@ -797,7 +800,59 @@ function drawDunPortal(){
   lampGlow(px, py - 40, 90, .25);
   ctx.fillStyle = '#c08aff'; circ(px - 30, py - 86 + Math.sin(T*3)*2, 3); circ(px + 30, py - 86 + Math.cos(T*3)*2, 3);
 }
-// Lista de tudo que tem altura na vila (montada uma vez; a Masmorra só aparece no nível 40)
+// Fenda selada (antes do nível 40): rachadura escura no chão, brilho roxo fraco e uma laje rachada por cima
+function drawRiftSealed(){
+  const px = DPORT.x, py = DPORT.y, f = .5 + .5*Math.sin(T*1.2);
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(px, py, 46, 14);
+  ctx.globalAlpha = .18 + .12*f; ctx.fillStyle = '#7a4ac8'; ell(px, py - 2, 40, 11); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#120c18'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px - 34, py - 2); ctx.lineTo(px - 14, py + 3); ctx.lineTo(px - 4, py - 4); ctx.lineTo(px + 12, py + 2); ctx.lineTo(px + 32, py - 3); ctx.stroke();
+  ctx.strokeStyle = `rgba(150,90,220,${.25 + .25*f})`; ctx.lineWidth = 1.2; ctx.stroke();
+  poly([[px - 22, py - 6], [px + 20, py - 9], [px + 26, py + 1], [px - 18, py + 5]], vgrad(py - 9, py + 5, '#6a6470', '#4a4452'));
+  ctx.strokeStyle = '#2a2430'; ctx.lineWidth = 1; line(px - 4, py - 7, px + 2, py + 3);
+}
+// Pedras em volta da Fenda: em pé e com runas acesas quando aberta; quebradas e caídas quando selada. front = as da frente (desenhadas depois do herói)
+const RIFT_STONES = [0, 1, 2, 3, 4, 5, 6].map(i => { const a = i/7*TAU + .25; return {x:DPORT.x + Math.cos(a)*84, y:DPORT.y + Math.sin(a)*32, h:40 + (i % 3)*7, front:Math.sin(a) > 0}; });
+function drawRiftStones(front){
+  const open = dunOpen();
+  for(const s of RIFT_STONES){
+    if(s.front !== front) continue;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(s.x + 3, s.y + 2, 10, 4);
+    if(!open){ // tocos caídos
+      poly([[s.x - 7, s.y], [s.x + 7, s.y], [s.x + 6, s.y - 12], [s.x - 5, s.y - 15]], vgrad(s.y - 15, s.y, '#6a6470', '#3e3846'));
+      poly([[s.x + 6, s.y + 3], [s.x + 22, s.y + 1], [s.x + 22, s.y - 5], [s.x + 7, s.y - 4]], vgrad(s.y - 5, s.y + 3, '#5a5462', '#3a3442'));
+      continue;
+    }
+    poly([[s.x - 8, s.y], [s.x + 8, s.y], [s.x + 6, s.y - s.h], [s.x, s.y - s.h - 6], [s.x - 6, s.y - s.h]], cyl(s.x - 8, s.x + 8, '#6e6878'));
+    const g = .55 + .45*Math.sin(T*3 + s.x);
+    ctx.strokeStyle = `rgba(200,150,255,${g})`; ctx.lineWidth = 1.6; ctx.beginPath();
+    ctx.moveTo(s.x - 3, s.y - s.h*.7); ctx.lineTo(s.x + 3, s.y - s.h*.55); ctx.lineTo(s.x - 2, s.y - s.h*.4); ctx.lineTo(s.x + 2, s.y - s.h*.28); ctx.stroke();
+    lampGlow(s.x, s.y - s.h*.5, 22, .12*g);
+  }
+}
+// Mesa Rúnica do Ezequiel: mesa de pedra com runas acesas e Pedras em cima
+function drawRuneTable(){
+  const {x, y} = RUNE_TABLE, f = .6 + .4*Math.sin(T*2.4);
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ell(x + 4, y + 2, 26, 6);
+  poly([[x - 16, y], [x - 10, y], [x - 10, y - 14], [x - 16, y - 14]], '#3e3846'); poly([[x + 10, y], [x + 16, y], [x + 16, y - 14], [x + 10, y - 14]], '#3e3846');
+  poly([[x - 26, y - 14], [x + 26, y - 14], [x + 30, y - 20], [x - 22, y - 20]], vgrad(y - 20, y - 14, '#7a7484', '#55505e'));
+  ctx.fillStyle = '#4a4452'; ctx.fillRect(x - 26, y - 14, 52, 4);
+  ctx.strokeStyle = `rgba(200,150,255,${.5 + .4*f})`; ctx.lineWidth = 1; for(let i = 0; i < 4; i++) line(x - 18 + i*12, y - 12, x - 14 + i*12, y - 11);
+  for(const [dx, c] of [[-10, '#b07cff'], [6, '#d0a8ff']]){ const sx = x + dx, sy = y - 24; ctx.beginPath(); for(let i = 0; i < 6; i++){ const a = i/6*TAU - Math.PI/2; ctx.lineTo(sx + Math.cos(a)*5, sy + Math.sin(a)*5.5); } ctx.closePath(); ctx.fillStyle = '#3a2260'; ctx.fill(); ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.stroke(); }
+  lampGlow(x, y - 22, 34, .2*f);
+}
+// Ezequiel, o Guardião da Fenda: manto azul-escuro com capuz e cajado com cristal roxo (balança ao andar)
+function drawEzequiel(){
+  const {x, y} = riftNpc, bob = riftNpc.moving ? Math.abs(Math.sin(riftNpc.walkT*9))*2 : 0;
+  ctx.save(); ctx.translate(0, -bob);
+  ctx.strokeStyle = '#5a3e26'; ctx.lineWidth = 2.4; line(x + 11, y + bob, x + 13, y - 46);
+  drawNPC(x, y, '#26324e', 0, '#18203a');
+  ctx.fillStyle = '#18203a'; poly([[x - 9, y - 30], [x + 9, y - 30], [x + 6, y - 44], [x, y - 49], [x - 6, y - 44]]); // capuz
+  ctx.fillStyle = '#d2a580'; circ(x + 1, y - 33, 3.5);
+  const g = .6 + .4*Math.sin(T*4); lampGlow(x + 13, y - 50, 20, .25*g);
+  ctx.fillStyle = '#c08aff'; ctx.beginPath(); ctx.moveTo(x + 13, y - 57); ctx.lineTo(x + 17, y - 50); ctx.lineTo(x + 13, y - 44); ctx.lineTo(x + 9, y - 50); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+// Lista de tudo que tem altura na vila (montada uma vez; a Fenda muda de cara sozinha conforme dunOpen())
 let TOWN_PROPS = null;
 function townProps(){
   if(TOWN_PROPS) return TOWN_PROPS;
@@ -812,7 +867,10 @@ function townProps(){
   add(fo.y + 26, () => drawAnvil(fo.x - 62, fo.y + 26)); add(fo.y + 24, () => drawNPC(fo.x - 88, fo.y + 24, '#3a3430', 0, 0, 1));
   add(fo.y + 18, () => drawBarrel(fo.x + 70, fo.y + 18));
   add(st.y + 20, () => drawBarrel(st.x + 58, st.y + 20)); add(st.y + 16, () => drawCrate(st.x - 78, st.y + 16)); add(st.y + 26, () => drawCrate(st.x - 60, st.y + 26, .8)); add(st.y + 22, () => drawBarrel(st.x + 92, st.y + 22));
-  add(DPORT.y, () => { if(S.lv >= MAX_LV) drawDunPortal(); });
+  add(DPORT.y - 30, () => drawRiftStones(false));
+  add(DPORT.y, () => { if(dunOpen()) drawDunPortal(); else drawRiftSealed(); });
+  add(DPORT.y + 34, () => drawRiftStones(true));
+  add(RUNE_TABLE.y, () => { if(dunOpen()) drawRuneTable(); });
   // Tobias (Baú de Visuais): manto roxo com bordas douradas, ao lado de um baú brilhante
   add(NPC_CHEST.y, () => {
     const {x, y} = NPC_CHEST, f = .6 + .4*Math.sin(T*3);
@@ -853,10 +911,13 @@ function drawTownLabels(){
     ctx.fillStyle = c; ctx.fillText(s, x, y); ctx.globalAlpha = 1;
   };
   for(const z of townZones()){
-    const b = TOWN_B.find(b => b.id === z.id), near = D(hero, z) < 110, npc = z.id === 'chest';
-    const y = b ? b.y - b.h - b.h*.72 - b.dep*.22 - 16 : npc ? NPC_CHEST.y - 58 : DPORT.y - 104;
-    tag(b ? b.x + b.dep*.3 : npc ? NPC_CHEST.x : DPORT.x, y, z.n, z.id === 'dun' ? '#e0b0ff' : z.id === 'forge' ? '#ffb070' : z.id === 'shop' ? '#f5cf3a' : npc ? '#ffd27a' : '#c9a8ff', near);
+    const b = TOWN_B.find(b => b.id === z.id), near = D(hero, z) < 110;
+    const y = b ? b.y - b.h - b.h*.72 - b.dep*.22 - 16 : z.ly;
+    tag(b ? b.x + b.dep*.3 : z.lx, y, z.n, {dun:'#e0b0ff', forge:'#ffb070', shop:'#f5cf3a', chest:'#ffd27a', runes:'#c9a8ff'}[z.id] || '#c9a8ff', near);
   }
+  if(!dunOpen() && !cut) tag(DPORT.x, DPORT.y - 44, 'Fenda selada · nível ' + MAX_LV, '#8a8098', D(hero, DPORT) < 110);
+  // tutorial: seta roxa pulando em cima da Fenda
+  if(S.tut === 1 && !cut){ const ay = DPORT.y - 136 + Math.sin(T*5)*6; ctx.fillStyle = '#c08aff'; poly([[DPORT.x - 10, ay], [DPORT.x + 10, ay], [DPORT.x, ay + 14]]); }
   tag(TPORT.x, TPORT.y + 30, 'Portal · Partir', '#a9c4ff', D(hero, TPORT) < 110);
   // destino do toque
   if(townGoal){ ctx.strokeStyle = 'rgba(220,240,180,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(townGoal.x, townGoal.y, 10 + Math.sin(T*8)*2, 4, 0, 0, TAU); ctx.stroke(); }
@@ -898,7 +959,21 @@ function drawOrbDrop(d){
   ctx.fillStyle = 'rgba(6,8,7,.85)'; ctx.fillRect(d.x - tw/2 - 4, d.y - 32, tw + 8, 15);
   ctx.fillStyle = O.c; ctx.fillText(O.n, d.x, d.y - 21);
 }
+// Pedra da Masmorra no chão: pedra rúnica de 6 lados (roxa) com o nível escrito, coluna de luz e nome
+function drawStoneDrop(d){
+  const b = Math.sin(T*2.5 + d.x)*2, y = d.y - 10 + b, c = STONE_C;
+  const g = ctx.createLinearGradient(0, d.y - 90, 0, d.y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, c + 'aa'); ctx.fillStyle = g; ctx.fillRect(d.x - 5, d.y - 90, 10, 90);
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ell(d.x, d.y + 3, 9, 3.5);
+  const h = ctx.createRadialGradient(d.x, y, 1, d.x, y, 18); h.addColorStop(0, c + 'aa'); h.addColorStop(1, c + '00'); ctx.fillStyle = h; circ(d.x, y, 18);
+  ctx.beginPath(); for(let i = 0; i < 6; i++){ const a = i/6*TAU - Math.PI/2; ctx.lineTo(d.x + Math.cos(a)*9, y + Math.sin(a)*10); } ctx.closePath();
+  ctx.fillStyle = '#3a2260'; ctx.fill(); ctx.strokeStyle = c; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.font = '800 10px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f0e2ff'; ctx.fillText(d.stone, d.x, y + 3.5);
+  const n = 'Pedra da Masmorra ' + d.stone; ctx.font = '700 11px "Alegreya Sans", sans-serif';
+  const tw = ctx.measureText(n).width; ctx.fillStyle = 'rgba(6,8,7,.85)'; ctx.fillRect(d.x - tw/2 - 4, d.y - 38, tw + 8, 15);
+  ctx.fillStyle = c; ctx.fillText(n, d.x, d.y - 27);
+}
 function drawItemDrop(d){
+  if(d.stone) return drawStoneDrop(d);
   if(d.orb) return drawOrbDrop(d);
   const it = d.it, col = RAR[it.rar].c, b = Math.sin(T*3 + d.x)*1.5;
   if(it.rar >= 2){ const g = ctx.createLinearGradient(0, d.y - 70, 0, d.y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, col + (it.rar === LEG_R ? '88' : '66')); ctx.fillStyle = g; ctx.fillRect(d.x - 5, d.y - 70, 10, 70); }
@@ -954,7 +1029,10 @@ function render(){
   if(scene === 'map') drawFocus();
   if(portal) drawPortal(portal.x, portal.y, clamp(portal.t/.6, 0, 1));
   const ents = mons.filter(m => !m.dead && vis(m)); ents.push(hero);
-  if(scene === 'town') for(const p of townProps()) ents.push(p); // prédios, árvores e postes entram na ordem por y
+  if(scene === 'town'){
+    for(const p of townProps()) ents.push(p); // prédios, árvores e postes entram na ordem por y
+    if(dunOpen() || cut) ents.push({y:riftNpc.y, draw:drawEzequiel}); // Ezequiel anda na cena: entra com o y de agora
+  }
   else if(LV) levelProps(vis, ents); // paredes e obstáculos do mapa
   ents.sort((a, b) => a.y - b.y);
   for(const e of ents) e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e);

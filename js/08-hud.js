@@ -87,9 +87,11 @@ function drawMinimap(){
   g.fillStyle = '#9bd84a'; g.strokeStyle = '#0c0f0d'; g.lineWidth = Math.max(1, k*.15); g.beginPath(); g.arc(hero.x/TILE*k, hero.y/TILE*k, Math.max(3, k*.55), 0, TAU); g.fill(); g.stroke();
   if(minimapBig){ g.font = `700 ${Math.round(px/26)}px "Alegreya Sans", sans-serif`; g.fillStyle = '#e9e3d1'; g.fillText('■ visitado', 8, px - 30); g.fillStyle = '#c86a6a'; g.fillText('■ ainda não visitado', 8, px - 10); }
   const el = $('#mmLeft');
-  const txt2 = inDun() ? `Fase ${S.dun.phase} · ${ELEM[dunElem(S.dun.phase)].n} · faltam ${left}` : left ? `Faltam ${left} criatura${left === 1 ? '' : 's'}` : 'Mapa limpo! Volte para a vila';
+  const dl = DUN_KILLS - S.dun.kills;
+  const txt2 = inDun() ? (S.dun.boss === 2 ? `Pedra ${S.dun.phase} concluída!` : S.dun.boss ? `Pedra ${S.dun.phase} · Chefe!` : `Pedra ${S.dun.phase} · ${ELEM[dunEl()].n} · faltam ${dl}`)
+    : left ? `Faltam ${left} criatura${left === 1 ? '' : 's'}` : 'Mapa limpo! Volte para a vila';
   if(el.textContent !== txt2) el.textContent = txt2;
-  el.classList.toggle('done', !left && !inDun());
+  el.classList.toggle('done', inDun() ? S.dun.boss === 2 : !left);
 }
 // Habilidades na barra: as 4 da classe e, no nível 40, a suprema (tecla 5)
 const barSkills = () => ultOf() ? [...ACTIVE, ultOf()] : ACTIVE;
@@ -115,6 +117,12 @@ function setNav(shut){
   try{ localStorage.setItem('loner-nav', shut ? 'shut' : 'open'); }catch(e){}
 }
 try{ if(localStorage.getItem('loner-nav') === 'shut') setNav(true); }catch(e){}
+// Caixa de fala (#talk) das cenas: nome + uma fala por vez; tocar/clicar (ou Enter/espaço) passa, "Pular" encerra a cena
+let talk = null;
+function showTalk(name, lines, onEnd){ talk = {name, lines, i:0, onEnd}; renderTalk(); }
+function renderTalk(){ const el = $('#talk'); el.hidden = !talk; if(!talk) return; $('#talkName').textContent = talk.name; $('#talkText').textContent = talk.lines[talk.i]; $('#talkMore').textContent = talk.i < talk.lines.length - 1 ? 'Toque para continuar ▸' : 'Toque para fechar ▸'; }
+function talkNext(){ if(!talk) return; talk.i++; if(talk.i >= talk.lines.length){ const f = talk.onEnd; talk = null; renderTalk(); if(f) f(); } else renderTalk(); }
+function hideTalk(){ talk = null; renderTalk(); }
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
 function updateHud(){
@@ -127,7 +135,7 @@ function updateHud(){
   $('#xpBar').classList.toggle('para', maxed);
   const pct = Math.round(hero.hp/ST.life*100);
   let st = '', dot = '#9bd84a';
-  if(mode === 'hunt' && inDun()){ st = `Masmorra · fase ${S.dun.phase} (${ELEM[dunElem(S.dun.phase)].n}) · ${S.dun.kills}/${DUN_KILLS} abates`; dot = ELEM[dunElem(S.dun.phase)].c; }
+  if(mode === 'hunt' && inDun()){ st = `Masmorra · Pedra ${S.dun.phase} (${ELEM[dunEl()].n}) · ${S.dun.boss === 2 ? 'concluída' : S.dun.boss ? 'Chefe!' : `${S.dun.kills}/${DUN_KILLS} abates`}`; dot = ELEM[dunEl()].c; }
   else if(mode === 'hunt') st = mapCleared ? `${mapDef.name} limpo! Volte para a vila` : `${mapDef.name} · faltam ${monsLeft()} criaturas`;
   else if(mode === 'portal'){ st = 'Abrindo portal…'; dot = '#8ab4ff'; }
   else if(mode === 'dead'){ st = 'Caiu em combate. Voltando para a vila…'; dot = '#d4473b'; }
@@ -139,6 +147,10 @@ function updateHud(){
   setText('#stText', st); $('#stDot').style.background = dot;
   setText('#hpText', `Vida ${fmt(hero.hp)}/${fmt(ST.life)}`);
   $('#skillbar').hidden = scene !== 'map';
+  $('#app').classList.toggle('cine', !!cut);
+  // tutorial da 1ª Masmorra: faixa com o próximo passo
+  const tt = !cut && !talk && TUT_TXT[S.tut] ? TUT_TXT[S.tut] : '';
+  if(hudCache.tut !== tt){ hudCache.tut = tt; $('#tut').hidden = !tt; $('#tutText').textContent = tt; }
   const aEl = $('#sb-atk');
   if(aEl){
     aEl.classList.toggle('ready', cds.atk <= 0 && mode === 'hunt');
@@ -177,6 +189,7 @@ function updateHud(){
 }
 
 function openTab(t){
+  if(t === 'dun') tutStep(1, 2);
   tab = t; $('#sheet').hidden = false;
   if(inTown()) townIdle = false; // mexeu em algo na vila: não parte sozinho
   $('#sheet').classList.toggle('center', t === 'bag' || t === 'forge' || t === 'dun' || t === 'chest'); // mochila, forja, masmorra e Tobias abrem no meio da tela
@@ -188,9 +201,9 @@ function openTab(t){
 function closeSheet(){ $('#sheet').hidden = true; tab = null; document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on')); }
 function renderPanel(top){
   const body = $('#sheetBody'), sc = body.scrollTop;
-  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', forge:'Forja', dun:'Masmorra', chest:NPC_CHEST.n + ', o colecionador'};
+  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', forge:'Forja', dun:'A Fenda · Masmorra', chest:NPC_CHEST.n + ', o colecionador', runes:'Mesa Rúnica de ' + RIFT_NPC.n};
   $('#sheetTitle').textContent = T2[tab];
-  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, forge:panelForge, dun:panelDun, chest:panelChest})[tab]();
+  body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, forge:panelForge, dun:panelDun, chest:panelChest, runes:panelRunes})[tab]();
   body.scrollTop = top ? 0 : sc;
 }
 // Baú de Visuais (vendido pelo mercador): mostra o preço e quantos visuais a conta já tem
@@ -326,6 +339,10 @@ const ICON_ORB = SVG('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opa
 // Orbe da Anulação: cristal partido ao meio (duas metades separadas por uma rachadura) — diferente dos orbes redondos
 const ICON_ANUL = SVG('<path d="M10.6 4L5 12l5.6 8-1.3-4 1.6-4-1.6-4z" fill="currentColor" fill-opacity=".4"/><path d="M13.4 4L19 12l-5.6 8 1.3-4-1.6-4 1.6-4z" fill="currentColor" fill-opacity=".4"/><circle cx="12" cy="6.5" r=".7" fill="currentColor"/><circle cx="12" cy="17.5" r=".7" fill="currentColor"/>');
 const orbIcon = k => k === 'anul' ? ICON_ANUL : ICON_ORB;
+// Pedra da Masmorra: pedra rúnica de 6 lados com o nível escrito no meio
+const stoneIcon = n => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 2.5v3M20.2 7.25l-2.6 1.5M3.8 7.25l2.6 1.5" stroke="currentColor" stroke-width="1" opacity=".6"/><text x="12" y="15.6" text-anchor="middle" font-size="${n >= 100 ? 7 : n >= 10 ? 8.5 : 10}" font-weight="800" fill="currentColor" font-family="Alegreya Sans, sans-serif">${n}</text></svg>`;
+const ICON_STONE = stoneIcon('');
+const stoneTile = l => `<div class="tile orb" style="--rc:${STONE_C};color:${STONE_C}" aria-label="Pedra da Masmorra ${l}, ${S.stones[l]}">${stoneIcon(l)}<span class="qty">${S.stones[l]}</span></div>`;
 const orbTile = k => `<button class="tile orb" style="--rc:${ORBS[k].c};color:${ORBS[k].c}" data-act="orb" data-v="${k}" aria-label="${ORBS[k].n}, ${S.orbs[k]}">${orbIcon(k)}<span class="qty">${S.orbs[k]}</span></button>`;
 // Botão de comprar +1 espaço (só na vila; preço sobe a cada compra)
 function slotBuyBtn(act, cur, cap, price, what){
@@ -337,7 +354,10 @@ function slotBuyBtn(act, cur, cap, price, what){
 let bagTab = 'items';
 function panelBag(){
   const nOrbs = Object.keys(ORBS).reduce((t, k) => t + (S.orbs[k] || 0), 0);
-  const tabs = `<div class="rk-tabs rk-main"><button class="${bagTab === 'items' ? 'on' : ''}" data-act="bagTab" data-v="items">${ICON_ITEM.chest}Itens <small style="font-weight:600;color:var(--muted)">${invUsed()}/${invMax()}</small></button><button class="${bagTab === 'orbs' ? 'on' : ''}" data-act="bagTab" data-v="orbs">${ICON_ORB}Orbes <small style="font-weight:600;color:var(--muted)">${fmt(nOrbs)}</small></button></div>`;
+  // aba Pedras só existe com a Fenda aberta (nível 40, depois da cena do Ezequiel)
+  if(bagTab === 'stones' && !dunOpen()) bagTab = 'items';
+  const tabs = `<div class="rk-tabs rk-main"><button class="${bagTab === 'items' ? 'on' : ''}" data-act="bagTab" data-v="items">${ICON_ITEM.chest}Itens <small style="font-weight:600;color:var(--muted)">${invUsed()}/${invMax()}</small></button><button class="${bagTab === 'orbs' ? 'on' : ''}" data-act="bagTab" data-v="orbs">${ICON_ORB}Orbes <small style="font-weight:600;color:var(--muted)">${fmt(nOrbs)}</small></button>${dunOpen() ? `<button class="${bagTab === 'stones' ? 'on' : ''}" data-act="bagTab" data-v="stones" style="color:${bagTab === 'stones' ? STONE_C : ''}">${ICON_STONE}Pedras <small style="font-weight:600;color:var(--muted)">${fmt(stoneCount())}</small></button>` : ''}</div>`;
+  if(bagTab === 'stones') return tabs + stonesHTML();
   if(bagTab === 'orbs'){
     // um espaço para cada tipo de orbe, sempre na mesma ordem (mesmo vazio)
     const cells = Object.keys(ORBS).map(k => { const n = S.orbs[k] || 0;
@@ -355,6 +375,13 @@ function panelBag(){
   h += `<p class="legend">Toque num item para ver e comparar. O número no canto é o ilvl. ▲ melhora seu dano ou sua vida. ◆ atributo perto do máximo.</p>`;
   h += slotBuyBtn('buyInvSlot', invMax(), INV_CAP, invSlotPrice(), 'na mochila') + `</div>`;
   return h + bulkSellHTML();
+}
+// Pedras da Masmorra na aba Orbes da mochila: uma pilha por nível
+function stonesHTML(){
+  const ls = stoneLevels();
+  return `<div class="sec"><h3>Pedras da Masmorra <span class="r">${fmt(stoneCount())}</span></h3>
+    ${ls.length ? `<div class="inv-grid">${ls.map(l => `<div class="slot">${stoneTile(l)}</div>`).join('')}</div>` : ''}
+    <p class="legend">${ls.length ? `Encaixe uma Pedra na Fenda, na vila, para entrar na Masmorra. Na Mesa Rúnica do ${RIFT_NPC.n} (ao lado da Fenda): 3 Pedras iguais viram 1 do nível de cima, e dá para voltar uma Pedra para o nível de baixo.` : `Caem no ${MAPS[MAPS.length - 1].name} (Pedra 1) e dentro da Masmorra. O Chefe da Masmorra sempre deixa uma.`}</p></div>`;
 }
 // Vender em lote por raridade (na Mochila e no Mercador; só na vila)
 function bulkSellHTML(){
@@ -376,26 +403,26 @@ function panelRules(){
     <div class="sec"><h3>Conta</h3>
       <div class="row"><label>${esc(fbUser ? (fbUser.email || fbUser.displayName || 'Conta Google') : 'Sem conta')}<small>${esc(heroName())} fica salvo na sua conta Google e aparece no ranking. Entre com a mesma conta em qualquer aparelho para continuar.</small></label><button class="btn" data-act="logout">Sair</button></div>
     </div>
-    <div class="sec"><h3>Registro</h3><div class="stats"><div class="stat"><span>Criaturas abatidas</span><b>${fmt(S.kills)}</b></div><div class="stat"><span>Masmorra (melhor fase)</span><b>${S.dun.best}</b></div></div></div>
+    <div class="sec"><h3>Registro</h3><div class="stats"><div class="stat"><span>Criaturas abatidas</span><b>${fmt(S.kills)}</b></div><div class="stat"><span>Masmorra (maior Pedra)</span><b>${S.dun.best}</b></div></div></div>
     <button class="btn" data-act="switchChar">Trocar de personagem<small>Volta para a lista de personagens da conta</small></button>`;
 }
 function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(i => i.id === id); if(where === 'eq') return SLOTS.map(s => S.eq[s]).find(i => i && i.id === id); return S.inv.find(i => i.id === id); }
-// Masmorra (nível 40): escolhe a fase inicial (1 até a melhor concluída + 1) e entra pelo portal da vila
+// Masmorra: escolhe qual Pedra usar (entre as que tem) e entra pelo portal da vila; a Pedra é gasta ao entrar
 function panelDun(){
-  const D0 = S.dun, max = D0.best + 1; D0.start = clamp(D0.start || 1, 1, max);
-  if(S.lv < MAX_LV) return `<p class="note">O portal da Masmorra abre no nível ${MAX_LV}.</p>`;
-  const k = dunMult(D0.start);
-  return `<p class="note">Criaturas de todos os mapas no nível ${MAX_LV}. Cada fase tem ${DUN_KILLS} abates; ao completar, começa a próxima com criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes (vida e dano). XP também sobe a cada fase. Morrer ou voltar para a vila encerra a corrida. Sua melhor fase concluída vai para o ranking da Masmorra.</p>
-    <div class="sec"><h3>Melhor fase concluída <span class="r">${D0.best}</span></h3>
-    <div class="retbox"><label style="font-size:15px">Começar na fase</label>
+  const D0 = S.dun, ls = stoneLevels();
+  const intro = `<p class="note">Cada entrada gasta 1 Pedra da Masmorra. Lá dentro: ${DUN_KILLS} criaturas de todos os mapas no nível ${MAX_LV}, todas com um elemento sorteado (Fogo, Gelo, Raio ou Veneno). Matou todas, aparece o <b>Chefe</b> com ${BOSS_MINIONS} ajudantes — ele sempre deixa uma Pedra do mesmo nível e itens. Cada nível de Pedra deixa as criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes (vida e dano) e dá mais XP. Morrer ou sair antes de matar o Chefe perde a Pedra. Sua maior Pedra concluída vai para o ranking.</p>`;
+  const best = `<div class="sec"><h3>Maior Pedra concluída <span class="r">${D0.best || '—'}</span></h3>`;
+  if(!ls.length) return intro + best + `<p class="note">Você não tem Pedras. A Pedra 1 cai no ${MAPS[MAPS.length - 1].name}; dentro da Masmorra caem Pedras do nível que você está fazendo.</p></div>`;
+  if(!ls.includes(D0.start)) D0.start = ls[ls.length - 1];
+  const i = ls.indexOf(D0.start), k = dunMult(D0.start);
+  return intro + best + `<div class="retbox"><label style="font-size:15px">Usar a Pedra</label>
     <div style="display:flex;align-items:center;justify-content:center;gap:14px">
-      <button class="plus" data-act="dunPhase" data-v="-1" ${D0.start > 1 ? '' : 'disabled'} aria-label="Fase anterior">−</button>
-      <div class="big">${D0.start}</div>
-      <button class="plus" data-act="dunPhase" data-v="1" ${D0.start < max ? '' : 'disabled'} aria-label="Próxima fase">+</button></div>
-    <p class="note">Criaturas com ${fmt(k*100)}% de vida e dano, causando dano de <b style="color:${ELEM[dunElem(D0.start)].c}">${ELEM[dunElem(D0.start)].n}</b>. Pode começar até a fase ${max}.</p></div>
-    <div class="sec"><h3>Elemento das fases</h3><p class="note">A cada ${DUN_ELEM_SPAN} fases o elemento muda (e depois recomeça). Todas as criaturas da fase causam esse dano: prepare a resistência certa.</p>
-    <div class="stats">${DUN_ELEMS.map((e, i) => `<div class="stat"><span style="color:${ELEM[e].c}">${ELEM[e].n}</span><b>${i*DUN_ELEM_SPAN + 1}–${(i + 1)*DUN_ELEM_SPAN}</b></div>`).join('')}</div></div>
-    <button class="btn primary full" data-act="dunGo" ${inTown() ? '' : 'disabled'}>Entrar no portal<small>${inTown() ? 'Fase ' + D0.start : 'Só pela vila'}</small></button></div>`;
+      <button class="plus" data-act="dunPick" data-v="-1" ${i > 0 ? '' : 'disabled'} aria-label="Pedra de nível menor">−</button>
+      <div class="big" style="color:${STONE_C};display:flex;align-items:center;gap:8px"><span style="width:40px;height:40px;display:inline-block">${stoneIcon(D0.start)}</span>${D0.start}</div>
+      <button class="plus" data-act="dunPick" data-v="1" ${i < ls.length - 1 ? '' : 'disabled'} aria-label="Pedra de nível maior">+</button></div>
+    <p class="note">Você tem ${S.stones[D0.start]} Pedra${S.stones[D0.start] === 1 ? '' : 's'} ${D0.start}. Criaturas com ${fmt(k*100)}% de vida e dano.</p></div>
+    <div class="stones-row">${ls.map(l => `<span style="color:${STONE_C}">Pedra ${l}: <b>${S.stones[l]}</b></span>`).join('')}</div></div>
+    <button class="btn primary full${S.tut === 2 ? ' tut-glow' : ''}" data-act="dunGo" ${inTown() ? '' : 'disabled'}>Encaixar a Pedra ${D0.start} e entrar<small>${inTown() ? 'Gasta 1 Pedra · elemento sorteado ao entrar' : 'Só pela vila'}</small></button>`;
 }
 // Forja da vila: escolhe 3 itens da mochila (forgeSel = ids) e eles viram 1 (forgeItems em 02)
 let forgeSel = [];
@@ -405,6 +432,22 @@ let forgeTab = 'items';
 function panelForge(){
   const tabs = `<div class="rk-tabs rk-main"><button class="${forgeTab === 'items' ? 'on' : ''}" data-act="forgeTab" data-v="items">${ICON_ITEM.chest}Itens</button><button class="${forgeTab === 'orbs' ? 'on' : ''}" data-act="forgeTab" data-v="orbs">${ICON_ORB}Orbes</button></div>`;
   return tabs + (forgeTab === 'orbs' ? forgeOrbsHTML() : forgeItemsHTML());
+}
+// Mesa Rúnica do Ezequiel (ao lado da Fenda, nível 40): forja de Pedras
+function panelRunes(){
+  return `<p class="note" style="color:#c9a8ff">${RIFT_NPC.n}: "Pedras iguais se fundem numa só, mais forte. E se a Fenda estiver forte demais, eu desfaço uma para você."</p>` + forgeStonesHTML();
+}
+// Forja de Pedras: 3 Pedras N → 1 Pedra N+1 (Juntar) ou 1 Pedra N → 1 Pedra N−1 (Voltar). Grátis, só na vila.
+function forgeStonesHTML(){
+  const town = inTown(), ls = stoneLevels();
+  const rows = ls.map(l => { const n = S.stones[l];
+    return `<div class="skill"><div class="ico" style="color:${STONE_C}">${stoneIcon(l)}</div>
+      <div><div class="sn" style="color:${STONE_C}">Pedra ${l} <em>você tem ${n}</em></div><div class="sd">${STONE_UP_N} viram 1 Pedra ${l + 1}${l > 1 ? ` · ou volte 1 para Pedra ${l - 1}` : ''}</div></div>
+      <div class="ctl" style="flex-direction:column;gap:6px"><button class="btn" data-act="stoneUp" data-v="${l}" ${town && n >= STONE_UP_N ? '' : 'disabled'}>Juntar ${STONE_UP_N}</button>
+      <button class="btn" data-act="stoneDown" data-v="${l}" ${town && l > 1 ? '' : 'disabled'}>Voltar 1</button></div></div>`;
+  }).join('');
+  return `<p class="note">Junte ${STONE_UP_N} Pedras do mesmo nível para criar 1 do nível de cima (criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes a cada nível, sem limite). Ou volte uma Pedra para o nível de baixo.${town ? '' : ' <span style="color:#ff8c80">A forja fica na vila.</span>'}</p>
+    <div class="sec"><h3>Pedras na mochila</h3>${rows || `<p class="note">Você não tem Pedras. A Pedra 1 cai no ${MAPS[MAPS.length - 1].name}.</p>`}</div>`;
 }
 function forgeOrbsHTML(){
   const town = inTown();
@@ -565,7 +608,9 @@ const ACT = {
     else if(mode === 'hunt'){ closeSheet(); startPortal('map', `Indo para ${m.name}`); }
     dirtyPanel();
   },
-  go: () => depart(),
+  go: () => { if(!cut) depart(); },
+  talkNext: () => talkNext(),
+  talkSkip: () => { if(cut) endCut(); else hideTalk(); },
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
   dodge: () => { if(performance.now() < skipClickT) return; doDodge(false); },
   atk: () => { if(performance.now() < skipClickT) return; basicAttack(); },
@@ -606,7 +651,7 @@ const ACT = {
     dlgItem = {where, id:it.id}; $('#dlg').hidden = false; renderDlg(); // mostra o item já melhorado
   },
   dlgClose: () => closeDlg(),
-  bagTab: v => { bagTab = v === 'orbs' ? 'orbs' : 'items'; dirtyPanel(); },
+  bagTab: v => { bagTab = v === 'orbs' || v === 'stones' ? v : 'items'; dirtyPanel(); },
   // Comprar espaços (só na vila)
   buyInvSlot: () => {
     const p = invSlotPrice(); if(!inTown() || invMax() >= INV_CAP || S.gold < p) return;
@@ -624,8 +669,10 @@ const ACT = {
   },
   look: v => { const [t, id] = v.split(':'); if(id && (!COS[id] || !cosOwned().includes(id))) return; S.look[t] = id || ''; applyLook(); save(); dirtyPanel(); },
   // Masmorra
-  dunPhase: v => { S.dun.start = clamp((S.dun.start || 1) + +v, 1, S.dun.best + 1); dirtyPanel(); },
-  dunGo: () => { if(!inTown() || S.lv < MAX_LV || trans) return; closeSheet(); const p = S.dun.start || 1; transition(() => enterDungeon(p)); },
+  dunPick: v => { const ls = stoneLevels(), i = clamp(ls.indexOf(S.dun.start) + +v, 0, ls.length - 1); if(ls.length) S.dun.start = ls[i]; dirtyPanel(); },
+  dunGo: () => { const l = S.dun.start; if(!inTown() || trans || !(S.stones[l] > 0)) return; closeSheet(); transition(() => { if(!enterDungeon(l)) enterTown(); }); },
+  stoneUp: v => { const l = +v; if(!inTown() || !(S.stones[l] >= STONE_UP_N)) return; S.stones[l] -= STONE_UP_N; if(!S.stones[l]) delete S.stones[l]; S.stones[l + 1] = (S.stones[l + 1] || 0) + 1; log(`${STONE_UP_N} Pedras ${l} viraram 1 Pedra ${l + 1}`, STONE_C); dirtyPanel(); save(); },
+  stoneDown: v => { const l = +v; if(!inTown() || l <= 1 || !(S.stones[l] > 0)) return; S.stones[l]--; if(!S.stones[l]) delete S.stones[l]; S.stones[l - 1] = (S.stones[l - 1] || 0) + 1; log(`Pedra ${l} voltou a ser Pedra ${l - 1}`, STONE_C); dirtyPanel(); save(); },
   // Forja (só na vila)
   forgeTab: v => { forgeTab = v === 'orbs' ? 'orbs' : 'items'; dirtyPanel(); },
   orbUp: v => {
@@ -683,6 +730,7 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => { if(e.target.id === 'cfg-ret'){ S.cfg.ret = +e.target.value; $('#retVal').textContent = S.cfg.ret + '%'; } });
 document.addEventListener('keydown', e => {
   if(e.target.closest('input,textarea')) return;
+  if(talk){ if(e.key === 'Enter' || e.code === 'Space'){ e.preventDefault(); if(!e.repeat) talkNext(); } return; } // fala aberta: só passa a fala
   const i = '12345'.indexOf(e.key);
   if(i >= 0 && barSkills()[i]){
     const id = barSkills()[i];
@@ -708,7 +756,8 @@ function townTap(sx, sy){
   const w = toWorld(sx, sy);
   for(const b of TOWN_B) if(b.tab && w.x > b.x - b.w/2 - 10 && w.x < b.x + b.w/2 + b.dep*.6 && w.y > b.y - b.h - b.dep*.45 - 50 && w.y < b.y + 40){ townGoal = {x:b.x, y:b.y + 34}; townZone = null; return; }
   if(D(w, NPC_CHEST) < 50 || D(w, {x:NPC_CHEST.x, y:NPC_CHEST.y - 30}) < 40){ townGoal = {x:NPC_CHEST.x, y:NPC_CHEST.y + 26}; townZone = null; return; }
-  if(S.lv >= MAX_LV && D(w, DPORT) < 70){ townGoal = {x:DPORT.x, y:DPORT.y + 6}; townZone = null; return; }
+  if(dunOpen() && D(w, DPORT) < 70){ townGoal = {x:DPORT.x, y:DPORT.y + 6}; townZone = null; return; }
+  if(dunOpen() && (D(w, RUNE_TABLE) < 40 || D(w, RIFT_NPC) < 36)){ townGoal = {x:RUNE_TABLE.x + 22, y:RUNE_TABLE.y + 26}; townZone = null; return; }
   townGoal = {x:clamp(w.x, 40, TOWN_W - 40), y:clamp(w.y, 130, TOWN_H - 40)};
 }
 cv.addEventListener('pointerdown', e => {

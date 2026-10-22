@@ -41,18 +41,28 @@ const TOWN_B = [
   {id:'forge', x:890, y:540, w:170, h:96, dep:76, wall:'#7a7068', roof:'#3a3430', tab:'forge', n:'Forja', smithy:1},
   {id:'celeiro', x:205, y:830, w:150, h:80, dep:66, wall:'#8a6a48', roof:'#5a3a22', barn:1}, // só enfeite (o armazém não existe mais)
 ];
-// Zonas de entrada: porta de cada prédio com painel, mais o portal da Masmorra (nível 40)
+// A Fenda (DPORT): antes do nível 40 fica selada (pedras caídas, rachadura apagada). No 40, na 1ª volta à vila, a cena (cut, em 06)
+// traz o Ezequiel, o Guardião da Fenda, até o herói e leva os dois até ela; a Fenda desperta (pedras em pé em volta, portal aceso)
+// e S.riftIntro fica true. Daí em diante o Ezequiel fica ao lado dela com a Mesa Rúnica (aba 'runes': juntar/voltar Pedras).
+const RIFT_NPC = {x:800, y:872, n:'Ezequiel'}, RUNE_TABLE = {x:748, y:878};
+const riftNpc = {x:RIFT_NPC.x, y:RIFT_NPC.y, face:Math.PI, moving:false, walkT:0}; // onde ele está agora (anda na cena)
+let cut = null; // cena do nível 40 em andamento (06)
+// Zonas de entrada: porta de cada prédio com painel, o Tobias e, com a Fenda aberta, ela e a Mesa Rúnica (lx/ly = onde fica a placa)
 const townZones = () => {
   const z = TOWN_B.filter(b => b.tab).map(b => ({id:b.id, tab:b.tab, n:b.n, x:b.x, y:b.y + 34, r:42}));
-  z.push({id:'chest', tab:'chest', n:NPC_CHEST.n, x:NPC_CHEST.x, y:NPC_CHEST.y + 26, r:36});
-  if(S.lv >= MAX_LV) z.push({id:'dun', tab:'dun', n:'Masmorra', x:DPORT.x, y:DPORT.y + 6, r:40});
+  z.push({id:'chest', tab:'chest', n:NPC_CHEST.n, x:NPC_CHEST.x, y:NPC_CHEST.y + 26, r:36, lx:NPC_CHEST.x, ly:NPC_CHEST.y - 58});
+  if(dunOpen() && !cut){
+    z.push({id:'dun', tab:'dun', n:'A Fenda', x:DPORT.x, y:DPORT.y + 6, r:40, lx:DPORT.x, ly:DPORT.y - 104});
+    z.push({id:'runes', tab:'runes', n:`${RIFT_NPC.n} · Mesa Rúnica`, x:RUNE_TABLE.x + 22, y:RUNE_TABLE.y + 26, r:34, lx:RUNE_TABLE.x + 22, ly:RUNE_TABLE.y - 58});
+  }
   return z;
 };
-// Colisão: caixas dos prédios (frente + fundo) e a fonte
+// Colisão: caixas dos prédios (frente + fundo), a fonte e a Mesa Rúnica (quando existe)
 function townBlocked(x, y){
   if(x < 30 || y < 120 || x > TOWN_W - 30 || y > TOWN_H - 30) return true;
   for(const b of TOWN_B){ const back = b.dep*.45 + 30; if(x > b.x - b.w/2 - 8 && x < b.x + b.w/2 + b.dep*.6 + 4 && y > b.y - back && y < b.y + 8) return true; }
   if(Math.hypot((x - FOUNT.x)/1.25, y - FOUNT.y + 6) < 62) return true;
+  if(dunOpen() && Math.hypot((x - RUNE_TABLE.x)/1.4, y - RUNE_TABLE.y + 4) < 18) return true;
   return false;
 }
 
@@ -265,7 +275,7 @@ function spawnLevel(){
       const m = makeMon(t, x, y, rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
       m.pack = pk;
       if(n > 3){ const f = packF(n); m.hpMax *= f; m.hp = m.hpMax; m.dmg *= f; }
-      if(inDun()){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunElem(S.dun.phase); }
+      if(inDun()) dunScale(m);
       m.lx = m.x; m.ly = m.y;
       mons.push(m); left--;
     }
@@ -273,12 +283,37 @@ function spawnLevel(){
   mapTotal = total; mapCleared = false;
 }
 const monsLeft = () => mons.filter(m => !m.dead).length;
-// Masmorra: entra numa fase (S.dun.phase) com 0 abates; inDun() diz se o herói está lá
+// Masmorra: gasta 1 Pedra do nível escolhido, sorteia o elemento e entra com 0 abates; inDun() diz se o herói está lá
 const inDun = () => scene === 'map' && mapDef === DUN;
-function enterDungeon(phase){
-  if(S.lv < MAX_LV) return;
-  S.dun.phase = clamp(phase || 1, 1, S.dun.best + 1); S.dun.kills = 0;
-  enterMap(DUN.id);
+function enterDungeon(level){
+  if(!(S.stones[level] > 0)) return false;
+  S.stones[level]--; if(!S.stones[level]) delete S.stones[level];
+  S.dun.phase = level; S.dun.kills = 0; S.dun.boss = 0; S.dun.el = pick(DUN_ELEMS);
+  if(S.tut === 1 || S.tut === 2) S.tut = 3;
+  enterMap(DUN.id); save();
+  return true;
+}
+// Criatura da Masmorra: vida e dano × 1,25^(Pedra−1) e o elemento da corrida
+function dunScale(m){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunEl(); }
+// Matou as DUN_KILLS criaturas: o Chefe aparece perto do herói (num chão livre, a uns 260 px) com BOSS_MINIONS ajudantes
+function spawnBoss(){
+  const withAoe = DUN.mons.filter(k => MONS[k].aoe), t = pick(withAoe.length ? withAoe : DUN.mons);
+  let p = null;
+  for(let i = 0; i < 40 && !p; i++){ const a = Math.random()*TAU, r = rnd(200, 320), x = hero.x + Math.cos(a)*r, y = hero.y + Math.sin(a)*r; if(walkable(x, y, 26) && losClear(hero, {x, y})) p = {x, y}; }
+  if(!p) p = {x:hero.x + 120, y:hero.y};
+  const pk = ++packId, b = makeMon(t, p.x, p.y, MAX_LV, true);
+  b.boss = true; b.pack = pk; b.name = `${MONS[t].n} Ancestral`; b.r *= BOSS_R; b.spd *= .9;
+  b.hpMax *= BOSS_HP; b.dmg *= BOSS_DMG; dunScale(b); b.lx = b.x; b.ly = b.y; mons.push(b);
+  for(let i = 0; i < BOSS_MINIONS; i++){
+    const a = i/BOSS_MINIONS*TAU, x = p.x + Math.cos(a)*55, y = p.y + Math.sin(a)*55;
+    const m = makeMon(pick(DUN.mons), walkable(x, y, 8) ? x : p.x, walkable(x, y, 8) ? y : p.y, MAX_LV, false);
+    m.minion = true; m.pack = pk; dunScale(m); m.lx = m.x; m.ly = m.y; mons.push(m);
+  }
+  S.dun.boss = 1; tutStep(3, 4);
+  for(let i = 0; i < 30; i++){ const an = Math.random()*TAU, sp = rnd(60, 200); part({x:p.x, y:p.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.7, size:rnd(2, 4.5), c:ELEM[dunEl()].c}); }
+  ring(p.x, p.y, 140, ELEM[dunEl()].c, 1, 6); ring(p.x, p.y, 90, STONE_C, .8, 3);
+  txt(hero.x, hero.y - 70, 'O CHEFE APARECEU!', '#ff8c80', 20, -16);
+  log(`O Chefe apareceu: ${b.name}, com ${BOSS_MINIONS} ajudantes!`, '#ff8c80');
 }
 let minimapBig = false; // minimapa grande (aberto ao tocar nele)
 function clearWorld(){ zones = []; hero.dodge = null; hero.buff = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
@@ -294,19 +329,22 @@ function enterMap(id){
   groundPat = makeGround(mapDef);
   spawnLevel(); markSeen();
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
-  if(mapDef === DUN){ log(`Masmorra · fase ${S.dun.phase} (${ELEM[dunElem(S.dun.phase)].n}): mate as ${DUN_KILLS} criaturas`, ELEM[dunElem(S.dun.phase)].c); dirtyPanel(); return; }
+  if(mapDef === DUN){ log(`Masmorra · Pedra ${S.dun.phase} · ${ELEM[dunEl()].n}: mate as ${DUN_KILLS} criaturas e o Chefe`, ELEM[dunEl()].c); dirtyPanel(); return; }
   log(`${mapDef.name}: ${mapTotal} criaturas para caçar`, '#c9e6a0');
   const xm = xpMult(mapDef); if(xm < 1) log(`Mapa abaixo do seu nível: XP reduzida em ${Math.round((1 - xm)*100)}%`, '#ff8c80');
   dirtyPanel();
 }
 function enterTown(){
-  if(S.dun && S.dun.phase > 0){ log(`Corrida na Masmorra encerrada na fase ${S.dun.phase} (melhor: ${S.dun.best} concluídas)`, '#d9a0ff'); S.dun.phase = 0; S.dun.kills = 0; }
+  if(S.dun && S.dun.phase > 0){ if(S.dun.boss < 2) log(`Masmorra da Pedra ${S.dun.phase} encerrada sem matar o Chefe (a Pedra foi gasta)`, '#d9a0ff'); S.dun.phase = 0; S.dun.kills = 0; S.dun.boss = 0; }
   scene = 'town'; mode = 'town'; WORLD = {w:TOWN_W, h:TOWN_H}; clearWorld(); decor = [];
   hero.x = TPORT.x; hero.y = TPORT.y - 40; hero.scale = 1; hero.alpha = 1; hero.face = -Math.PI/2; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.moving = false;
   cam.x = hero.x; cam.y = hero.y - 40; townWait = 0; townGoal = null; townZone = null; townIdle = true; townArmed = false;
   if(!townPat) townPat = makeTown();
   if(S.char){ rollShop(); log('O mercador trouxe 3 itens novos', '#e2ae4a'); }
   if(S.cfg.autoSell) sellWhere(it => it.rar === 0, true);
+  riftNpc.x = RIFT_NPC.x; riftNpc.y = RIFT_NPC.y; riftNpc.face = Math.PI; riftNpc.moving = false; cut = null;
+  if(S.char) tutTown();
+  if(S.char && S.lv >= MAX_LV && !S.riftIntro) startCut(); // 1ª volta à vila no nível 40: cena do Ezequiel (06)
   dirtyPanel(); save();
 }
 function startPortal(dest, reason){

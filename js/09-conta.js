@@ -216,7 +216,7 @@ function pushRank(){
     name: heroName(), lv: S.lv, par: S.par, score: lastScore, cls: S.char.cls || 'arqueiro', build: S.char.build || 'veneno', kills: S.kills,
     updated: firebase.firestore.FieldValue.serverTimestamp(),
   };
-  // dun = melhor fase concluída na Masmorra (só vai quando > 0; as regras do Firestore precisam aceitar o campo)
+  // dun = maior Pedra da Masmorra concluída (Chefe morto; só vai quando > 0; as regras do Firestore precisam aceitar o campo)
   if(S.dun && S.dun.best > 0) row.dun = S.dun.best;
   fb.db.collection(RANK).doc(rankId(S.cid)).set(row).then(() => { if(tab === 'rank') loadRank(); })
     .catch(e => { rankErr = 'Não foi possível enviar sua pontuação (' + (e.code || 'erro') + ').'; if(tab === 'rank') dirtyPanel(); });
@@ -226,7 +226,7 @@ function rankTick(dt){
   if(rankDirty || (rankPushT <= 0 && Math.abs(rankScore() - lastScore) > 1e-4)) pushRank();
   else if(rankPushT <= 0) rankPushT = 60;
 }
-// Ranking com duas abas principais: Nível (Geral = todas as classes, ou uma classe) e Masmorra (rankCls = 'dun', melhor fase concluída).
+// Ranking com duas abas principais: Nível (Geral = todas as classes, ou uma classe) e Masmorra (rankCls = 'dun', maior Pedra concluída).
 // Por classe busca só a classe e ordena aqui, para não precisar de índice composto; Geral e Masmorra usam orderBy (índice simples, automático).
 let rankCls = null, rankLvTab = null; // rankLvTab = última aba de nível escolhida (para voltar a ela)
 function loadRank(){
@@ -251,7 +251,7 @@ function panelRank(){
     h += `<div class="rk-tabs">${tabs.map(t => `<button class="${t.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${t.id}">${t.ic}${t.n}</button>`).join('')}</div>`;
   }
   h += `<div class="sec"><h3>Top ${RANK_N} · ${isDun ? 'Masmorra' : cur === 'geral' ? 'Todas as classes' : (CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
-    <p class="note">${isDun ? `Ordem pela fase mais alta concluída na Masmorra (libera no nível ${MAX_LV}). Todas as classes juntas.` : `Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente.`} Só aparece o nome do herói.</p>`;
+    <p class="note">${isDun ? `Ordem pela maior Pedra da Masmorra concluída (Chefe derrotado). Todas as classes juntas.` : `Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente.`} Só aparece o nome do herói.</p>`;
   const meId = fbUser && S.cid ? rankId(S.cid) : '', mine = id => fbUser && id.startsWith(fbUser.uid + '_');
   if(rankList === null){ if(!rankErr) h += `<p class="note">Carregando…</p>`; }
   else if(!rankList.length) h += `<p class="note">Ninguém no ranking ainda. Seja o primeiro.</p>`;
@@ -259,7 +259,7 @@ function panelRank(){
     const me = r.id === meId, cls = (CLASSES.find(c => c.id === r.cls) || CLASSES[0]).n;
     const bd = (BUILDS.find(b => b.id === r.build) || BUILDS.find(b => b.cls === r.cls) || BUILDS[0]).n;
     return `<li class="${me ? 'me' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.name)}${me ? ' (você)' : mine(r.id) ? ' (sua conta)' : ''}<small>${esc(cls)} · build ${esc(bd)} · ${fmt(r.kills || 0)} abates</small></span>
-      <span class="lv">${isDun ? `Fase ${+r.dun || 0}<br><span class="p">Paragon ${+r.par || 0}</span>` : `Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}`}</span></li>`;
+      <span class="lv">${isDun ? `Pedra ${+r.dun || 0}<br><span class="p">Paragon ${+r.par || 0}</span>` : `Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}`}</span></li>`;
   }).join('') + `</ol>`;
   if(meId && rankList && rankList.length >= RANK_N && !rankList.some(r => r.id === meId)) h += `<p class="note">${esc(heroName())} ainda não está no top ${RANK_N}.</p>`;
   return h + `</div>`;

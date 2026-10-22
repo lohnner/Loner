@@ -112,16 +112,25 @@ const MON_EL = {
   brutamonte:'fire', cao:'fire', elemental:'fire', diabrete:'fire', carrasco:'fire'};
 // toda criatura tem elemento; tiro de quem ataca de longe fica da cor do elemento
 for(const k in MONS){ MONS[k].el = MON_EL[k] || 'poison'; if(MONS[k].ranged) MONS[k].ranged = ELEM[MONS[k].el].c; }
-// Masmorra (fim de jogo): o portal abre na vila no nível 40. Fases de DUN_KILLS abates com criaturas de todos os mapas no nível 40;
-// cada fase deixa as criaturas DUN_STEP vezes mais fortes que a anterior (vida e dano): fase N = 1,25^(N−1).
-// Morrer ou voltar para a vila encerra a corrida; a próxima pode começar em qualquer fase até a melhor concluída + 1. S.dun.best vai para o ranking.
+// Masmorra (fim de jogo) com Pedras da Masmorra: cada corrida gasta 1 Pedra de nível N (S.stones[N], sem limite de nível).
+// A Pedra 1 cai no último mapa (STONE_MAP_CH por criatura). Na corrida: DUN_KILLS criaturas de todos os mapas no nível 40, todas com
+// o mesmo elemento sorteado (S.dun.el); matou todas, aparece o Chefe com BOSS_MINIONS ajudantes. O Chefe sempre deixa uma Pedra N
+// e itens; as criaturas da corrida podem deixar Pedra N ou N−1 (STONE_DUN_CH). Pedra N = criaturas × 1,25^(N−1) de vida e dano (dunMult).
+// Forja: 3 Pedras N viram 1 Pedra N+1; 1 Pedra N volta a ser 1 Pedra N−1. S.dun.best = maior Pedra concluída (Chefe morto) → ranking.
+// S.dun.phase = nível da Pedra da corrida em andamento (0 = fora da Masmorra).
 const DUN_KILLS = 50, DUN_STEP = 1.25;
-const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada fase mais forte.'};
+const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada Pedra mais forte.'};
 const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
-// Elemento das fases: muda a cada DUN_ELEM_SPAN fases, passando pelos 4 tipos sem repetir, e depois recomeça.
-// Todas as criaturas da fase causam esse dano — o jogador precisa da resistência certa.
-const DUN_ELEMS = ['fire','cold','light','poison'], DUN_ELEM_SPAN = 5;
-const dunElem = p => DUN_ELEMS[Math.floor((Math.max(1, p) - 1)/DUN_ELEM_SPAN) % DUN_ELEMS.length];
+// Elemento da corrida: sorteado ao entrar (todas as criaturas causam esse dano — o jogador precisa da resistência certa)
+const DUN_ELEMS = ['fire','cold','light','poison'];
+const dunEl = () => S.dun.el || DUN_ELEMS[0];
+const STONE_MAP_CH = .012, STONE_DUN_CH = .02, STONE_UP_N = 3, STONE_LOW_CH = .35; // queda da Pedra N−1 na corrida: 35% das Pedras
+const BOSS_HP = 6, BOSS_DMG = 1.15, BOSS_R = 1.5, BOSS_MINIONS = 3;
+const STONE_C = '#b07cff';
+const stoneCount = () => Object.values(S.stones || {}).reduce((a, n) => a + (n || 0), 0);
+const stoneLevels = () => Object.keys(S.stones || {}).map(Number).filter(l => S.stones[l] > 0).sort((a, b) => a - b);
+// A Fenda (portal da Masmorra) só abre no nível 40, depois da cena com o Ezequiel (S.riftIntro); antes fica selada na vila
+const dunOpen = () => S.lv >= MAX_LV && !!S.riftIntro;
 // Golpes em área: a criatura marca o chão e, depois de AOE_T (0,7 s), o golpe acerta quem ainda estiver dentro (m × AOE_DMG × o dano dela).
 // Cada um tem um jeito (k) que combina com a criatura:
 //   leap  = pula e cai na marca (onde o herói estava): lobos, cães, sapo, carniçal, gárgula, brutamonte
@@ -331,12 +340,13 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:7,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:8,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1,el:'',boss:0},stones:{},riftIntro:false,riftGift:false,tut:0};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
   const cls = (s.char && s.char.cls) || 'arqueiro', d = defaults(cls);
-  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})},look:{...d.look,...(s.look||{})},dun:{...d.dun,...(s.dun||{}),phase:0,kills:0}});
+  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})},look:{...d.look,...(s.look||{})},dun:{...d.dun,...(s.dun||{}),phase:0,kills:0,boss:0}});
+  d.stones = {}; for(const l in (s.stones || {})) if(+l >= 1 && s.stones[l] > 0) d.stones[+l] = Math.floor(s.stones[l]);
   // Saves antigos sem limite de nível: o que passou de 40 vira Paragon
   if(d.lv > MAX_LV){ d.par += d.lv - MAX_LV; d.lv = MAX_LV; d.xp = 0; }
   d.orbs = {...defaults(cls).orbs, ...(s.orbs || {})};
@@ -356,7 +366,9 @@ function normalize(s){
   if((s.ver || 0) < 6){ d.inv.forEach(fixAffixes); d.shop.forEach(fixAffixes); for(const k in d.eq) fixAffixes(d.eq[k]); }
   // ver 7: tiers dos atributos (T1–T10, teto no nível 40) — retierItem (02)
   if((s.ver || 0) < 7){ d.inv.forEach(retierItem); d.shop.forEach(retierItem); for(const k in d.eq) retierItem(d.eq[k]); }
-  d.ver = 7;
+  // ver 8: Masmorra por Pedras — a melhor "fase" antiga não vale como Pedra: zera e quem já tinha jogado ganha 3 Pedras 1 para começar
+  if((s.ver || 0) < 8 && d.dun.best > 0){ d.dun.best = 0; d.stones[1] = (d.stones[1] || 0) + 3; }
+  d.ver = 8;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.
@@ -401,7 +413,8 @@ const CLASSES = [{id:'arqueiro',n:'Arqueiro',d:'Ataca de longe com arco',ok:1},{
 // Builds liberadas por classe (cls); as sem cls ainda não existem
 const BUILDS = [{id:'veneno',n:'Veneno',d:'Dano ao longo do tempo',ok:1,cls:'arqueiro'},{id:'sangramento',n:'Sangramento',d:'Cortes que sangram',ok:1,cls:'guerreiro'},{id:'fogo',n:'Fogo',d:'Explosões e queimaduras',ok:1,cls:'mago'},{id:'gelo',n:'Gelo',d:'Em breve'}];
 const buildsFor = cls => BUILDS.filter(b => !b.cls || b.cls === cls);
-const xpMult = md => { const over = S.lv - md.lv[1]; return over > 0 ? Math.max(.05, 1 - over*.12) : 1; };
+// XP de mapa abaixo do seu nível: cada nível acima do máximo do mapa tira 25% (1 acima = 75%, 2 = 50%, 3 = 25%, 4 ou mais = 5%)
+const xpMult = md => { const over = S.lv - md.lv[1]; return over > 0 ? Math.max(.05, 1 - over*.25) : 1; };
 const avgIlvl = () => Math.round(SLOTS.reduce((t, k) => t + (S.eq[k] ? S.eq[k].ilvl : 0), 0) / SLOTS.length);
 const mapRec = md => Math.max(0, md.lv[0] - 2);
 // S é o personagem em jogo. Só vale depois do login e da escolha na tela de personagens (09-conta.js liga accountReady).

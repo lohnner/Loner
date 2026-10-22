@@ -18,7 +18,7 @@ function moveTo(p, dt, mul){
   hero.face = Math.atan2(p.y - hero.y, p.x - hero.x); moveDir(hero.face, dt, mul); return false;
 }
 // Dá para pegar? Orbe sempre (vai para a aba Orbes); item precisa de espaço na mochila e da raridade mínima das Regras.
-const canPick = d => d.orb ? true : d.it.rar >= S.cfg.minPick && !invFull(); // orbe sempre cabe (aba Orbes sem limite)
+const canPick = d => d.orb || d.stone ? true : d.it.rar >= S.cfg.minPick && !invFull(); // orbe e Pedra sempre cabem (aba Orbes sem limite)
 function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
@@ -340,12 +340,13 @@ function updateField(dt){
     d.t += dt;
     if(!d.gone && D(d, hero) < 26 && canPick(d) && mode === 'hunt'){
       d.gone = true;
-      if(d.orb){ S.orbs[d.orb]++; log(`Pegou ${ORBS[d.orb].n} (${S.orbs[d.orb]})`, ORBS[d.orb].c); }
+      if(d.stone){ S.stones[d.stone] = (S.stones[d.stone] || 0) + 1; log(`Pegou Pedra da Masmorra ${d.stone} (${S.stones[d.stone]})`, STONE_C); save(); }
+      else if(d.orb){ S.orbs[d.orb]++; log(`Pegou ${ORBS[d.orb].n} (${S.orbs[d.orb]})`, ORBS[d.orb].c); }
       else { S.inv.push(d.it); if(d.it.rar >= 1) log(`Pegou ${d.it.name}`, RAR[d.it.rar].c); }
       dirtyPanel();
     }
   }
-  drops = drops.filter(d => !d.gone && d.t < 90);
+  drops = drops.filter(d => !d.gone && (d.t < 90 || d.stone)); // Pedra não some do chão
   for(const c of coins){
     c.t += dt;
     if(c.t > .5 && mode !== 'dead'){
@@ -366,9 +367,77 @@ function townMove(ang, dt){
   if(!townBlocked(hero.x, ny)){ hero.y = ny; return true; }
   return false;
 }
+/* ---------- CENA DO NÍVEL 40: O GUARDIÃO DA FENDA ---------- */
+// Etapas (cut.st): 0 espera · 1 Ezequiel vem da borda até o herói · 2 fala (CUT_A) · 3 anda até a Fenda com o herói atrás
+// · 4 a Fenda desperta · 5 fala (CUT_B) · 6 ele vai para o lado da Mesa Rúnica e a cena acaba. Falas na caixa #talk (showTalk em 08).
+const CUT_A = [
+  'Então é você o caçador de quem a vila inteira fala… Chegou mais longe do que qualquer um lá fora.',
+  'Meu nome é Ezequiel. Guardo a Fenda desde antes desta vila existir. Ela dormia — até hoje. Venha comigo.',
+];
+const CUT_B = [
+  'Sentiu? A Fenda acordou com a sua força. Do outro lado ficam criaturas de todos os cantos do mundo.',
+  'Cada Pedra da Masmorra abre a Fenda uma vez, e cada nível de Pedra deixa tudo lá dentro mais forte. No fim, um Chefe — e ele sempre guarda uma Pedra.',
+  'Mais Pedras você encontra no Abismo Ardente e lá dentro. Traga 3 iguais para a minha Mesa Rúnica e eu forjo uma mais poderosa.',
+  'Tome, leve esta Pedra 1 para conhecer a Fenda. Ela está na sua mochila, na aba Pedras. Boa caçada.',
+];
+const CUT_START = {x:1065, y:900}, CUT_RIFT = {x:DPORT.x - 66, y:DPORT.y + 44};
+function startCut(){ cut = {st:0, t:0}; riftNpc.x = CUT_START.x; riftNpc.y = CUT_START.y; townGoal = null; }
+// Ezequiel anda até p; true quando chega
+function npcWalk(p, dt, spd){
+  const d = D(riftNpc, p); if(d < 5){ riftNpc.moving = false; return true; }
+  const a = Math.atan2(p.y - riftNpc.y, p.x - riftNpc.x), s = Math.min(d, (spd || 105)*dt);
+  riftNpc.face = a; riftNpc.x += Math.cos(a)*s; riftNpc.y += Math.sin(a)*s; riftNpc.moving = true; riftNpc.walkT += dt;
+  return false;
+}
+function heroWalk(p, dt){ const d = D(hero, p); if(d < 8){ hero.moving = false; return true; } townMove(Math.atan2(p.y - hero.y, p.x - hero.x), dt*.8); return false; }
+// Presente do Ezequiel no fim da cena: 1 Pedra 1 para testar (uma vez por personagem; pular a cena também dá)
+function giftStone(){
+  if(S.riftGift) return; S.riftGift = true;
+  S.stones[1] = (S.stones[1] || 0) + 1;
+  ring(hero.x, hero.y, 60, STONE_C, .8, 4); txt(hero.x, hero.y - 60, '+1 Pedra da Masmorra', STONE_C, 15, -20);
+  log('Ezequiel te deu 1 Pedra da Masmorra 1 (Mochila › Pedras)', STONE_C);
+}
+function endCut(){
+  giftStone(); S.riftIntro = true; cut = null; riftNpc.x = RIFT_NPC.x; riftNpc.y = RIFT_NPC.y; riftNpc.face = Math.PI; riftNpc.moving = false;
+  hideTalk();
+  const zin = townZones().find(z => D(hero, z) < z.r); townZone = zin ? zin.id : null; // não abre sozinho o painel de onde o herói já está
+  if(!S.tut) S.tut = 1; // começa o tutorial da Fenda (tutStep)
+  log('A Fenda está aberta! Ande até ela e encaixe a Pedra 1.', '#c9a8ff'); save(); dirtyPanel();
+}
+// Tutorial da 1ª Masmorra (S.tut): 1 ande até a Fenda · 2 encaixe a Pedra 1 · 3 mate as 50 · 4 mate o Chefe · 5 pegue a Pedra e volte
+// · −1 concluído. Se a corrida acabar antes do Chefe, o Ezequiel dá outra Pedra 1 e volta para o passo 1.
+const TUT_TXT = {1:'Ande até a Fenda (seta roxa) para abrir a Masmorra', 2:'Toque em "Encaixar a Pedra 1 e entrar"', 3:'Mate as 50 criaturas da Masmorra', 4:'O Chefe apareceu! Derrote-o (e desvie das marcas no chão)', 5:'Pegue a Pedra que o Chefe deixou e volte para a vila'};
+function tutStep(from, to){ if(S.tut === from){ S.tut = to; dirtyPanel(); } }
+// chamado ao voltar para a vila: termina o tutorial ou, se a corrida falhou, dá outra Pedra 1 para tentar de novo
+function tutTown(){
+  if(S.tut === 5){ S.tut = -1; log('Tutorial concluído! Junte 3 Pedras iguais na Mesa Rúnica para subir de nível.', '#f5cf3a'); }
+  else if(S.tut === 3 || S.tut === 4){ S.tut = 1; S.stones[1] = (S.stones[1] || 0) + 1; log('Ezequiel: "Não desanime. Tome outra Pedra 1 e tente de novo."', '#c9a8ff'); }
+}
+function updateCut(dt){
+  const c = cut; c.t += dt; hero.moving = false;
+  if(c.st === 0){ if(c.t > .8){ c.st = 1; log(`${RIFT_NPC.n} se aproxima…`, '#c9a8ff'); } }
+  else if(c.st === 1){
+    const side = riftNpc.x > hero.x ? 44 : -44;
+    hero.face = Math.atan2(riftNpc.y - hero.y, riftNpc.x - hero.x);
+    if(npcWalk({x:hero.x + side, y:hero.y + 4}, dt)){ riftNpc.face = Math.atan2(hero.y - riftNpc.y, hero.x - riftNpc.x); c.st = 2; showTalk(RIFT_NPC.n, CUT_A, () => { c.st = 3; }); }
+  }
+  else if(c.st === 3){
+    const npcIn = npcWalk(CUT_RIFT, dt, 90), follow = {x:riftNpc.x - Math.cos(riftNpc.face)*46, y:riftNpc.y - Math.sin(riftNpc.face)*46 + 6};
+    if(D(hero, riftNpc) > 40) heroWalk(follow, dt);
+    if(npcIn && D(hero, riftNpc) < 70){ c.st = 4; c.t = 0; riftNpc.face = Math.atan2(DPORT.y - riftNpc.y, DPORT.x - riftNpc.x); hero.face = riftNpc.face;
+      S.riftIntro = true; // a Fenda desperta (desenho muda em 07)
+      for(let i = 0; i < 50; i++){ const an = Math.random()*TAU, sp = rnd(60, 220); part({x:DPORT.x, y:DPORT.y - 40, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 30, life:rnd(.6, 1.2), size:rnd(2, 4.5), c:pick(['#c08aff','#f0d8ff','#7a4ac8'])}); }
+      ring(DPORT.x, DPORT.y, 150, '#c08aff', 1.2, 6); ring(DPORT.x, DPORT.y, 90, '#f0d8ff', .9, 3);
+      txt(DPORT.x, DPORT.y - 120, 'A FENDA DESPERTOU', '#e0b0ff', 20, -12);
+    }
+  }
+  else if(c.st === 4){ if(c.t > 1.6){ c.st = 5; riftNpc.face = Math.atan2(hero.y - riftNpc.y, hero.x - riftNpc.x); showTalk(RIFT_NPC.n, CUT_B, () => { c.st = 6; giftStone(); }); } }
+  else if(c.st === 6){ if(npcWalk(RIFT_NPC, dt, 80)) endCut(); }
+}
 function updateTown(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
   heroTimers(dt);
+  if(cut && mode === 'town'){ updateCut(dt); if(hero.hp < ST.life) hero.hp = Math.min(ST.life, hero.hp + ST.life*.4*dt); return; }
   if(mode === 'town'){
     // movimento: joystick/WASD tem prioridade; senão, anda até o ponto tocado
     let ang = manualDir();

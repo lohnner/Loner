@@ -82,16 +82,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .sk.disabled{filter:grayscale(1);opacity:.55}
 .sk.ready{border-color:var(--poison-d);box-shadow:0 0 10px rgba(155,216,74,.3)}
 .sk.queued{border-color:var(--gold)}
-#townBtn{position:absolute;right:calc(max(10px,env(safe-area-inset-right,0px)) + 110px);top:68px;z-index:2;display:flex;align-items:center;gap:7px;padding:9px 14px 9px 11px;border-radius:24px;border:1px solid #4a5fa8;background:rgba(18,22,40,.88);color:#cfdcff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-#townBtn svg{width:22px;height:22px;color:#a9c4ff}
+/* Voltar à vila: pequeno, embaixo do "Faltam N criaturas" e da mesma largura (os dois esticam na coluna do minimapa) */
+#townBtn{justify-self:stretch;display:flex;align-items:center;justify-content:center;gap:4px;padding:2px 8px;border-radius:8px;border:1px solid #4a5fa8;background:rgba(18,22,40,.88);color:#cfdcff;font-weight:800;font-size:12px;line-height:1.4}
+#townBtn svg{width:13px;height:13px;color:#a9c4ff}
 #mmWrap{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:grid;gap:4px;justify-items:end;z-index:2}
+#mmWrap.big #townBtn{display:none}
 #mm{width:96px;height:96px;border-radius:10px;border:1px solid #4a5a3a;background:rgba(6,8,6,.75);box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:pointer}
-#mmLeft{font-size:12px;font-weight:800;color:#e9e3d1;background:rgba(8,10,9,.8);padding:2px 8px;border-radius:8px;text-align:right;max-width:170px}
+#mmLeft{justify-self:stretch;font-size:12px;font-weight:800;color:#e9e3d1;background:rgba(8,10,9,.8);padding:2px 8px;border-radius:8px;text-align:right;max-width:170px}
 #mmLeft.done{color:#f5cf3a;border:1px solid #8a6a1a}
 #mmWrap.big{top:50%;right:50%;transform:translate(50%,-50%);justify-items:center}
 #mmWrap.big #mm{width:min(86vw,440px);height:min(86vw,440px);border-color:#8a9a6a}
 #mmWrap.big #mmLeft{max-width:none;text-align:center}
-#townBtn.done{border-color:#f5cf3a;color:#ffe9a0;box-shadow:0 0 16px rgba(245,207,58,.5);animation:pulse 1.2s infinite alternate}
+#townBtn.done{border-color:#f5cf3a;color:#ffe9a0;box-shadow:0 0 10px rgba(245,207,58,.5);animation:pulse 1.2s infinite alternate}
 @keyframes pulse{to{transform:scale(1.06)}}
 #goBtn{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:10px;display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:24px;border:1px solid var(--poison-d);background:rgba(20,34,16,.9);color:#d8f0b8;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.5);z-index:2}
 #goBtn svg{width:20px;height:20px;color:var(--poison)}
@@ -273,6 +275,20 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .upd-card b{font:700 28px/1.1 var(--display);color:var(--gold)}
 .upd-card p{margin:0;color:var(--muted)}
 /* Janela do item: as duas fichas lado a lado (tela deitada) */
+/* Caixa de fala das cenas (embaixo, no meio) */
+/* durante a cena (#app.cine) somem HUD, abas e botões; a fala fica em cima */
+#app.cine .hud,#app.cine .nav,#app.cine #goBtn,#app.cine #log,#app.cine #tut{display:none}
+#talk{position:fixed;left:0;right:0;top:max(10px,env(safe-area-inset-top,0px));z-index:35;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.talk-card{pointer-events:auto;position:relative;width:min(560px,100%);display:grid;gap:4px;padding:12px 16px 10px;border-radius:14px;border:1px solid #6a4a98;background:linear-gradient(180deg,rgba(30,22,44,.96),rgba(16,12,24,.96));box-shadow:0 10px 30px rgba(0,0,0,.6);cursor:pointer}
+.talk-card b{font:700 20px/1 var(--display);color:#c9a8ff}
+.talk-card p{margin:0;font-size:15px;line-height:1.35;color:var(--fg)}
+.talk-card small{color:var(--muted);font-size:11px;text-align:right}
+#talkSkip{position:absolute;top:8px;right:10px;padding:3px 10px;font-size:12px}
+/* Faixa do tutorial (em cima, no meio) */
+#tut{position:absolute;left:50%;top:66px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:8px;max-width:min(420px,60vw);padding:5px 12px;border-radius:10px;border:1px solid #6a4a98;background:rgba(24,16,36,.88);color:#e8d8ff;font-size:12px;font-weight:700;pointer-events:none}
+.tut-dot{width:8px;height:8px;border-radius:50%;background:#c08aff;flex:none;animation:pulse 1s infinite alternate}
+.btn.tut-glow{box-shadow:0 0 0 2px #c08aff,0 0 18px rgba(192,138,255,.6);animation:pulse 1s infinite alternate}
+.stones-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:8px}
 .scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;align-items:start}
 /* Celular em pé: pede para deitar (o jogo só funciona deitado) */
 #rotate{display:none;position:fixed;inset:0;z-index:60;background:var(--bg);place-items:center;text-align:center;padding:24px}
