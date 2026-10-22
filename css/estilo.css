@@ -239,9 +239,13 @@ input[type=range]{width:100%;accent-color:var(--life);height:28px}
 .slist li em{font-style:normal;font-weight:800;font-size:12px;white-space:nowrap;color:var(--muted)}
 .slist li.up,.slist li.up em{color:var(--poison)}
 .slist li.down,.slist li.down em{color:#ff8c80}
-.slist li.sk span{color:var(--r4);font-weight:700}
+.slist li.skl span{color:var(--r4);font-weight:700}
 .slist li.none{color:var(--muted)}
+.slist li.grp{margin-top:5px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:2px}
 .slist .pf{color:var(--perf)}
+.slist .tier{display:inline-block;min-width:26px;margin-right:6px;padding:0 4px;border-radius:5px;border:1px solid var(--line);font-style:normal;font-size:10px;font-weight:800;line-height:16px;text-align:center;color:var(--muted);vertical-align:1px}
+.slist .tier.t2{color:var(--gold);border-color:var(--gold-d)}
+.slist .tier.t1{color:#1a0d02;background:var(--perf);border-color:var(--perf)}
 .scard.none-eq{color:var(--muted);font-size:13px;border-style:dashed}
 .ssum{display:flex;gap:14px;font-size:14px;font-weight:800}
 .ssum .up{color:var(--poison)} .ssum .down{color:#ff8c80}

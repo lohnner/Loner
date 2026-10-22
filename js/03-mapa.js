@@ -243,10 +243,14 @@ function makeMon(type, x, y, ml, elite){
 }
 // Criaturas do mapa: MAP_MONS por mapa (Masmorra: DUN_KILLS), espalhadas pelas salas (menos a de início). Não nascem mais:
 // matou todas, o mapa está limpo e o jogador volta para a vila.
-// Primeiro mapa: criaturas sozinhas. Demais: sozinha (35%), dupla (30%) ou grupo de 3 a 5 (35%).
-const SOLO_MAP = 'campos', MAP_MONS = 80;
-const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; const r = Math.random(); return r < .35 ? 1 : r < .65 ? 2 : rint(3, 5); };
-let mapTotal = 0, mapCleared = false;
+// Primeiro mapa: criaturas sozinhas. Demais: PACK_SOLO das vezes sozinha, senão um grupo de 2 até packMax() — o máximo cresce
+// com o mapa (2º mapa 2–3, 3º até 4... último até PACK_MAX = 10; Masmorra até 10). Atacou/viu uma do grupo, o grupo todo vem (m.pack, 06).
+// Grupo grande: cada criatura um pouco mais fraca (vida e dano × packF; 4 = 95% ... 7 = 80%, 10 = 70%), senão 10 juntas matam na hora
+const SOLO_MAP = 'campos', MAP_MONS = 80, PACK_MAX = 10, PACK_SOLO = .35;
+const packF = n => n <= 3 ? 1 : Math.max(.7, 1 - .05*(n - 3));
+const packMax = () => mapDef === DUN ? PACK_MAX : Math.min(PACK_MAX, 2 + MAPS.indexOf(mapDef));
+const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; return Math.random() < PACK_SOLO ? 1 : rint(2, packMax()); };
+let mapTotal = 0, mapCleared = false, packId = 0;
 function spawnLevel(){
   const total = mapDef === DUN ? DUN_KILLS : MAP_MONS;
   // lugares possíveis: chão a pelo menos 9 ladrilhos (pelo caminho) do início
@@ -254,10 +258,13 @@ function spawnLevel(){
   let left = total, guard = 0;
   while(left > 0 && guard++ < 500 && spots.length){
     const s = pick(spots), p = {x:(s % LV_N + .5)*TILE, y:(((s / LV_N) | 0) + .5)*TILE}, n = Math.min(left, packSize()), eliteIdx = Math.random() < (n === 1 ? .04 : .1) ? 0 : -1, main = pick(mapDef.mons);
+    const pk = n > 1 ? ++packId : 0, spread = 30 + n*9; // grupo maior se espalha um pouco mais
     for(let i = 0; i < n; i++){
       const t = Math.random() < .7 ? main : pick(mapDef.mons);
-      let x = p.x + rnd(-40, 40), y = p.y + rnd(-40, 40); if(!walkable(x, y, 8)){ x = p.x; y = p.y; }
+      let x = p.x + rnd(-spread, spread), y = p.y + rnd(-spread, spread); if(!walkable(x, y, 8)){ x = p.x + rnd(-12, 12); y = p.y + rnd(-12, 12); if(!walkable(x, y, 8)){ x = p.x; y = p.y; } }
       const m = makeMon(t, x, y, rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
+      m.pack = pk;
+      if(n > 3){ const f = packF(n); m.hpMax *= f; m.hp = m.hpMax; m.dmg *= f; }
       if(inDun()){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunElem(S.dun.phase); }
       m.lx = m.x; m.ly = m.y;
       mons.push(m); left--;

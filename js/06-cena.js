@@ -146,7 +146,9 @@ function monUpdate(m, dt){
   // só nota o herói se ele estiver perto pelo caminho das salas (não através da parede)
   const fl = LV ? LV.flow[Math.floor(m.y/TILE)*LV_N + Math.floor(m.x/TILE)] : 0;
   if(live && !m.aggro && d < 260 && fl >= 0 && fl <= 9) m.aggro = true;
-  if(!live) m.aggro = false;
+  if(!live){ m.aggro = false; m.called = false; }
+  // grupo: quando uma nota o herói (ou leva dano), chama as outras do mesmo grupo uma vez
+  if(m.aggro && m.pack && !m.called){ m.called = true; for(const o of mons) if(o.pack === m.pack && !o.dead && !o.aggro){ o.aggro = true; o.called = true; } }
   if(m.wind > 0) return;
   if(m.atkT > 0){
     m.atkT -= dt; m.moving = false;

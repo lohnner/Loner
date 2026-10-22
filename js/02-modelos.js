@@ -56,16 +56,81 @@ function genItem(ilvl, rar, slot, cls){
   it.name = nameItem(it);
   return it;
 }
-// Sorteia n atributos novos (sem repetir os que o item já tem), com força pela raridade atual
-function addAffixes(it, n){
-  const rf = RAR_F[it.rar], have = new Set(it.affix.map(a => a.k));
-  const pool = Object.keys(AFX).filter(k => AFX[k].slots.includes(it.slot) && !have.has(k));
-  for(let i = 0; i < n && pool.length; i++){
-    const k = pool.splice(Math.floor(Math.random()*pool.length), 1)[0], A = AFX[k], t = skew();
-    const lo = A.lo(it.ilvl), hi = A.hi(it.ilvl) * rf;
-    let v = lo + (hi - lo) * t; v = A.dec ? Math.round(v*10)/10 : Math.max(1, Math.round(v));
-    it.affix.push({k, v, t});
+// Tiers dos atributos (estilo Path of Exile): a faixa de cada atributo vai do mínimo (lo no nível 1) ao máximo (hi no nível 40, o teto).
+// T1 = 90–100% dessa faixa, T2 = 80–90%... T10 = 0–10%. O ilvl libera o melhor tier (bestTier: ilvl 37–40 → T1, 33–36 → T2... 1–4 → T10)
+// e o sorteio cai nele ou alguns abaixo (TIER_W por raridade: quanto mais rara, mais perto do melhor). t = posição na faixa (0–1).
+const TIERS = 10;
+// peso (por raridade) do melhor tier liberado, 1 abaixo, 2 abaixo... até 9 abaixo. Só entram os tiers que o ilvl libera e os pesos
+// são divididos entre eles: nível 1–4 só tem T10 (100%), 5–8 tem T9/T10 (T9 ~35–40%)... e no 37–40 o T1 é o mais difícil (2–9%).
+const TIER_W = [[2,4,8,12,15,17,16,13,8,5], [2,4,8,12,15,17,16,13,8,5], [4,7,11,15,16,15,13,10,6,3], [5,9,13,16,16,14,11,8,5,3], [9,13,16,16,14,11,9,6,4,2]];
+const affixRange = k => [AFX[k].lo(1), AFX[k].hi(MAX_LV)];
+const bestTier = ilvl => clamp(TIERS + 1 - Math.ceil(ilvl/4), 1, TIERS);
+const tierOf = t => clamp(TIERS - Math.floor(t*TIERS), 1, TIERS);
+function rollTier(it){
+  const best = bestTier(it.ilvl), w = (TIER_W[it.rar] || TIER_W[0]).slice(0, TIERS - best + 1);
+  let r = Math.random()*w.reduce((a, b) => a + b, 0), o = 0;
+  while(o < w.length - 1 && r >= w[o]){ r -= w[o]; o++; }
+  return best + o;
+}
+// Atributo pela posição t na faixa (cortada no melhor tier que o ilvl permite)
+function affixAt(it, k, t){
+  const A = AFX[k], [lo, hi] = affixRange(k);
+  t = clamp(t, 0, (TIERS - bestTier(it.ilvl) + 1)/TIERS);
+  const v = lo + (hi - lo)*t;
+  return {k, v:A.dec ? Math.round(v*10)/10 : Math.max(1, Math.round(v)), t, tier:tierOf(Math.min(t, .9999))};
+}
+// Sorteia o tier e um ponto dentro dele
+const rollAffix = (it, k) => { const tier = rollTier(it); return affixAt(it, k, (TIERS - tier + Math.random())/TIERS); };
+// Itens de antes dos tiers (ver < 7): cada atributo vira o tier do valor que já tinha (cortado pelo ilvl do item)
+function retierItem(it){
+  if(!it || !Array.isArray(it.affix)) return;
+  it.affix = it.affix.map(a => {
+    if(a.k === 'skill' || !AFX[a.k]) return a;
+    const [lo, hi] = affixRange(a.k);
+    return affixAt(it, a.k, (a.v - lo)/(hi - lo));
+  });
+}
+// Quantos prefixos (p) e sufixos (s) o item já tem
+const affixCount = it => { const c = {p:0, s:0}; for(const a of normalAffix(it)) if(AFX[a.k]) c[AFX[a.k].g]++; return c; };
+// Grupo do próximo atributo: o que tiver menos (empate = sorteio), sem passar de AFX_G_MAX nem usar grupo sem opção no espaço
+function nextGroup(it, c, pools){
+  const ok = ['p', 's'].filter(g => c[g] < AFX_G_MAX && pools[g].length);
+  if(!ok.length) return null;
+  if(ok.length === 2 && c.p !== c.s) return c.p < c.s ? 'p' : 's';
+  return pick(ok);
+}
+// Sorteia n atributos novos (sem repetir os que o item já tem), equilibrando prefixos e sufixos, cada um com seu tier.
+// ts (opcional) = posições t a usar no lugar do sorteio (migração de itens antigos)
+function addAffixes(it, n, ts){
+  const have = new Set(it.affix.map(a => a.k)), c = affixCount(it);
+  const pools = {p:[], s:[]};
+  for(const k in AFX) if(AFX[k].slots.includes(it.slot) && !have.has(k)) pools[AFX[k].g].push(k);
+  for(let i = 0; i < n; i++){
+    const g = nextGroup(it, c, pools); if(!g) break;
+    const k = pools[g].splice(Math.floor(Math.random()*pools[g].length), 1)[0];
+    it.affix.push(ts && ts.length ? affixAt(it, k, ts.shift()) : rollAffix(it, k)); c[g]++;
   }
+}
+// Itens de antes dos prefixos/sufixos (ver < 6): tira os atributos que não servem mais no espaço (ex.: vida na arma) ou que passam
+// do limite do grupo, e sorteia outros no lugar mantendo a qualidade (t) dos que saíram. O número de atributos não muda.
+function fixAffixes(it){
+  if(!it || !Array.isArray(it.affix)) return;
+  const skill = it.affix.filter(a => a.k === 'skill'), keep = [], lost = [], c = {p:0, s:0};
+  for(const a of normalAffix(it)){
+    const A = AFX[a.k];
+    if(A && A.slots.includes(it.slot) && c[A.g] < AFX_G_MAX && !keep.some(x => x.k === a.k)){ keep.push(a); c[A.g]++; }
+    else lost.push(typeof a.t === 'number' ? a.t : .5);
+  }
+  // equilibra: com 2 ou mais atributos, o grupo maior não pode passar do menor + 1 (ex.: 2 prefixos e nenhum sufixo vira 1+1)
+  const n = keep.length + lost.length;
+  for(const g of ['p', 's']){
+    const max = n === 1 ? 1 : Math.ceil(n/2);
+    while(c[g] > max){ const i = keep.findIndex(a => AFX[a.k].g === g); lost.push(keep[i].t); keep.splice(i, 1); c[g]--; }
+  }
+  it.affix = keep;
+  addAffixes(it, lost.length, lost);
+  it.affix.push(...skill);
+  if(it.rar === 1) it.name = nameItem(it);
 }
 // Usa um orbe no item. Orbes de melhoria sobem 1 raridade (+1 atributo, base melhor); a Anulação tira 1 atributo e baixa 1 raridade.
 // Devolve true se usou.
@@ -77,7 +142,10 @@ function upgradeItem(it, k){
   if(it.armor) it.armor = Math.max(1, Math.round(it.armor*f));
   it.rar = to;
   if(O.rm){
-    const rest = normalAffix(it); rest.splice(Math.floor(Math.random()*rest.length), 1);
+    // tira 1 atributo do grupo maior (empate = qualquer um), para prefixos e sufixos continuarem equilibrados
+    const rest = normalAffix(it), c = affixCount(it), big = c.p === c.s ? null : c.p > c.s ? 'p' : 's';
+    const idx = rest.map((a, i) => i).filter(i => !big || (AFX[rest[i].k] && AFX[rest[i].k].g === big));
+    rest.splice(pick(idx.length ? idx : rest.map((a, i) => i)), 1);
     it.affix = from === LEG_R ? rest : [...rest, ...it.affix.filter(a => a.k === 'skill')];
     if(from === LEG_R && it.slot !== 'bow') delete it.cls; // sem a +habilidade, qualquer classe usa
   } else {
@@ -127,7 +195,7 @@ const sellPrice = it => Math.round((4 + it.ilvl*2) * [1,3,6,14,40][it.rar]);
 
 /* ---------- STATUS ---------- */
 function calcStats(eq = S.eq){
-  const a = {life:0,armor:0,pois:0,ias:0,crit:0,critd:0,ms:0,ls:0,cdr:0,pdur:0,gf:0,rf:0,rc:0,rl:0,rp:0,rall:0}, bonus = {};
+  const a = {wdp:0,fdmg:0,dmg:0,life:0,armor:0,pois:0,ias:0,crit:0,critd:0,ms:0,ls:0,cdr:0,pdur:0,gf:0,rf:0,rc:0,rl:0,rp:0,rall:0}, bonus = {};
   let wmin = 1, wmax = 2, aps = 1.1;
   for(const slot of SLOTS){
     const it = eq[slot]; if(!it) continue;
@@ -140,7 +208,9 @@ function calcStats(eq = S.eq){
   const pp = S.pp || {}, dm = (1 + L*.03) * (1 + .01*(pp.dmg || 0)), st = {rk, bonus};
   // Paragon: cada nível dá +1 de dano (na arma) e +10 de vida, para todas as classes
   const par = S.par || 0;
-  st.min = wmin*dm + par; st.max = wmax*dm + par; st.avg = (st.min + st.max)/2;
+  // Prefixos de dano: % da arma (só nela), dano adicionado (v a 2v) e % de dano geral
+  const wm = (1 + a.wdp/100), gm = dm * (1 + a.dmg/100);
+  st.min = (wmin*wm + a.fdmg)*gm + par; st.max = (wmax*wm + a.fdmg*2)*gm + par; st.avg = (st.min + st.max)/2;
   // As passivas de cada classe ocupam o mesmo papel: Dedos Ligeiros = Fúria, Toxina Potente = Brutalidade, Couro Curtido ~ Pele de Ferro
   st.aps = aps * (1 + a.ias/100) * (1 + .05*(rk('agility') + rk('fury') + rk('channel'))) * (1 + .005*(pp.ias || 0));
   st.crit = Math.min(75, 5 + a.crit); st.critd = 150 + a.critd;

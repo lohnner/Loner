@@ -275,24 +275,34 @@ const BASES = {
   amulet:['Pingente de Osso','Amuleto de Prata','Talismã Verde','Medalhão Antigo'],
 };
 const ARMOR_M = {helm:1,chest:1.8,gloves:.7,boots:.8};
+// Atributos dos itens, no estilo Path of Exile: cada um é Prefixo (g:'p' — dano, vida, armadura, movimento) ou Sufixo (g:'s' — velocidade,
+// crítico, resistências, utilidade). Um item tem no máximo AFX_G_MAX de cada grupo e eles ficam equilibrados (addAffixes em 02):
+// 1 atributo = qualquer um; 2 = 1+1; 3 = 2+1 ou 1+2; 4 (Lendário) = 2+2. Cada espaço só sorteia o que faz sentido nele (arma não dá vida).
+const AFX_G_MAX = 2, AFX_G_N = {p:'Prefixo', s:'Sufixo'};
+const RES_SLOTS = ['helm','chest','gloves','boots','ring','amulet'];
 const AFX = {
-  life:{n:v=>`+${v} de vida`,lo:l=>4+l*1.5,hi:l=>12+l*4.2,slots:SLOTS},
-  pois:{n:v=>`+${v}% de dano de ${dotN()}`,lo:()=>5,hi:l=>16+l*.9,slots:['bow','amulet','gloves','ring','helm']},
-  ias:{n:v=>`+${v}% de velocidade de ataque`,lo:()=>3,hi:()=>15,slots:['bow','gloves','ring','amulet']},
-  crit:{n:v=>`+${n1(v)}% de chance de crítico`,lo:()=>1,hi:()=>8,dec:1,slots:['gloves','ring','amulet','helm']},
-  critd:{n:v=>`+${v}% de dano crítico`,lo:()=>8,hi:()=>45,slots:['bow','gloves','amulet','ring']},
-  ms:{n:v=>`+${v}% de velocidade de movimento`,lo:()=>3,hi:()=>15,slots:['boots']},
-  armor:{n:v=>`+${v} de armadura`,lo:l=>2+l*.6,hi:l=>6+l*2,slots:['helm','chest','gloves','boots']},
-  ls:{n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow','ring','amulet']},
-  cdr:{n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
-  pdur:{n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','chest','amulet']},
-  gf:{n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
+  // Prefixos
+  wdp:{g:'p',n:v=>`+${v}% de dano da arma`,lo:()=>4,hi:l=>8+l*.3,slots:['bow']}, // só na arma: aumenta o dano dela (calcStats)
+  fdmg:{g:'p',n:v=>`Adiciona ${v} a ${v*2} de dano`,lo:l=>1+l*.04,hi:l=>1+l*.15,slots:['bow','gloves','ring']},
+  dmg:{g:'p',n:v=>`+${v}% de dano`,lo:()=>2,hi:()=>6,slots:['ring','amulet']},
+  pois:{g:'p',n:v=>`+${v}% de dano de ${dotN()}`,lo:()=>4,hi:l=>13+l*.7,slots:['bow','gloves','ring','amulet']},
+  life:{g:'p',n:v=>`+${v} de vida`,lo:l=>4+l*1.3,hi:l=>10+l*3.4,slots:['helm','chest','gloves','boots','ring','amulet']},
+  armor:{g:'p',n:v=>`+${v} de armadura`,lo:l=>2+l*.6,hi:l=>6+l*2,slots:['helm','chest','gloves','boots']},
+  ms:{g:'p',n:v=>`+${v}% de velocidade de movimento`,lo:()=>3,hi:()=>15,slots:['boots']},
+  // Sufixos
+  ias:{g:'s',n:v=>`+${v}% de velocidade de ataque`,lo:()=>3,hi:()=>15,slots:['bow','gloves','ring','amulet']},
+  crit:{g:'s',n:v=>`+${n1(v)}% de chance de crítico`,lo:()=>1,hi:()=>8,dec:1,slots:['gloves','ring','amulet','helm']},
+  critd:{g:'s',n:v=>`+${v}% de dano crítico`,lo:()=>8,hi:()=>45,slots:['bow','gloves','amulet','ring']},
+  ls:{g:'s',n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow','ring','amulet']},
+  pdur:{g:'s',n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','amulet']},
+  cdr:{g:'s',n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
+  gf:{g:'s',n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
   // Resistências aos 4 tipos de dano (Fogo, Raio, Gelo, Veneno); "todos os elementos" vale para os 4
-  rf:{n:v=>`+${v}% de resistência a fogo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rl:{n:v=>`+${v}% de resistência a raio`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rc:{n:v=>`+${v}% de resistência a gelo`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rp:{n:v=>`+${v}% de resistência a veneno`,lo:()=>5,hi:l=>12+l*.6,slots:['helm','chest','gloves','boots','ring','amulet']},
-  rall:{n:v=>`+${v}% de resistência a todos os elementos`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
+  rf:{g:'s',n:v=>`+${v}% de resistência a fogo`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
+  rl:{g:'s',n:v=>`+${v}% de resistência a raio`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
+  rc:{g:'s',n:v=>`+${v}% de resistência a gelo`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
+  rp:{g:'s',n:v=>`+${v}% de resistência a veneno`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
+  rall:{g:'s',n:v=>`+${v}% de resistência a todos os elementos`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
 };
 // Resistências que deixaram de existir (caos, necrótica, psíquica): itens antigos trocam cada uma por uma das 4 que o item ainda não tem (migrateElemItem)
 const OLD_RES = ['rx','rn','rs'], NEW_RES = ['rf','rl','rc','rp'];
@@ -306,7 +316,7 @@ function migrateElemItem(it){
     a.v = Math.max(1, Math.round(lo + (hi - lo)*(typeof a.t === 'number' ? a.t : .5)));
   }
 }
-const SUF = {rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rp:'do Antídoto',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
+const SUF = {wdp:'da Crueldade',fdmg:'do Gume',dmg:'da Fúria',rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rp:'do Antídoto',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
 const RA = ['Presa','Sussurro','Agouro','Espinho','Mordida','Lamento','Véu','Garra','Sombra','Sopro','Ferrão','Prece'];
 const RB = ['Fel','Cinzas','Musgo','Ossos','Víbora','Cripta','Névoa','Peste','Corvo','Brejo','Cicuta','Lodo'];
 const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do Pântano','Capuz da Mamba'],chest:['Pele da Hidra','Manto da Cicuta'],gloves:['Toque Pestilento','Dedos de Áspide'],boots:['Passos do Charco','Botas da Naja'],ring:['Olho da Serpente','Aliança Verde'],amulet:['Coração de Peçonha','Lágrima de Cobra']};
@@ -321,7 +331,7 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:5,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:7,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1}};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
@@ -342,7 +352,11 @@ function normalize(s){
   if((s.ver || 0) < 4){ d.inv.forEach(rebalanceItem); d.shop.forEach(rebalanceItem); for(const k in d.eq) rebalanceItem(d.eq[k]); }
   // ver 5: só 4 tipos de dano — resistências a caos/necrótico/psíquico viram fogo/raio/gelo/veneno
   if((s.ver || 0) < 5){ d.inv.forEach(migrateElemItem); d.shop.forEach(migrateElemItem); for(const k in d.eq) migrateElemItem(d.eq[k]); }
-  d.ver = 5;
+  // ver 6: prefixos e sufixos (2 de cada no máximo, equilibrados, só o que faz sentido no espaço) — fixAffixes (02)
+  if((s.ver || 0) < 6){ d.inv.forEach(fixAffixes); d.shop.forEach(fixAffixes); for(const k in d.eq) fixAffixes(d.eq[k]); }
+  // ver 7: tiers dos atributos (T1–T10, teto no nível 40) — retierItem (02)
+  if((s.ver || 0) < 7){ d.inv.forEach(retierItem); d.shop.forEach(retierItem); for(const k in d.eq) retierItem(d.eq[k]); }
+  d.ver = 7;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.

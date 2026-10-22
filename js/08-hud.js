@@ -465,7 +465,13 @@ function itemRows(it){
   const r = [];
   if(it.slot === 'bow'){ r.push({k:'wdmg', v:(it.min + it.max)/2, txt:`${fmt(it.min)}–${fmt(it.max)} de dano`, perf:it.bt >= .9}); r.push({k:'aps', v:it.aps, txt:`${n1(it.aps)} ataques/s`}); }
   else if(it.armor) r.push({k:'barmor', v:it.armor, txt:`${fmt(it.armor)} de armadura`, perf:it.bt >= .9});
-  for(const a of it.affix) r.push(a.k === 'skill' ? {k:'sk:' + a.s, v:a.v, txt:`+${a.v} em ${SKD[a.s].n}`, sk:1, perf:a.v === 2} : {k:a.k, v:a.v, txt:AFX[a.k].n(a.v), perf:a.t >= .9});
+  // Prefixos e sufixos em blocos separados (com o título do bloco), a +habilidade do Lendário por último
+  for(const g of ['p', 's']){
+    const list = it.affix.filter(a => AFX[a.k] && AFX[a.k].g === g);
+    if(list.length) r.push({hdr:`${AFX_G_N[g]}s · ${list.length}/${AFX_G_MAX}`});
+    for(const a of list) r.push({k:a.k, v:a.v, txt:AFX[a.k].n(a.v), tier:a.tier || tierOf(Math.min(a.t || 0, .9999))});
+  }
+  for(const a of it.affix) if(a.k === 'skill') r.push({k:'sk:' + a.s, v:a.v, txt:`+${a.v} em ${SKD[a.s].n}`, sk:1, perf:a.v === 2});
   return r;
 }
 // Ficha de um item com todos os status. vs = valores do outro item para comparar:
@@ -473,6 +479,7 @@ function itemRows(it){
 //  mode 'cur' (equipado): vermelho = o que você perde trocando (o item novo não tem ou tem menos)
 function statCard(it, title, vs, mode, extra){
   const rows = itemRows(it).map(r => {
+    if(r.hdr) return `<li class="grp">${r.hdr}</li>`;
     let cls = '', tag = '';
     if(vs){
       const d = r.v - (vs[r.k] || 0), num = DIFF_DEC[r.k] ? n1(Math.abs(d)) : fmt(Math.abs(d));
@@ -480,7 +487,9 @@ function statCard(it, title, vs, mode, extra){
       else if(mode === 'new'){ cls = d > 0 ? 'up' : 'down'; tag = (d > 0 ? '▲ +' : '▼ −') + num; }
       else if(d > 0){ cls = 'down'; tag = '−' + num + ' ao trocar'; }
     }
-    return `<li class="${cls}${r.sk ? ' sk' : ''}"><span>${r.txt}${r.perf ? ' <b class="pf">◆</b>' : ''}</span>${tag ? `<em>${tag}</em>` : ''}</li>`;
+    // tier do atributo (T1 = 90–100% do máximo): T1 laranja, T2–T3 dourado, o resto apagado
+    const tierChip = r.tier ? `<i class="tier${r.tier === 1 ? ' t1' : r.tier <= 3 ? ' t2' : ''}" title="Tier ${r.tier}: ${(TIERS - r.tier)*10}–${(TIERS - r.tier + 1)*10}% do máximo">T${r.tier}</i>` : '';
+    return `<li class="${cls}${r.sk ? ' skl' : ''}"><span>${tierChip}${r.txt}${r.perf ? ' <b class="pf">◆</b>' : ''}</span>${tag ? `<em>${tag}</em>` : ''}</li>`;
   }).join('');
   return `<div class="scard" style="--rc:${RAR[it.rar].c}"><div class="sh">${title}</div><div class="sn">${it.name}</div>
     <div class="st">${RAR[it.rar].n} · ${itemSlotN(it)} · ilvl ${it.ilvl}${extra || ''}</div>
