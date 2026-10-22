@@ -3,12 +3,17 @@
 'use strict';
 
 /* ---------- RUNTIME ---------- */
-const cv = $('#cv'), ctx = cv.getContext('2d');
+// Canvas opaco (alpha:false): o render pinta a tela inteira todo quadro, e o navegador não precisa misturar com a página atrás
+const cv = $('#cv'), ctx = cv.getContext('2d', {alpha:false});
 let cw = 360, ch = 480, dpr = 1, zoom = 1;
+// Resolução interna: no máximo MAX_PX pixels (telas 2K/4K ou Windows em 125–150% desenhariam 4–8 milhões por quadro) e
+// renderScale (0,7–1), que o frame() (07) baixa sozinho se os quadros ficarem pesados e sobe de volta quando sobra tempo.
+const MAX_PX = 3e6;
+let renderScale = 1;
 function resize(){
   const r = cv.parentElement.getBoundingClientRect();
-  dpr = Math.min(2, window.devicePixelRatio || 1);
   cw = Math.max(1, r.width); ch = Math.max(1, r.height);
+  dpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PX/(cw*ch))) * renderScale;
   cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
   cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
   zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3);

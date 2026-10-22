@@ -1101,11 +1101,24 @@ function tickTrans(dt){
   if(!trans.did && t >= .35){ trans.did = true; trans.fn(); }
   if(t >= .8){ trans = null; fade = 0; }
 }
+// Qualidade automática: médias do trabalho por quadro (simular + desenhar, em ms) e do intervalo real entre quadros (pega também
+// o trabalho da placa de vídeo, que não aparece no tempo do JS). Pesado (trabalho > FRAME_HEAVY ou intervalo > FRAME_SLOW) por
+// ~1,5 s baixa renderScale (03) em 0,1 até RS_MIN; leve por ~3 s sobe de volta. Assim o PC fraco segura 60 FPS e o forte fica nítido.
+const FRAME_HEAVY = 11, FRAME_LIGHT = 5.5, FRAME_SLOW = 19.5, FRAME_OK = 17.5, RS_MIN = .7;
+let frameCost = 0, frameGap = 16.7, heavyT = 0, lightT = 0;
 function frame(now){
-  let dt = Math.min(.05, (now - last)/1000); last = now;
+  const gap = now - last;
+  let dt = Math.min(.05, gap/1000); last = now;
+  const w0 = performance.now();
   if(S.speed !== 0) step(dt); // jogo sempre em 1x (S.speed = 0 só para pausar em testes)
   tickTrans(dt);
   render();
+  frameCost += (performance.now() - w0 - frameCost)*.05;
+  if(gap < 250) frameGap += (gap - frameGap)*.05; // ignora a volta de aba escondida
+  const heavy = frameCost > FRAME_HEAVY || frameGap > FRAME_SLOW, light = frameCost < FRAME_LIGHT && frameGap < FRAME_OK;
+  heavyT = heavy ? heavyT + dt : 0; lightT = light ? lightT + dt : 0;
+  if(heavyT > 1.5 && renderScale > RS_MIN){ renderScale = Math.round((renderScale - .1)*10)/10; heavyT = 0; resize(); }
+  else if(lightT > 3 && renderScale < 1){ renderScale = Math.round((renderScale + .1)*10)/10; lightT = 0; resize(); }
   uiT -= dt; if(uiT <= 0){ uiT = .1; updateHud(); }
   saveT -= dt; if(saveT <= 0){ saveT = 5; save(); }
   accountTick(dt);
