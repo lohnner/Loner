@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classes · Wiki do Loner</title>
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+<main>
+  <h1>Classes</h1>
+  <p class="lead">São 3 classes. Cada uma tem um tipo de dano ao longo do tempo (veneno, sangramento ou queimadura), 4 habilidades ativas, 5 passivas, uma esquiva própria e uma suprema que libera no nível 40.</p>
+  <div class="toc"><a href="#comparar">Comparação</a><a href="#arqueiro">Arqueiro</a><a href="#guerreiro">Guerreiro</a><a href="#mago">Mago</a><a href="#pontos">Pontos de habilidade</a></div>
+
+  <h2 id="comparar">Comparação rápida</h2>
+  <div id="cmp"></div>
+  <div class="note">Os atributos de item <b>+% de dano ao longo do tempo</b> e <b>+% de duração</b> servem para as três classes: no Arqueiro aumentam o veneno, no Guerreiro o sangramento e no Mago a queimadura.</div>
+
+  <div class="note">Nas descrições abaixo, os números de dano (ex.: "sangra 190 em 4s") são com uma arma de <b>100 de dano médio</b> e sem bônus de itens. As porcentagens valem sempre.</div>
+  <section id="arqueiro"></section>
+  <section id="guerreiro"></section>
+  <section id="mago"></section>
+
+  <h2 id="pontos">Pontos de habilidade</h2>
+  <ul>
+    <li>Cada nível dá <b>1 ponto</b>. Você começa com a 1ª habilidade da classe no rank 1.</li>
+    <li>Cada habilidade só libera a partir de um nível (ex.: a ultimate da classe no nível 10, Contágio / Sede de Sangue / Combustão no 12).</li>
+    <li>Rank máximo: <b id="skmax"></b> (as passivas especiais que agem quando a criatura morre vão até 5).</li>
+    <li>Itens <span class="r4">Lendários</span> dão <b>+1</b> (às vezes +2) numa habilidade da classe, passando do máximo.</li>
+    <li>Gastar ponto: em qualquer lugar. <b>Redistribuir tudo:</b> só na vila, grátis.</li>
+    <li>A suprema não usa pontos: libera sozinha no nível 40.</li>
+  </ul>
+</main>
+<script src="../js/01-base.js"></script>
+<script src="../js/02-modelos.js"></script>
+<script src="icones.js"></script>
+<script src="wiki.js"></script>
+<script>
+wikiLayout();
+put('#skmax', SK_MAX);
+const INFO = {
+  arqueiro:{
+    papel:'Ataca de longe com o arco e recua. Envenena tudo: o veneno continua doendo depois que você se afasta, e o Contágio faz ele pular de uma criatura para outra quando ela morre.',
+    inato:['+20% de resistência a <b class="c-poison">Veneno</b>', 'Vida normal (100%)', 'Sem armadura extra'],
+    bom:'Jogar de longe, andar em volta do grupo e deixar o veneno trabalhar.', ruim:'Pouca vida: ser pego por um pulo ou um grupo de 6 criaturas dói muito.',
+    imgs:[['arrow','Flecha Venenosa'],['fan','Leque Tóxico'],['rain','Chuva Ácida'],['burst','Explosão de Praga'],['storm','Tempestade de Flechas (suprema)']]},
+  guerreiro:{
+    papel:'Corpo a corpo com espada de uma mão. É o mais resistente do jogo e faz as criaturas sangrarem; o sangramento dói 50% mais enquanto a criatura anda.',
+    inato:['+40% de vida', `Armadura extra: 10 + 2,2 por nível`, '15% menos dano recebido', '1,5% do dano vira vida'],
+    bom:'Entrar no meio do grupo, girar e se curar com Sede de Sangue.', ruim:'Precisa chegar perto: criaturas que atiram de longe obrigam a correr atrás.',
+    imgs:[['cleave','Golpe Dilacerante'],['charge','Investida'],['whirl','Giro de Lâmina'],['rupture','Ruptura'],['titan','Fúria do Titã (suprema)']]},
+  mago:{
+    papel:'Magias de fogo de longe, quase tudo em área. Queima grupos inteiros e, com Combustão, quem morre queimando explode nos vizinhos.',
+    inato:['+20% de resistência a <b class="c-fire">Fogo</b>', '8% menos vida', 'Sem armadura extra'],
+    bom:'Limpar grupos grandes de longe com Meteoro, Onda de Chamas e Inferno.', ruim:'É o mais frágil: depende de esquivar (Teleporte) e de matar rápido.',
+    imgs:[['firebolt','Bola de Fogo'],['flamewave','Onda de Chamas'],['meteor','Meteoro'],['inferno','Inferno'],['cataclysm','Cataclismo (suprema)']]},
+};
+put('#cmp', table(['', 'Arqueiro', 'Guerreiro', 'Mago'], [
+  ['Distância', 'Longe', 'Corpo a corpo', 'Longe'],
+  ['Arma', 'Arco', 'Espada / machado', 'Cajado'],
+  ['Dano ao longo do tempo', ELN('poison') + ' Veneno', '<b style="color:#e0574a">Sangramento</b>', ELN('fire') + ' Queimadura'],
+  ['Vida', '100%', '<b>140%</b>', '92%'],
+  ['Armadura extra', '—', '<b>10 + 2,2/nível</b>', '—'],
+  ['Dano recebido', '100%', '<b>85%</b>', '100%'],
+  ['Roubo de vida inato', '—', '1,5%', '—'],
+  ['Resistência inata', '+20% veneno', '—', '+20% fogo'],
+  ['Esquiva', `${DODGE.arqueiro.n} (${n1(DODGE.arqueiro.cd)} s)`, `${DODGE.guerreiro.n} (${n1(DODGE.guerreiro.cd)} s)`, `${DODGE.mago.n} (${n1(DODGE.mago.cd)} s)`],
+  ['Suprema (nível 40)', SKD.storm.n, SKD.titan.n, SKD.cataclysm.n],
+]));
+for(const cls of ['arqueiro', 'guerreiro', 'mago']){
+  const I = INFO[cls], K = CLASS_KIT[cls], Dg = DODGE[cls], dot = DOT_INFO[cls];
+  put('#' + cls, `<h2>${clsN(cls)}</h2>
+    <div class="hero-row"><img class="shot" src="img/heroi-${cls}.jpg" alt="${clsN(cls)} parado, de lado" width="480" height="440">
+    <div><p class="lead" style="font-size:17px">${I.papel}</p>
+      <p><b>Dano ao longo do tempo:</b> ${dot.t}. <b>Arma:</b> ${{arqueiro:'arco', guerreiro:'espada ou machado de uma mão', mago:'cajado'}[cls]}.</p>
+      <p><b>Bônus da classe:</b></p><ul>${I.inato.map(x => `<li>${x}</li>`).join('')}</ul>
+      <p><b>Esquiva — ${Dg.n}:</b> avança ${Dg.len} de distância sem levar dano. Recarga ${n1(Dg.cd)} s (os atributos de recarga diminuem).</p>
+      <div class="tip"><b>Bom em:</b> ${I.bom}<br><b>Cuidado:</b> ${I.ruim}</div></div></div>
+    <h3>Habilidades ativas</h3><div class="card">${skillList(cls, K.active)}</div>
+    <h3>Habilidades passivas</h3><div class="card">${skillList(cls, K.passive)}</div>
+    <h3>Suprema</h3><div class="card">${skillList(cls, [ULT[cls]])}</div>
+    <h3>Em ação</h3><div class="grid">${I.imgs.map(([id, n]) => `<figure><img class="shot" src="img/hab-${id}.jpg" alt="${n} sendo usada contra um grupo" loading="lazy" width="748" height="442"><figcaption>${n}</figcaption></figure>`).join('')}</div>`);
+}
+</script>
+</body>
+</html>

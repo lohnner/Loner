@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapas e criaturas · Wiki do Loner</title>
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+<main>
+  <h1>Mapas e criaturas</h1>
+  <p class="lead">São 9 mapas do nível 1 ao 40, cada um com 5 criaturas e 1 ou 2 tipos de dano. Todo mapa é gerado de novo a cada entrada. No nível 40 eles viram o Mapa Aleatório.</p>
+  <div class="toc"><a href="#como">Como os mapas funcionam</a><a href="#lista">Os 9 mapas</a><a href="#grupos">Grupos e elites</a><a href="#aleatorio">Mapa Aleatório (nível 40)</a><a href="#todos">Todas as criaturas</a></div>
+
+  <h2 id="como">Como os mapas funcionam</h2>
+  <ul>
+    <li><b>Sempre aleatórios:</b> a cada entrada nasce um mapa novo com 11 a 15 áreas (salas, cavernas, arenas, anéis com ilha no meio) ligadas por corredores.</li>
+    <li><b>80 criaturas fixas</b> por mapa. Elas não nascem de novo: matou todas, aparece "Mapa limpo!" e o botão <b>Voltar à vila</b> brilha.</li>
+    <li>O <b>minimapa</b> (canto de cima, à direita) mostra só o que você já viu. Toque nele para abrir grande: as áreas não visitadas aparecem em vermelho. Quando faltam 10 criaturas ou menos, elas aparecem no minimapa.</li>
+    <li>As criaturas só notam você de perto, pelo caminho (não através da parede). As de longe só atiram com a visão livre.</li>
+    <li><b>XP menor em mapa fácil:</b> cada nível do herói acima do máximo do mapa tira 25% da XP (1 acima: 75%; 2: 50%; 3: 25%; 4 ou mais: 5%).</li>
+    <li>Um mapa libera 1 nível antes do mínimo dele.</li>
+  </ul>
+
+  <h2 id="lista">Os 9 mapas</h2>
+  <div id="maps"></div>
+
+  <h2 id="grupos">Grupos e elites</h2>
+  <ul>
+    <li>Nos <b>Campos de Trigo</b> todas andam sozinhas. Nos outros mapas, 35% andam sozinhas e o resto em grupos que crescem a cada mapa (Floresta 2–3, Pântano até 4... Abismo e Masmorra até 10).</li>
+    <li>Viu uma do grupo (ou bateu nela), <b>o grupo todo vem</b>.</li>
+    <li>Em grupos de 4 ou mais, cada criatura fica um pouco mais fraca (4 = 95%, 7 = 80%, 10 = 70% de vida e dano).</li>
+    <li><b>Elites</b> têm nome com título (<span id="elite"></span>), 3,2× vida, 1,5× dano, são maiores e dão 3,5× XP, mais ouro e quase sempre item.</li>
+  </ul>
+
+  <h2 id="aleatorio">Mapa Aleatório (nível 40)</h2>
+  <div class="card">
+    <p>Ao chegar no nível 40, os 9 mapas somem da aba Mapas e no lugar aparece o <b>Mapa Aleatório</b>:</p>
+    <ul>
+      <li>Cada entrada sorteia o lugar e as criaturas de um dos 9 mapas, todas no nível 40.</li>
+      <li><b id="rk"></b> criaturas; mortas todas, aparece um <b>Chefe</b> com 3 ajudantes. Sem tempo e fora do ranking.</li>
+      <li>Tem níveis 1, 2, 3...: escolha com − e + na aba Mapas. Vencer o Chefe do seu maior nível libera o próximo.</li>
+      <li>Cada nível deixa as criaturas <b>25% mais fortes</b> (vida e dano) e dá 25% mais XP.</li>
+      <li>É onde caem as <b>Pedras da Masmorra</b>: no Mapa N caem Pedras do 1 até o N. Veja <a href="masmorra.html#pedras">Pedras</a>.</li>
+    </ul>
+  </div>
+  <div id="rmap"></div>
+
+  <h2 id="todos">Todas as criaturas</h2>
+  <p>Vida e dano são relativos a uma criatura padrão do mesmo nível (100%). Velocidade em pixels por segundo (o herói anda a 125).</p>
+  <div id="all"></div>
+  <p>Os golpes em área (pulo, cone, pisão, arremesso, magia) estão explicados com imagens em <a href="combate.html#areas">Combate › Golpes em área</a>.</p>
+</main>
+<script src="../js/01-base.js"></script>
+<script src="../js/02-modelos.js"></script>
+<script src="icones.js"></script>
+<script src="wiki.js"></script>
+<script>
+wikiLayout();
+put('#elite', ELITE_TAG.join(', '));
+put('#rk', RMAP_KILLS);
+put('#maps', MAPS.map((m, i) => `<h3 id="m-${m.id}" style="display:flex;align-items:center;gap:10px"><span style="width:18px;height:18px;border-radius:5px;background:${m.ground[1]};border:1px solid var(--line)"></span>${i + 1}. ${m.name} <small>· nível ${m.lv[0]}–${m.lv[1]}</small></h3>
+  <p>${m.desc}</p>
+  <p><b>Dano das criaturas:</b> ${mapEls(m).map(ELN).join(' + ')} · <b>Libera no nível</b> ${m.req} · <b>Itens:</b> ilvl ${m.lv[0]}–${m.lv[1] + 1} · <b>Grupos:</b> ${m.id === 'campos' ? 'sozinhas' : `até ${Math.min(10, 2 + i)}`}</p>
+  <figure><img class="shot" src="img/criaturas-${m.id}.jpg" alt="As 5 criaturas do mapa ${m.name}, em fila" loading="lazy" width="832" height="272"><figcaption>${m.mons.map(k => MONS[k].n).join(' · ')}</figcaption></figure>
+  ${monTable(m.mons)}`).join(''));
+put('#rmap', table(['Nível do Mapa Aleatório', {t:'Vida e dano das criaturas', c:'num'}, {t:'XP', c:'num'}, 'Pedras que caem'],
+  [1, 2, 3, 4, 5, 10, 15, 20].map(n => [`<b>${n}</b>`, num(fmt(dunMult(n)*100) + '%'), num(fmt(dunMult(n)*100) + '%'), n === 1 ? 'Pedra 1' : `Pedras 1 a ${n}`])));
+put('#all', monTable(Object.keys(MONS).sort((a, b) => MONS[a].n.localeCompare(MONS[b].n))));
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Combate · Wiki do Loner</title>
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+<main>
+  <h1>Combate</h1>
+  <p class="lead">Como o herói ataca, como as criaturas machucam e o que reduz o dano.</p>
+  <div class="toc"><a href="#ataque">Ataque normal</a><a href="#dot">Dano ao longo do tempo</a><a href="#critico">Crítico</a><a href="#tipos">Tipos de dano</a><a href="#defesa">Armadura e resistências</a><a href="#areas">Golpes em área</a><a href="#esquiva">Esquiva</a><a href="#vida">Vida e morte</a></div>
+
+  <h2 id="ataque">Ataque normal</h2>
+  <ul>
+    <li>Botão grande no canto (ou clique/segure o mouse no mapa no PC). <b>Um golpe a cada 2 segundos</b>; segurar repete sozinho.</li>
+    <li>O golpe vai no alvo escolhido (toque nele) se estiver ao alcance; senão na criatura mais perto ao alcance; senão para onde o herói olha.</li>
+    <li>Cada golpe é forte: o dano é multiplicado por 2 s × velocidade de ataque, então atacar mais rápido continua valendo.</li>
+    <li>O herói para um instante para golpear. Esquivar antes do golpe sair devolve a recarga.</li>
+    <li>Arqueiro: flecha. Guerreiro: golpe de espada à frente. Mago: brasa de fogo.</li>
+  </ul>
+
+  <h2 id="dot">Dano ao longo do tempo</h2>
+  <div id="dot-t"></div>
+  <ul>
+    <li>O dano aparece em números verdes (veneno), vermelhos (sangramento) ou laranja (queimadura) em cima da criatura.</li>
+    <li>A barra de vida da criatura mostra, mais clara, quanto ainda vai sair do dano ao longo do tempo.</li>
+    <li>As ultimates (Explosão de Praga, Ruptura, Inferno) <b>detonam</b> na hora uma parte do que já está na criatura.</li>
+    <li><b>Sangramento dói 50% mais enquanto a criatura anda.</b></li>
+  </ul>
+
+  <h2 id="critico">Crítico</h2>
+  <p>Todo herói começa com <b>5% de chance</b> de crítico e <b>150% de dano crítico</b>. Itens aumentam (chance máxima 75%). O crítico vale para golpes diretos; o número aparece amarelo com "!".</p>
+
+  <h2 id="tipos">Os 4 tipos de dano</h2>
+  <p>Toda criatura causa um destes tipos. Só existem esses quatro:</p>
+  <div id="els"></div>
+
+  <h2 id="defesa">Armadura e resistências</h2>
+  <p>Todo dano que o herói leva passa por três reduções, uma depois da outra:</p>
+  <ol>
+    <li><b>Armadura:</b> reduz armadura ÷ (armadura + 40 + 8 × nível da criatura). Contra criaturas fortes a mesma armadura protege menos.</li>
+    <li><b>Resistência do tipo:</b> reduz a porcentagem da resistência ao tipo do golpe (máximo <b id="resmax"></b>%).</li>
+    <li><b>Couraça do Guerreiro:</b> mais 15% de redução, só para ele.</li>
+  </ol>
+  <div id="armor-t"></div>
+  <p class="muted">Quanto do dano a armadura corta contra criaturas de cada nível.</p>
+
+  <h2 id="areas">Golpes em área das criaturas</h2>
+  <p>Muitas criaturas têm, além do ataque normal, um golpe em área que <b>marca o chão antes</b>. Quem ainda estiver dentro quando a marca termina leva <b>2,5 vezes</b> o dano normal. A marca tem a cor do tipo de dano.</p>
+  <ul>
+    <li>Com o golpe pronto e você ao alcance, a criatura tem <b><span id="ch"></span>% de chance</b> de usar. Se não usar, só tenta de novo depois de <b><span id="cd"></span> segundos</b>.</li>
+    <li>Cone e pisão só saem com você encostado nela. Elites marcam uma área 20% maior.</li>
+    <li>Se a criatura morrer antes, pulo, cone e pisão não saem.</li>
+  </ul>
+  <div class="grid two">
+    <figure><img class="shot" src="img/golpe-pulo.jpg" alt="Um lobo parado com uma linha tracejada até uma marca azul embaixo do Arqueiro" width="720" height="440" loading="lazy"><figcaption><b>Pulo</b> — a criatura para por <b id="lw"></b> s, marca o chão onde você está e mostra uma linha até a marca. Depois pula e cai nela. Saia de lá. (lobos, cães, sapo, carniçal, gárgula, brutamonte, javali)</figcaption></figure>
+    <figure><img class="shot" src="img/golpe-cone.jpg" alt="Um cavaleiro negro com uma área em forma de leque à frente dele" width="720" height="440" loading="lazy"><figcaption><b>Cone</b> — golpe em leque à frente dela; fica parada se preparando. Saia pelos lados. (cavaleiro, esqueleto, escorpião, cão, espantalho)</figcaption></figure>
+    <figure><img class="shot" src="img/golpe-pisao.jpg" alt="Um golem com um círculo em volta dele" width="720" height="440" loading="lazy"><figcaption><b>Pisão</b> — círculo em volta dela mesma. Afaste-se. (golem, sanguessuga, urso)</figcaption></figure>
+    <figure><img class="shot" src="img/golpe-arremesso.jpg" alt="Um goblin arremessando uma dinamite em arco até uma marca no chão" width="720" height="440" loading="lazy"><figcaption><b>Arremesso</b> — joga algo em arco que cai na marca. (goblin, bruxa, yeti, aranha das cavernas, lavrador)</figcaption></figure>
+    <figure><img class="shot" src="img/golpe-magia.jpg" alt="Um cultista e uma marca de magia embaixo do herói" width="720" height="440" loading="lazy"><figcaption><b>Magia</b> — surge embaixo de você, de longe. (ent, múmia, cultista, feiticeiro, ossudo, espírito, elemental)</figcaption></figure>
+  </div>
+  <div id="aoe-t"></div>
+
+  <h2 id="esquiva">Esquiva</h2>
+  <div id="dodge-t"></div>
+  <ul>
+    <li>Durante a esquiva o herói <b>não leva dano</b> ("Esquivou").</li>
+    <li>Vai para onde você manda andar; no PC, com espaço e sem WASD, vai para o mouse; senão, para longe da criatura mais perto.</li>
+    <li>Celular: botão azul à esquerda do leque ou dois toques rápidos no mapa.</li>
+    <li>A recarga diminui com os atributos de recarga das habilidades.</li>
+  </ul>
+
+  <h2 id="vida">Vida, cura e morte</h2>
+  <ul>
+    <li>Sem levar dano por 3 segundos, o herói recupera <b>2% da vida por segundo</b>.</li>
+    <li>Roubo de vida cura uma parte do dano causado.</li>
+    <li>Na vila a vida enche.</li>
+    <li><b>Morrer:</b> perde <b>10% do ouro</b> e volta para a vila. Na Masmorra, perde também a Pedra.</li>
+    <li>Em <b>Opções</b> você escolhe a vida em que o herói volta sozinho para a vila (10–90%) e se volta quando a mochila encher. A marca branca na barra de vida mostra esse limite.</li>
+    <li>A Sanguessuga cura 60% do dano que causa em você.</li>
+  </ul>
+</main>
+<script src="../js/01-base.js"></script>
+<script src="../js/02-modelos.js"></script>
+<script src="icones.js"></script>
+<script src="wiki.js"></script>
+<script>
+wikiLayout();
+put('#resmax', RES_MAX); put('#ch', Math.round(AOE_CHANCE*100)); put('#cd', AOE_CD); put('#lw', LEAP_WIND);
+put('#dot-t', table(['Classe', 'Tipo', 'Como aplica', 'Passiva de dano', 'Passiva especial'], [
+  ['Arqueiro', ELN('poison') + ' Veneno', 'Flecha Venenosa, Leque, Chuva Ácida, Explosão de Praga; ataque normal com Ponta Envenenada', 'Toxina Potente (+12%/rank)', 'Contágio: ao morrer envenenada, o veneno pula para quem está perto'],
+  ['Guerreiro', '<b style="color:#e0574a">Sangramento</b>', 'Golpe Dilacerante, Investida, Giro, Ruptura; ataque normal com Lâmina Serrilhada', 'Brutalidade (+12%/rank)', 'Sede de Sangue: ao morrer sangrando, você se cura'],
+  ['Mago', ELN('fire') + ' Queimadura', 'Bola de Fogo, Onda de Chamas, Meteoro, Inferno; ataque normal com Brasa Viva', 'Piromania (+12%/rank)', 'Combustão: ao morrer queimando, explode nos vizinhos'],
+].map(r => r.map(c => ({t:c, c:'wrap'})))));
+put('#els', table(['Tipo', 'Mapas', 'Resistência inata'], RES_KEYS.map(el => [ELN(el), {t:MAPS.filter(m => mapEls(m).includes(el)).map(m => m.name).join(', '), c:'wrap'}, el === 'poison' ? 'Arqueiro +20%' : el === 'fire' ? 'Mago +20%' : '—'])) +
+  '<p class="muted">Na Masmorra, o tipo é sorteado a cada entrada. Itens: resistência a fogo, raio, gelo, veneno e "a todos os elementos" (só no peitoral).</p>');
+const red = (a, l) => pct(a/(a + 40 + 8*l));
+put('#armor-t', table(['Armadura', {t:'Criatura nv 10', c:'num'}, {t:'nv 20', c:'num'}, {t:'nv 30', c:'num'}, {t:'nv 40', c:'num'}], [50, 100, 200, 300, 500].map(a => [`<b>${a}</b>`, ...[10, 20, 30, 40].map(l => num(red(a, l)))])));
+put('#aoe-t', table(['Criatura', 'Golpe', 'Jeito', {t:'Área', c:'num'}, {t:'Força', c:'num'}, {t:'Alcance', c:'num'}],
+  Object.keys(MON_AOE).filter(k => MONS[k]).map(k => { const A = MON_AOE[k]; return [MONS[k].n, `<b>${A.n}</b>`, AOE_N[A.k], num(A.r), num(`${n1(A.m*AOE_DMG)}×`), num(A.reach)]; })) +
+  '<p class="muted">Força = multiplicador sobre o ataque normal da criatura, já com os 2,5× de ser pego pela área.</p>');
+put('#dodge-t', table(['Classe', 'Esquiva', {t:'Distância', c:'num'}, {t:'Recarga', c:'num'}], ['arqueiro', 'guerreiro', 'mago'].map(c => [clsN(c), `<b>${DODGE[c].n}</b>`, num(DODGE[c].len), num(n1(DODGE[c].cd) + ' s')])));
+</script>
+</body>
+</html>

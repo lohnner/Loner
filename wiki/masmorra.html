@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Fenda e as Pedras · Wiki do Loner</title>
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+<main>
+  <h1>A Fenda e as Pedras da Masmorra</h1>
+  <p class="lead">O fim de jogo do Loner. No nível 40 a Fenda desperta na vila; você encaixa uma Pedra da Masmorra nela e enfrenta uma corrida de 5 minutos contra 100 criaturas e um Chefe. Cada nível de Pedra é 25% mais forte, sem limite, e a sua maior Pedra vai para o ranking.</p>
+  <div class="toc"><a href="#tutorial">Tutorial passo a passo</a><a href="#pedras">As Pedras</a><a href="#mesa">Mesa Rúnica</a><a href="#corrida">A corrida</a><a href="#chefe">O Chefe</a><a href="#forca">Força por Pedra</a><a href="#dicas">Dicas</a></div>
+
+  <h2 id="tutorial">Tutorial passo a passo</h2>
+  <ol class="steps">
+    <li><h3>Chegue ao nível 40</h3>
+      <p>Antes disso a Fenda fica <b>selada</b>: um círculo de pedras caídas no canto de baixo à direita da vila, com a placa "Fenda selada · nível 40". Ao subir para o 40 aparece no registro: <i>"Alguém espera por você na vila…"</i>.</p>
+      <figure><img class="shot" src="img/fenda-selada.jpg" alt="A Fenda selada: pedras caídas em volta de um círculo apagado" width="720" height="480" loading="lazy"><figcaption>A Fenda selada, antes do nível 40.</figcaption></figure></li>
+    <li><h3>Volte para a vila e conheça o Ezequiel</h3>
+      <p>Ao entrar na vila no nível 40 começa uma cena: o <b>Ezequiel</b> (manto azul, capuz e cajado de cristal roxo) vem até você, conversa e leva o herói até a Fenda. A Fenda desperta ("A FENDA DESPERTOU") e ele te dá a <b>primeira Pedra 1</b>. Toque na caixa de fala (ou Enter/espaço) para passar; "Pular" também dá a Pedra.</p></li>
+    <li><h3>Ande até a Fenda</h3>
+      <p>Uma seta roxa aparece em cima dela. Chegando perto, abre a aba <b>A Fenda · Masmorra</b>. Do lado fica a <b>Mesa Rúnica</b> do Ezequiel.</p>
+      <figure><img class="shot" src="img/fenda.jpg" alt="A Fenda aberta: um arco de pedra com redemoinho roxo, cercado por 7 pedras com runas acesas; à esquerda o Ezequiel e a Mesa Rúnica" width="760" height="500" loading="lazy"><figcaption>A Fenda aberta, as pedras com runas e, à esquerda, o Ezequiel e a Mesa Rúnica.</figcaption></figure></li>
+    <li><h3>Escolha a Pedra e entre</h3>
+      <p>Na aba, use − e + para escolher entre as Pedras que você tem e toque em <b>"Encaixar a Pedra N e entrar"</b>. A Pedra é gasta na hora e o tipo de dano da corrida é sorteado (Fogo, Gelo, Raio ou Veneno).</p></li>
+    <li><h3>Mate as <span class="kills"></span> criaturas em 5 minutos</h3>
+      <p>O relógio aparece no minimapa e na barra de cima, com quantas faltam. No último minuto ele fica vermelho. O chão da Masmorra fica com a cor do elemento sorteado.</p></li>
+    <li><h3>Derrote o Chefe</h3>
+      <p>Mortas todas, "O CHEFE APARECEU!": uma criatura gigante com nome "… Ancestral", anel no chão da cor do elemento e 3 ajudantes. Desvie das marcas no chão!</p>
+      <figure><img class="shot" src="img/masmorra-chefe.jpg" alt="O Guerreiro enfrentando o Cão Infernal Ancestral, com anel azul no chão, e um ajudante" width="792" height="504" loading="lazy"><figcaption>O Chefe da Masmorra com um dos ajudantes.</figcaption></figure></li>
+    <li><h3>Pegue a Pedra e volte</h3>
+      <p>O Chefe sempre deixa uma Pedra do mesmo nível e 3 itens extras. Aparece "PEDRA N CONCLUÍDA!", a sua melhor Pedra sobe no ranking e o botão Voltar à vila brilha.</p></li>
+  </ol>
+  <div class="note">Se você morrer ou sair durante o tutorial (passos 5 e 6), ganha outra Pedra 1 para tentar de novo.</div>
+
+  <h2 id="pedras">As Pedras da Masmorra</h2>
+  <div class="hero-row"><div class="card" style="display:grid;place-items:center"><span style="width:110px;height:110px;display:block" id="stoneIc"></span></div>
+  <div><ul>
+    <li>Ficam na aba <b>Pedras</b> da mochila (ela só aparece depois que a Fenda desperta), com a quantidade de cada nível.</li>
+    <li>Não ocupam espaço de item e não somem do chão.</li>
+    <li><b>Só caem depois que a Fenda desperta.</b></li>
+  </ul></div></div>
+  <h3>Onde caem</h3>
+  <div id="onde"></div>
+
+  <h2 id="mesa">Mesa Rúnica do Ezequiel</h2>
+  <p>Fica ao lado da Fenda (veja a imagem do passo 3). Grátis, só na vila:</p>
+  <ul>
+    <li><b><span id="upn"></span> Pedras N viram 1 Pedra N+1.</b> É o jeito de subir de nível mais rápido.</li>
+    <li><b>1 Pedra N volta a ser 1 Pedra N−1</b>, se quiser fazer uma corrida mais fácil.</li>
+  </ul>
+  <div class="tip">Conta: uma Pedra 5 pela Mesa custa <b id="p5"></b> Pedras 1. Por isso vale fazer o Mapa Aleatório no nível mais alto que você aguenta: lá caem Pedras maiores.</div>
+
+  <h2 id="corrida">A corrida</h2>
+  <ul>
+    <li><b class="kills"></b> criaturas de <b>todos os mapas</b>, no nível 40, todas causando o dano do elemento sorteado.</li>
+    <li>Vida e dano × <b>1,25 para cada nível de Pedra</b> acima do 1 (Pedra 2 = 125%, Pedra 3 = 156%...). A XP sobe junto.</li>
+    <li>Grupos de até 10 criaturas.</li>
+    <li><b>Tempo: 5 minutos</b> até o Chefe morrer.</li>
+    <li><b>Perde a Pedra</b> se: morrer, sair antes de matar o Chefe ou deixar o tempo acabar ("TEMPO ESGOTADO!" e você volta para a vila).</li>
+  </ul>
+
+  <h2 id="chefe">O Chefe</h2>
+  <div id="boss"></div>
+
+  <h2 id="forca">Força por nível de Pedra</h2>
+  <div id="forca-t"></div>
+
+  <h2 id="dicas">Dicas</h2>
+  <ul>
+    <li>Olhe o elemento sorteado ao entrar: resistência alta nele faz muita diferença (máximo 75%). Ter as 4 resistências equilibradas é o mais seguro.</li>
+    <li>Não pare para pegar tudo: 5 minutos para 100 criaturas é 1 a cada 3 segundos. Junte grupos e use as habilidades em área.</li>
+    <li>Guarde a ultimate e a suprema para o Chefe.</li>
+    <li>O Chefe e os ajudantes usam golpes em área com marca no chão: saia da marca. Ser pego dói 2,5 vezes mais.</li>
+    <li>Suba de Pedra devagar: se a corrida ficou apertada no tempo, junte Pedras na Mesa Rúnica antes de subir.</li>
+  </ul>
+</main>
+<script src="../js/01-base.js"></script>
+<script src="../js/02-modelos.js"></script>
+<script src="icones.js"></script>
+<script src="wiki.js"></script>
+<script>
+wikiLayout();
+document.querySelectorAll('.kills').forEach(e => e.textContent = DUN_KILLS);
+put('#stoneIc', WICON.stone);
+put('#upn', STONE_UP_N);
+put('#p5', fmt(STONE_UP_N**4));
+put('#onde', table(['Onde', 'Chance', 'Qual Pedra'], [
+  ['<b>Mapa Aleatório N</b> (nível 40)', `${pct(STONE_MAP_CH)} por criatura (elite ${pct(STONE_MAP_CH*3)})`, 'Sorteada entre 1 e N'],
+  ['<b>Chefe do Mapa Aleatório N</b>', 'Sempre 1', 'Sorteada entre 1 e N'],
+  ['<b>Masmorra, corrida da Pedra N</b>', `${pct(STONE_DUN_CH)} por criatura (elite ${pct(STONE_DUN_CH*3)})`, `Pedra N, ou N−1 em ${pct(STONE_LOW_CH)} das vezes`],
+  ['<b>Chefe da Masmorra (Pedra N)</b>', 'Sempre 1', 'Pedra N'],
+  ['<b>Ezequiel</b> (cena do nível 40)', '1 vez', 'Pedra 1'],
+]));
+put('#boss', table(['', 'Chefe'], [
+  ['Quem é', 'Uma criatura com golpe em área, sorteada (na Masmorra, de todos os mapas; no Mapa Aleatório, do mapa sorteado). Sempre elite.'],
+  ['Vida', `${BOSS_HP}× a de uma elite`], ['Dano', `${n1(BOSS_DMG)}× o de uma elite`], ['Tamanho', `${n1(BOSS_R)}× maior`],
+  ['Ajudantes', `${BOSS_MINIONS} criaturas normais (não contam nas ${DUN_KILLS})`], ['XP', '6× a de uma elite'],
+  ['Recompensa', 'Pedra garantida + 3 itens extras'],
+].map(([a, b]) => [`<b>${a}</b>`, {t:b, c:'wrap'}])));
+put('#forca-t', table(['Pedra', {t:'Vida e dano das criaturas', c:'num'}, {t:'XP', c:'num'}, 'Pedras 1 para fazer pela Mesa'],
+  [1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30].map(n => [`<b style="color:var(--stone)">Pedra ${n}</b>`, num(fmt(dunMult(n)*100) + '%'), num(fmt(dunMult(n)*100) + '%'), num(fmt(STONE_UP_N**(n - 1)))])));
+</script>
+</body>
+</html>

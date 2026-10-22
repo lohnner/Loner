@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Níveis e Maestria · Wiki do Loner</title>
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wiki.css">
+</head>
+<body>
+<main>
+  <h1>Níveis e Maestria</h1>
+  <p class="lead">O herói sobe do nível 1 ao 40 matando criaturas. Depois do 40 a XP vira níveis de Maestria, sem limite.</p>
+  <div class="toc"><a href="#xp">XP</a><a href="#niveis">Tabela de níveis</a><a href="#ganha">O que cada nível dá</a><a href="#maestria">Maestria</a><a href="#ranking">Ranking</a><a href="#conta">Conta e personagens</a></div>
+
+  <h2 id="xp">Quanto de XP cada criatura dá</h2>
+  <ul>
+    <li>XP = <b>8 + 6 × nível da criatura</b>.</li>
+    <li>Elite: <b>× 3,5</b>. Chefe: × 6 em cima disso.</li>
+    <li>Masmorra e Mapa Aleatório: × a força da Pedra / do nível do mapa (1,25 a cada nível).</li>
+    <li>Mapa fácil demais: cada nível do herói acima do máximo do mapa tira 25% (até sobrar 5%).</li>
+  </ul>
+  <div class="tip">Ritmo aproximado: ~32 abates por nível perto do 10, ~62 no 20, ~92 no 30 e ~122 no 39. Cada mapa tem 80 criaturas.</div>
+
+  <h2 id="niveis">Tabela de níveis</h2>
+  <div id="lv"></div>
+
+  <h2 id="ganha">O que cada nível dá</h2>
+  <ul>
+    <li><b>1 ponto de habilidade</b> (aba Herói).</li>
+    <li><b>+14 de vida</b> base (o Guerreiro ganha 40% a mais, o Mago 8% a menos) e <b>+3% de dano</b>.</li>
+    <li>Guerreiro: +2,2 de armadura.</li>
+    <li>Novos mapas e itens melhores (o ilvl acompanha o nível das criaturas).</li>
+    <li>Habilidades novas nos níveis 1, 2, 3, 4, 5, 6, 7, 10 e 12. A suprema no 40.</li>
+  </ul>
+
+  <h2 id="maestria">Maestria</h2>
+  <ul>
+    <li>No nível 40 a XP passa a encher a barra de <b>Maestria</b> (roxa). No topo aparece "Nv 40 · M7".</li>
+    <li>Cada nível de Maestria: <b>+1 de dano na arma</b>, <b>+10 de vida</b> e <b>1 ponto</b> para gastar.</li>
+    <li>Cada nível pede 2% mais XP que o anterior (o 1º pede o mesmo que o nível 40).</li>
+    <li>Redistribuir os pontos de Maestria é grátis.</li>
+  </ul>
+  <div id="para"></div>
+
+  <h2 id="ranking">Ranking</h2>
+  <ul>
+    <li>Tela cheia, com duas abas: <b>Nível</b> e <b>Masmorra</b>.</li>
+    <li><b>Nível</b>: ordem por nível + Maestria (a barra de XP desempata). Tem a aba Geral e uma por classe.</li>
+    <li><b>Masmorra</b>: ordem pela maior Pedra concluída (Chefe derrotado), todas as classes juntas. O Mapa Aleatório não conta.</li>
+    <li>Uma linha por personagem. Só o nome do herói aparece; o seu nome e e-mail do Google nunca vão para o ranking.</li>
+    <li>Atualiza ao entrar no jogo, ao subir de nível ou Maestria e a cada minuto se algo mudou.</li>
+  </ul>
+
+  <h2 id="conta">Conta e personagens</h2>
+  <ul>
+    <li>Login com Google é obrigatório. Tudo fica salvo na nuvem; entre com a mesma conta em qualquer aparelho.</li>
+    <li>Até <b>5 personagens</b> por conta. Dá para criar, jogar, trocar e apagar na tela de personagens.</li>
+    <li>Os visuais comprados no Baú valem para todos os personagens da conta.</li>
+    <li>O jogo avisa quando sai uma versão nova e atualiza sozinho, salvando antes.</li>
+  </ul>
+</main>
+<script src="../js/01-base.js"></script>
+<script src="../js/02-modelos.js"></script>
+<script src="icones.js"></script>
+<script src="wiki.js"></script>
+<script>
+wikiLayout();
+let acc = 0;
+const rows = [];
+for(let l = 1; l < MAX_LV; l++){ acc += xpNeed(l); const kill = (8 + 6*l); rows.push([`<b>${l} → ${l + 1}</b>`, num(fmt(xpNeed(l))), num(fmt(acc)), num(fmt(kill)), num(Math.ceil(xpNeed(l)/kill))]); }
+put('#lv', table(['Nível', {t:'XP para subir', c:'num'}, {t:'XP total', c:'num'}, {t:'XP por criatura do mesmo nível', c:'num'}, {t:'Criaturas comuns', c:'num'}], rows));
+put('#para', table(['Bônus de Maestria', 'Cada ponto', 'Limite'], [['Ataque', '+1% de dano da arma', 'sem limite'], ['Veneno / Sangramento / Queimadura', '+1,5% de dano ao longo do tempo da classe', '50'], ['Defesa', '+1% de vida', '50'], ['Agilidade', '+0,5% de velocidade de ataque', '50']]));
+</script>
+</body>
+</html>
