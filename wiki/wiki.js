@@ -30,14 +30,9 @@ const NAV_IC = {
 };
 
 // APK do jogo para Android (a pasta APK fica dentro da wiki); o botão baixa direto (atributo download)
+// (o quadro grande do Início é HTML fixo no wiki/index.html, para aparecer mesmo com este arquivo em cache)
 const APK = {href:'APK/Loner.apk', file:'Loner.apk', size:'1,8 MB'};
 const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
-const ICON_ANDROID = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 9h12v8a1.5 1.5 0 0 1-1.5 1.5H16V21a1 1 0 0 1-2 0v-2.5h-4V21a1 1 0 0 1-2 0v-2.5h-.5A1.5 1.5 0 0 1 6 17zM3.5 9.5a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0zm15 0a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0zM6.2 8a5.8 5.8 0 0 1 3.1-4.6l-.9-1.5a.4.4 0 0 1 .7-.4l.9 1.6a6 6 0 0 1 4 0l.9-1.6a.4.4 0 0 1 .7.4l-.9 1.5A5.8 5.8 0 0 1 17.8 8zm3.3-2.4a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zm5 0a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4z"/></svg>';
-// Bloco grande de download (usado no Início)
-const apkBox = () => `<div class="dl" id="apk"><div class="robot">${ICON_ANDROID}</div><div>
-  <h2>Loner no seu celular</h2><p>Baixe o aplicativo para Android e jogue em tela cheia, deitado, sem barra de endereço. O app sempre abre a versão mais nova do jogo.</p>
-  <a class="dlBtn" href="${APK.href}" download="${APK.file}" type="application/vnd.android.package-archive">${ICON_DL}<span><b>Download APK</b><small>Android · ${APK.size}</small></span></a>
-  <p class="how">Depois de baixar, toque no arquivo <b>${APK.file}</b> para instalar. Se o celular pedir, permita "instalar apps desta fonte" para o navegador. Entre com a mesma conta Google para continuar o seu progresso.</p></div></div>`;
 
 // Topo + menu lateral em volta do <main> da página
 function wikiLayout(){
