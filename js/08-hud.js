@@ -108,6 +108,13 @@ function buildSkillbar(){
     `<button class="sk dodge" id="sb-dodge" data-act="dodge" style="${sbPos(SB_DODGE, SB_R2, SB_SK)}" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` +
     barSkills().map(id => `<button class="sk${SKD[id].ult ? ' ult' : ''}" id="sb-${id}" data-act="useSk" data-v="${id}" style="${id === ult ? sbPos(SB_ULT, SB_R2, SB_SK) : sbPos(SB_ARC[ACTIVE.indexOf(id)], SB_R, SB_SK)}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
+// Menu de cima (abas): a seta esconde (fica só a seta para baixo) e mostra de novo; lembrado neste aparelho
+function setNav(shut){
+  $('#nav').classList.toggle('shut', shut);
+  const b = $('#navTog'); b.setAttribute('aria-expanded', String(!shut)); b.setAttribute('aria-label', shut ? 'Mostrar menu' : 'Esconder menu');
+  try{ localStorage.setItem('loner-nav', shut ? 'shut' : 'open'); }catch(e){}
+}
+try{ if(localStorage.getItem('loner-nav') === 'shut') setNav(true); }catch(e){}
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
 function updateHud(){
@@ -553,6 +560,7 @@ const ACT = {
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
   dodge: () => { if(performance.now() < skipClickT) return; doDodge(false); },
   atk: () => { if(performance.now() < skipClickT) return; basicAttack(); },
+  navTog: () => setNav(!$('#nav').classList.contains('shut')),
   mmToggle: () => { minimapBig = !minimapBig; drawMinimap(); },
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;

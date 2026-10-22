@@ -18,9 +18,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #app{position:relative;height:100%;overflow:hidden;background:var(--bg)}
 .gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
-.hud{position:absolute;z-index:3;left:max(10px,env(safe-area-inset-left,0px));top:8px;width:250px;padding:7px 10px;display:grid;gap:4px;background:rgba(14,18,15,.82);border:1px solid var(--line);border-radius:12px;pointer-events:none}
+.hud{position:absolute;z-index:3;left:max(10px,env(safe-area-inset-left,0px));top:8px;width:196px;padding:5px 8px;display:grid;gap:3px;background:rgba(14,18,15,.82);border:1px solid var(--line);border-radius:12px;pointer-events:none}
 .hud-top{display:flex;align-items:baseline;gap:10px;min-width:0}
-.hero-id{font-family:var(--display);font-size:20px;line-height:1;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hud .lvl{font-size:10px}
+.hud .gold{font-size:12px;gap:4px}
+.hud .gold i{width:8px;height:8px}
+.hud .xp{height:3px}
+.hud .status{font-size:10.5px;gap:5px}
+.hud .status .dot{width:6px;height:6px}
+.hero-id{font-family:var(--display);font-size:16px;line-height:1;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .lvl{font-size:13px;font-weight:700;color:var(--poison);letter-spacing:.06em;text-transform:uppercase}
 .gold{margin-left:auto;color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:5px}
 .gold i{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe39a,var(--gold) 55%,var(--gold-d));display:inline-block}
@@ -35,7 +41,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 .stage{position:absolute;inset:0;overflow:hidden;background:#050605}
 #cv{position:absolute;inset:0;display:block;touch-action:none}
-#log{position:absolute;left:max(10px,env(safe-area-inset-left,0px));right:40%;top:92px;display:grid;gap:3px;justify-items:start;pointer-events:none;font-size:13px;font-weight:500}
+#log{position:absolute;left:max(10px,env(safe-area-inset-left,0px));right:40%;top:66px;display:grid;gap:3px;justify-items:start;pointer-events:none;font-size:13px;font-weight:500}
 #log div{background:rgba(8,10,9,.66);padding:2px 8px;border-radius:5px;animation:logfade 5s forwards;max-width:100%}
 @keyframes logfade{0%,80%{opacity:1}100%{opacity:0}}
 #townCard{position:absolute;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:12px;background:rgba(17,22,19,.93);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
@@ -76,7 +82,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .sk.disabled{filter:grayscale(1);opacity:.55}
 .sk.ready{border-color:var(--poison-d);box-shadow:0 0 10px rgba(155,216,74,.3)}
 .sk.queued{border-color:var(--gold)}
-#townBtn{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:134px;z-index:2;display:flex;align-items:center;gap:7px;padding:9px 14px 9px 11px;border-radius:24px;border:1px solid #4a5fa8;background:rgba(18,22,40,.88);color:#cfdcff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+#townBtn{position:absolute;right:calc(max(10px,env(safe-area-inset-right,0px)) + 110px);top:68px;z-index:2;display:flex;align-items:center;gap:7px;padding:9px 14px 9px 11px;border-radius:24px;border:1px solid #4a5fa8;background:rgba(18,22,40,.88);color:#cfdcff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
 #townBtn svg{width:22px;height:22px;color:#a9c4ff}
 #mmWrap{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:grid;gap:4px;justify-items:end;z-index:2}
 #mm{width:96px;height:96px;border-radius:10px;border:1px solid #4a5a3a;background:rgba(6,8,6,.75);box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:pointer}
@@ -113,9 +119,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .rk-list .nm small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
 .rk-list .lv{font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
 .rk-list .lv .p{color:#c9a8ff}
-.nav{position:absolute;z-index:3;top:8px;left:calc(max(10px,env(safe-area-inset-left,0px)) + 258px);display:flex;gap:2px;padding:3px;background:rgba(14,18,15,.82);border:1px solid var(--line);border-radius:12px}
+.nav{position:absolute;z-index:3;top:8px;left:calc(max(10px,env(safe-area-inset-left,0px)) + 204px);display:flex;gap:2px;padding:3px;background:rgba(14,18,15,.82);border:1px solid var(--line);border-radius:12px}
 .nav button{position:relative;width:52px;background:none;border:0;border-radius:9px;display:grid;justify-items:center;gap:1px;padding:5px 0 4px;color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.03em}
 .nav button svg{width:22px;height:22px}
+/* Seta do menu: escondido fica só ela, virada para baixo */
+.nav #navTog{width:28px;align-content:center;color:var(--fg)}
+.nav #navTog svg{width:18px;height:18px;transition:transform .2s}
+.nav.shut button:not(#navTog){display:none}
+.nav.shut #navTog svg{transform:rotate(180deg)}
 .nav button.on{color:var(--fg)}
 .nav button.on svg{color:var(--poison)}
 .badge{position:absolute;top:0;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--poison);color:#0d1a05;font-size:11px;font-weight:800;display:grid;place-items:center}
