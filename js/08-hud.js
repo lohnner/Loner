@@ -14,8 +14,6 @@ const ICON_ITEM = {
   chest: SVG('<path d="M8 4l4 2 4-2 4 4-2 3v9H6v-9L4 8z" fill="currentColor" fill-opacity=".25"/><path d="M12 6v14"/>'),
   gloves: SVG('<path d="M8 21v-7l-2.5-4 1.5-1 2 2V5a1 1 0 0 1 2 0v6V4a1 1 0 0 1 2 0v7V5a1 1 0 0 1 2 0v7V7a1 1 0 0 1 2 0v8l-2 6z" fill="currentColor" fill-opacity=".25"/>'),
   boots: SVG('<path d="M8 3h5v11l6 3v4H6v-4l2-2z" fill="currentColor" fill-opacity=".25"/><path d="M6 18h13"/>'),
-  ring: SVG('<circle cx="12" cy="14.5" r="6"/><path d="M9.5 6.5L12 4l2.5 2.5L12 9z" fill="currentColor"/>'),
-  amulet: SVG('<path d="M6 3c0 6 3 9 6 9s6-3 6-9"/><path d="M12 11l4 5-4 5-4-5z" fill="currentColor" fill-opacity=".35"/>'),
 };
 const ICON_SK = {
   arrow: SVG('<path d="M5 19L18 6"/><path d="M13 5h6v6" /><path d="M5 19l-1 1M8 16l-3-1M8 16l1 3"/><circle cx="7" cy="8" r="1.6" fill="currentColor"/>'),
@@ -290,7 +288,7 @@ function panelHero(){
     ${stat('Crítico', `${n1(st.crit)}% · ${fmt(st.critd)}%`)}${stat('Dano de ' + dotN(), '+' + Math.round((st.pois - 1)*100) + '%')}
     ${stat('Duração ' + dotDe(), '+' + Math.round((st.pdur - 1)*100) + '%')}${stat('Recarga', '-' + st.cdr + '%')}
     ${stat('Roubo de vida', n1(st.ls) + '%')}${stat('Movimento', fmt(st.ms))}
-    ${stat('ilvl médio do equipamento', avgIlvl())}${stat('Itens equipados', SLOTS.filter(k => S.eq[k]).length + '/7')}
+    ${stat('ilvl médio do equipamento', avgIlvl())}${stat('Itens equipados', SLOTS.filter(k => S.eq[k]).length + '/' + SLOTS.length)}
   </div></div>
   <div class="sec"><h3>Resistências <span class="r">máx. ${RES_MAX}%</span></h3><div class="stats">
     ${RES_KEYS.map(k => `<div class="stat"><span style="color:${ELEM[k].c}">${ELEM[k].n}</span><b>${st.res[k]}%</b></div>`).join('')}

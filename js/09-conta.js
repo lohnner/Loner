@@ -155,7 +155,9 @@ function playChar(c){
   refreshStats(); hero.hp = ST.life; for(const k in cds) cds[k] = 0;
   accountReady = true; renderLogin();
   closeDlg(); closeSheet(); $('#create').hidden = true;
-  enterTown(); emptyOldStash(); save(); rankDirty = true; lastScore = -1; // sempre começa na vila
+  enterTown(); emptyOldStash();
+  if(S.oldSlotsMsg){ log(S.oldSlotsMsg, '#f5cf3a'); delete S.oldSlotsMsg; } // anéis/amuletos vendidos na conversão (normalize, ver 9)
+  save(); rankDirty = true; lastScore = -1; // sempre começa na vila
 }
 function newChar(){ $('#login').hidden = true; showCreate(); }
 function switchChar(){ save(); cloudFlush(); leaveGame(); showChars(); }
@@ -181,12 +183,13 @@ function emptyOldStash(){
   const items = Array.isArray(acct.stash) ? acct.stash : [], orbs = acct.orbs || {}, bought = acct.stashX || 0;
   const nOrbs = Object.keys(ORBS).reduce((t, k) => t + (orbs[k] || 0), 0);
   if(!items.length && !nOrbs && !bought) return;
-  for(const it of items) S.inv.push(it);
+  let refund = 0, nIt = 0;
+  for(const it of items){ if(OLD_SLOTS.includes(it.slot)) refund += sellPrice(it); else { S.inv.push(it); nIt++; } } // anel/amuleto saíram do jogo: viram ouro
   for(const k in ORBS) if(orbs[k] > 0) S.orbs[k] = (S.orbs[k] || 0) + orbs[k];
-  let refund = 0; for(let i = 0; i < bought; i++) refund += stashSlotPrice(i);
+  for(let i = 0; i < bought; i++) refund += stashSlotPrice(i);
   S.gold += refund;
   acct.stash = []; acct.orbs = {}; acct.stashX = 0;
-  log(`O armazém foi fechado: ${items.length} ${items.length === 1 ? 'item foi' : 'itens foram'} e ${nOrbs} ${nOrbs === 1 ? 'orbe foi' : 'orbes foram'} para a mochila${refund ? ` · +${fmt(refund)} ouro dos espaços do armazém` : ''}.`, '#f5cf3a');
+  log(`O armazém foi fechado: ${nIt} ${nIt === 1 ? 'item foi' : 'itens foram'} e ${nOrbs} ${nOrbs === 1 ? 'orbe foi' : 'orbes foram'} para a mochila${refund ? ` · +${fmt(refund)} ouro` : ''}.`, '#f5cf3a');
 }
 // Visuais da conta (comprados no Baú de Visuais): lista de ids de COS, valem para todos os personagens
 const cosOwned = () => acct ? (acct.cos || (acct.cos = [])) : [];

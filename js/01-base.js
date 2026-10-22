@@ -263,13 +263,15 @@ const dotN = () => DOT_INFO[clsOf()].n;
 const dotT = () => DOT_INFO[clsOf()].t;
 const dotDe = () => DOT_INFO[clsOf()].de;
 
-const SLOTS = ['bow','helm','chest','gloves','boots','ring','amulet'];
+const SLOTS = ['bow','helm','chest','gloves','boots'];
+// Espaços que deixaram de existir (anel e amuleto): saves com ver < 9 vendem esses itens sozinhos (normalize)
+const OLD_SLOTS = ['ring','amulet'];
 // Espaços usados na mochila: só os itens (os orbes ficam na aba Orbes, sem limite)
 const invUsed = () => S.inv.length;
 const invFull = () => invUsed() >= invMax();
 // O espaço da arma se chama 'bow' por compatibilidade com saves antigos; o nome muda com a classe
 const WEAPON_N = {arqueiro:'Arco', guerreiro:'Arma', mago:'Cajado'};
-const SLOT_N = {get bow(){ return WEAPON_N[clsOf()]; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas',ring:'Anel',amulet:'Amuleto'};
+const SLOT_N = {get bow(){ return WEAPON_N[clsOf()]; },helm:'Capuz',chest:'Peitoral',gloves:'Luvas',boots:'Botas'};
 const BOWS = [{lv:0,n:'Arco Curto',aps:1.3,m:1},{lv:8,n:'Arco de Caça',aps:1.2,m:1.12},{lv:16,n:'Arco Longo',aps:1.05,m:1.32},{lv:24,n:'Arco Composto',aps:1.15,m:1.3},{lv:32,n:'Arco de Guerra',aps:1.1,m:1.42}];
 const BLADES = [{lv:0,n:'Espada Curta',aps:1.2,m:1},{lv:8,n:'Machado de Guerra',aps:1.05,m:1.2},{lv:16,n:'Espada Longa',aps:1.1,m:1.2},{lv:24,n:'Montante',aps:.9,m:1.42},{lv:32,n:'Lâmina Rúnica',aps:1.1,m:1.3}];
 const STAVES = [{lv:0,n:'Cajado de Carvalho',aps:1.2,m:1},{lv:8,n:'Varinha de Brasa',aps:1.3,m:1.05},{lv:16,n:'Cajado Rúnico',aps:1.05,m:1.3},{lv:24,n:'Cetro Ardente',aps:1.15,m:1.28},{lv:32,n:'Cajado do Abismo',aps:1.05,m:1.45}];
@@ -280,38 +282,36 @@ const BASES = {
   chest:['Gibão Acolchoado','Couraça de Couro','Brigantina','Manto de Escamas'],
   gloves:['Luvas de Pano','Braçadeiras','Manoplas de Couro','Garras de Arqueiro'],
   boots:['Sapatos Gastos','Botas de Couro','Botas de Patrulha','Grevas Leves'],
-  ring:['Anel de Cobre','Anel de Prata','Anel de Ouro','Anel de Ônix'],
-  amulet:['Pingente de Osso','Amuleto de Prata','Talismã Verde','Medalhão Antigo'],
 };
 const ARMOR_M = {helm:1,chest:1.8,gloves:.7,boots:.8};
 // Atributos dos itens, no estilo Path of Exile: cada um é Prefixo (g:'p' — dano, vida, armadura, movimento) ou Sufixo (g:'s' — velocidade,
 // crítico, resistências, utilidade). Um item tem no máximo AFX_G_MAX de cada grupo e eles ficam equilibrados (addAffixes em 02):
 // 1 atributo = qualquer um; 2 = 1+1; 3 = 2+1 ou 1+2; 4 (Lendário) = 2+2. Cada espaço só sorteia o que faz sentido nele (arma não dá vida).
 const AFX_G_MAX = 2, AFX_G_N = {p:'Prefixo', s:'Sufixo'};
-const RES_SLOTS = ['helm','chest','gloves','boots','ring','amulet'];
+const RES_SLOTS = ['helm','chest','gloves','boots'];
 const AFX = {
   // Prefixos
   wdp:{g:'p',n:v=>`+${v}% de dano da arma`,lo:()=>4,hi:l=>8+l*.3,slots:['bow']}, // só na arma: aumenta o dano dela (calcStats)
-  fdmg:{g:'p',n:v=>`Adiciona ${v} a ${v*2} de dano`,lo:l=>1+l*.04,hi:l=>1+l*.15,slots:['bow','gloves','ring']},
-  dmg:{g:'p',n:v=>`+${v}% de dano`,lo:()=>2,hi:()=>6,slots:['ring','amulet']},
-  pois:{g:'p',n:v=>`+${v}% de dano de ${dotN()}`,lo:()=>4,hi:l=>13+l*.7,slots:['bow','gloves','ring','amulet']},
-  life:{g:'p',n:v=>`+${v} de vida`,lo:l=>4+l*1.3,hi:l=>10+l*3.4,slots:['helm','chest','gloves','boots','ring','amulet']},
+  fdmg:{g:'p',n:v=>`Adiciona ${v} a ${v*2} de dano`,lo:l=>1+l*.04,hi:l=>1+l*.15,slots:['bow','gloves']},
+  dmg:{g:'p',n:v=>`+${v}% de dano`,lo:()=>2,hi:()=>6,slots:[]}, // só saía no anel e no amuleto: não sorteia mais (fica para o calcStats)
+  pois:{g:'p',n:v=>`+${v}% de dano de ${dotN()}`,lo:()=>4,hi:l=>13+l*.7,slots:['bow','gloves']},
+  life:{g:'p',n:v=>`+${v} de vida`,lo:l=>4+l*1.3,hi:l=>10+l*3.4,slots:['helm','chest','gloves','boots']},
   armor:{g:'p',n:v=>`+${v} de armadura`,lo:l=>2+l*.6,hi:l=>6+l*2,slots:['helm','chest','gloves','boots']},
   ms:{g:'p',n:v=>`+${v}% de velocidade de movimento`,lo:()=>3,hi:()=>15,slots:['boots']},
   // Sufixos
-  ias:{g:'s',n:v=>`+${v}% de velocidade de ataque`,lo:()=>3,hi:()=>15,slots:['bow','gloves','ring','amulet']},
-  crit:{g:'s',n:v=>`+${n1(v)}% de chance de crítico`,lo:()=>1,hi:()=>8,dec:1,slots:['gloves','ring','amulet','helm']},
-  critd:{g:'s',n:v=>`+${v}% de dano crítico`,lo:()=>8,hi:()=>45,slots:['bow','gloves','amulet','ring']},
-  ls:{g:'s',n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow','ring','amulet']},
-  pdur:{g:'s',n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow','amulet']},
-  cdr:{g:'s',n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm','amulet','ring']},
-  gf:{g:'s',n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','ring','amulet','boots']},
+  ias:{g:'s',n:v=>`+${v}% de velocidade de ataque`,lo:()=>3,hi:()=>15,slots:['bow','gloves']},
+  crit:{g:'s',n:v=>`+${n1(v)}% de chance de crítico`,lo:()=>1,hi:()=>8,dec:1,slots:['gloves','helm']},
+  critd:{g:'s',n:v=>`+${v}% de dano crítico`,lo:()=>8,hi:()=>45,slots:['bow','gloves']},
+  ls:{g:'s',n:v=>`${n1(v)}% do dano vira vida`,lo:()=>.5,hi:()=>4,dec:1,slots:['bow']},
+  pdur:{g:'s',n:v=>`+${v}% de duração ${dotDe()}`,lo:()=>5,hi:()=>30,slots:['bow']},
+  cdr:{g:'s',n:v=>`-${v}% de recarga das habilidades`,lo:()=>2,hi:()=>10,slots:['helm']},
+  gf:{g:'s',n:v=>`+${v}% de ouro encontrado`,lo:()=>5,hi:()=>40,slots:['helm','boots']},
   // Resistências aos 4 tipos de dano (Fogo, Raio, Gelo, Veneno); "todos os elementos" vale para os 4
   rf:{g:'s',n:v=>`+${v}% de resistência a fogo`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
   rl:{g:'s',n:v=>`+${v}% de resistência a raio`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
   rc:{g:'s',n:v=>`+${v}% de resistência a gelo`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
   rp:{g:'s',n:v=>`+${v}% de resistência a veneno`,lo:()=>4,hi:l=>10+l*.5,slots:RES_SLOTS},
-  rall:{g:'s',n:v=>`+${v}% de resistência a todos os elementos`,lo:()=>3,hi:l=>6+l*.3,slots:['chest','ring','amulet']},
+  rall:{g:'s',n:v=>`+${v}% de resistência a todos os elementos`,lo:()=>3,hi:l=>6+l*.3,slots:['chest']},
 };
 // Resistências que deixaram de existir (caos, necrótica, psíquica): itens antigos trocam cada uma por uma das 4 que o item ainda não tem (migrateElemItem)
 const OLD_RES = ['rx','rn','rs'], NEW_RES = ['rf','rl','rc','rp'];
@@ -328,7 +328,7 @@ function migrateElemItem(it){
 const SUF = {wdp:'da Crueldade',fdmg:'do Gume',dmg:'da Fúria',rf:'da Brasa',rc:'do Inverno',rl:'da Tempestade',rp:'do Antídoto',rall:'dos Elementos',life:'do Vigor',pois:'da Peçonha',ias:'da Pressa',crit:'da Precisão',critd:'do Abate',ms:'do Vento',armor:'da Muralha',ls:'do Vampiro',cdr:'do Fluxo',pdur:'da Agonia',gf:'da Fortuna'};
 const RA = ['Presa','Sussurro','Agouro','Espinho','Mordida','Lamento','Véu','Garra','Sombra','Sopro','Ferrão','Prece'];
 const RB = ['Fel','Cinzas','Musgo','Ossos','Víbora','Cripta','Névoa','Peste','Corvo','Brejo','Cicuta','Lodo'];
-const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do Pântano','Capuz da Mamba'],chest:['Pele da Hidra','Manto da Cicuta'],gloves:['Toque Pestilento','Dedos de Áspide'],boots:['Passos do Charco','Botas da Naja'],ring:['Olho da Serpente','Aliança Verde'],amulet:['Coração de Peçonha','Lágrima de Cobra']};
+const LEG = {bow:['Sussurro da Víbora','Corda de Basilisco'],helm:['Coroa do Pântano','Capuz da Mamba'],chest:['Pele da Hidra','Manto da Cicuta'],gloves:['Toque Pestilento','Dedos de Áspide'],boots:['Passos do Charco','Botas da Naja']};
 
 /* ---------- ESTADO SALVO ---------- */
 const KEY = 'cacada-vibora-v1';
@@ -368,7 +368,17 @@ function normalize(s){
   if((s.ver || 0) < 7){ d.inv.forEach(retierItem); d.shop.forEach(retierItem); for(const k in d.eq) retierItem(d.eq[k]); }
   // ver 8: Masmorra por Pedras — a melhor "fase" antiga não vale como Pedra: zera e quem já tinha jogado ganha 3 Pedras 1 para começar
   if((s.ver || 0) < 8 && d.dun.best > 0){ d.dun.best = 0; d.stones[1] = (d.stones[1] || 0) + 3; }
-  d.ver = 8;
+  // ver 9: anel e amuleto saíram do jogo — os equipados e os da mochila são vendidos (ouro no preço do Mercador); os da loja somem
+  if((s.ver || 0) < 9){
+    const gone = it => it && OLD_SLOTS.includes(it.slot);
+    let n = 0, g = 0;
+    for(const it of [...d.inv, ...OLD_SLOTS.map(k => d.eq[k])]) if(gone(it)){ n++; g += sellPrice(it); } // sellPrice vem do 02 (a função só roda depois)
+    for(const k of OLD_SLOTS) delete d.eq[k];
+    d.inv = d.inv.filter(it => !gone(it)); d.shop = d.shop.filter(it => !gone(it));
+    d.gold += g;
+    if(n) d.oldSlotsMsg = `Anéis e amuletos saíram do jogo: ${n} ${n === 1 ? 'item foi vendido' : 'itens foram vendidos'} por ${fmt(g)} de ouro.`;
+  }
+  d.ver = 9;
   return d;
 }
 // Cópia local da conta (todos os personagens) em KEY + ':' + uid; KEY puro é o save antigo (antes do login), migrado no primeiro login.
