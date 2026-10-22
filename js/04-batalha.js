@@ -130,7 +130,7 @@ function doDodge(fromKey, ang){
   if(ang === undefined) ang = manualDir();
   if(ang === null && fromKey && mouse.on && mouse.x >= 0 && mouse.y >= 0 && mouse.x <= cw && mouse.y <= ch){ const w = toWorld(mouse.x, mouse.y); if(D(w, hero) > 10) ang = Math.atan2(w.y - hero.y, w.x - hero.x); }
   if(ang === null){ const n = nearestMon(hero); ang = n && D(n, hero) < 300 ? Math.atan2(hero.y - n.y, hero.x - n.x) : hero.face; }
-  if(hero.atk && !hero.atk.rel) hero.atk = null;
+  if(hero.atk && !hero.atk.rel){ hero.atk = null; cds.atk = 0; } // ataque que não saiu não gasta a recarga
   hero.whirl = null;
   const e = rayEnd(hero.x, hero.y, clamp(hero.x + Math.cos(ang)*D0.len, 20, WORLD.w - 20), clamp(hero.y + Math.sin(ang)*D0.len, 20, WORLD.h - 20));
   hero.dodge = {x0:hero.x, y0:hero.y, x1:e.x, y1:e.y, t:0, dur:D0.dur};
@@ -176,24 +176,42 @@ function meleeHit(m, mult, bleedTotal){
   for(let i = 0; i < 5; i++){ const an = Math.atan2(m.y - hero.y, m.x - hero.x) + rnd(-.9, .9); part({x:m.x, y:m.y, vx:Math.cos(an)*rnd(50,140), vy:Math.sin(an)*rnd(50,140), life:.3, size:2.2, c:'#e0574a'}); }
   return dmg;
 }
-function fireBasic(tgt){
+// Ataque normal: só pelo botão de ataque (segurar repete) ou clicando/segurando o mouse no mapa. Sai no máximo a cada BASIC_CD s;
+// o dano de cada golpe é × BASIC_CD × velocidade de ataque, então o dano por segundo fica o mesmo e a velocidade de ataque vira força do golpe.
+const BASIC_CD = 2, BASIC_DUR = .3;
+let atkHeld = null; // {pid, mouse}: botão (ou mouse) segurado — ataca de novo assim que a recarga acabar
+const basicMult = () => BASIC_CD * ST.aps * heroBuff('aps');
+const basicReach = m => isWar() ? MELEE + m.r + 14 : RANGE + 60;
+// Alvo: o fixado (se ao alcance), senão o mais perto ao alcance; sem ninguém, golpeia/atira para onde está virado (ou para angHint)
+function basicAttack(angHint){
+  if(scene !== 'map' || mode !== 'hunt' || cds.atk > 0 || hero.atk || hero.cast || hero.dash || hero.dodge || hero.whirl) return false;
+  const foc = getFocus();
+  let t = foc && !foc.dead && D(foc, hero) <= basicReach(foc) ? foc : nearestMon(hero);
+  if(t && D(t, hero) > basicReach(t)) t = null;
+  hero.face = t ? Math.atan2(t.y - hero.y, t.x - hero.x) : angHint !== undefined ? angHint : hero.face;
+  hero.atk = {t:0, dur:BASIC_DUR, rel:false, tgt:t, ang:hero.face};
+  cds.atk = BASIC_CD;
+  return true;
+}
+function fireBasic(tgt, ang0){
+  const k = basicMult();
   if(isWar()){
-    if(!tgt || tgt.dead || D(tgt, hero) > MELEE + tgt.r + 14) tgt = nearestMon(hero, MELEE + 30); if(!tgt) return;
-    const cm = rollCrit(), dmg = rnd(ST.min, ST.max) * cm, sr = ST.rk('serrated');
+    hero.swing = .22;
+    if(!tgt || tgt.dead || D(tgt, hero) > basicReach(tgt)){ tgt = nearestMon(hero); if(tgt && D(tgt, hero) > basicReach(tgt)) tgt = null; }
+    if(!tgt) return;
+    const cm = rollCrit(), dmg = rnd(ST.min, ST.max) * k * cm, sr = ST.rk('serrated');
     dealHit(tgt, dmg, cm > 1);
     if(sr) bleed(tgt, dmg*(.4 + .2*sr)*ST.pois, 3*ST.pdur);
-    hero.swing = .22;
     return;
   }
-  if(!tgt || tgt.dead) tgt = nearestMon(hero, RANGE + 60); if(!tgt) return;
-  const ang = Math.atan2(tgt.y - hero.y, tgt.x - hero.x), cm = rollCrit();
+  const ang = tgt && !tgt.dead ? Math.atan2(tgt.y - hero.y, tgt.x - hero.x) : ang0 !== undefined ? ang0 : hero.face, cm = rollCrit();
   if(isMage()){
     // Mago: brasa que sai do cajado; Brasa Viva faz queimar
-    const dmg = rnd(ST.min, ST.max) * cm, kr = ST.rk('kindle');
+    const dmg = rnd(ST.min, ST.max) * k * cm, kr = ST.rk('kindle');
     shoot(ang, {kind:'ember', dmg, crit:cm > 1, burn: kr ? dmg*(.4 + .2*kr)*ST.pois : 0, bdur:3*ST.pdur, spd:560, life:.75});
     return;
   }
-  const dmg = rnd(ST.min, ST.max) * cm, tr = ST.rk('tip');
+  const dmg = rnd(ST.min, ST.max) * k * cm, tr = ST.rk('tip');
   shoot(ang, {kind:'arrow', dmg, crit:cm > 1, pois: tr ? dmg*(.4 + .2*tr)*ST.pois : 0, pdur:3*ST.pdur, spd:660});
 }
 function bestCluster(list){

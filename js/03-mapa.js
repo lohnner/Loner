@@ -20,7 +20,7 @@ let scene = 'map', mode = 'hunt', mapDef = MAPS[0], WORLD = {w:W_MAP, h:W_MAP};
 // whirl = Giro de Lâmina em andamento, dash = Investida em andamento (Guerreiro)
 const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,alpha:1,atk:null,cast:null,kite:0,whirl:null,dash:null,dodge:null,invul:0};
 let mons = [], projs = [], clouds = [], drops = [], coins = [], parts = [], texts = [], later = [], decor = [], rings = [];
-const cds = {dodge:0}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
+const cds = {dodge:0, atk:0}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
 let zones = []; // áreas marcadas no chão pelas criaturas (MON_AOE)
 // townGoal = ponto para onde o herói anda na vila (toque/clique); townZone = porta em que ele está; townIdle = ainda não mexeu desde que chegou
 let townGoal = null, townZone = null, townIdle = true, townArmed = false;

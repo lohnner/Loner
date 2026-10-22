@@ -29,20 +29,17 @@ function heroAI(dt){
   if(hero.cast){ const md = manualDir(); if(md !== null) moveDir(md, dt, .7); else hero.moving = false; return; }
   manualAI(dt);
 }
-// Andar é sempre manual: o jogador move o herói (manualDir em 05); parado, ele só ataca quem está ao alcance e não sai andando sozinho.
+// Andar e atacar são manuais: o jogador move o herói (manualDir em 05) e ataca pelo botão (basicAttack em 04; segurar repete).
 // Itens e orbes são pegos ao passar por cima.
 function manualAI(dt){
   if(hero.dodge) return;
+  if(atkHeld) basicAttack(atkHeld.mouse && mouse.on ? (w => Math.atan2(w.y - hero.y, w.x - hero.x))(toWorld(mouse.x, mouse.y)) : undefined);
   const md = manualDir();
   if(hero.whirl){ if(md !== null) moveDir(md, dt, .75); else hero.moving = false; return; }
-  if(md !== null){ if(hero.atk && !hero.atk.rel) hero.atk = null; hero.face = md; moveDir(md, dt); return; }
+  // golpe saindo: para um instante virado para o alvo
+  if(hero.atk && !hero.atk.rel){ const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); hero.moving = false; return; }
+  if(md !== null){ hero.face = md; moveDir(md, dt); return; }
   hero.moving = false;
-  if(hero.atk && !hero.atk.rel){ const t = hero.atk.tgt; if(t && !t.dead) hero.face = Math.atan2(t.y - hero.y, t.x - hero.x); return; }
-  const reach = m => isWar() ? MELEE + m.r + 6 : RANGE, foc = getFocus();
-  const t = foc && D(foc, hero) <= reach(foc) ? foc : nearestMon(hero);
-  if(!t || D(t, hero) > reach(t)) return;
-  hero.face = Math.atan2(t.y - hero.y, t.x - hero.x);
-  if(!hero.atk) hero.atk = {t:0, dur:1/(ST.aps*heroBuff('aps')), rel:false, tgt:t};
 }
 // Fim da Investida: explosão pequena em volta de onde o Guerreiro parou
 const DASH_BOOM_R = 65;
@@ -82,7 +79,7 @@ function heroTimers(dt){
   }
   if(hero.atk){
     const a = hero.atk; a.t += dt;
-    if(!a.rel && a.t >= a.dur*.55){ a.rel = true; hero.kite = 0; fireBasic(a.tgt); }
+    if(!a.rel && a.t >= a.dur*.55){ a.rel = true; hero.kite = 0; fireBasic(a.tgt, a.ang); }
     if(a.t >= a.dur) hero.atk = null;
   }
   if(hero.cast){
@@ -403,4 +400,10 @@ function step(dt){
   rings = rings.filter(r => r.t < r.life);
   const k = Math.min(1, dt*6), ty = scene === 'town' ? hero.y - 40 : hero.y;
   cam.x += (hero.x - cam.x)*k; cam.y += (ty - cam.y)*k;
+  // vila: a câmera não mostra o vazio fora dela (tela deitada vê pouco na altura)
+  if(scene === 'town'){
+    const hw = cw/2/zoom, hh = ch/2/zoom;
+    cam.x = TOWN_W > hw*2 ? clamp(cam.x, hw, TOWN_W - hw) : TOWN_W/2;
+    cam.y = TOWN_H > hh*2 ? clamp(cam.y, hh, TOWN_H - hh) : TOWN_H/2;
+  }
 }

@@ -93,9 +93,20 @@ function drawMinimap(){
 }
 // Habilidades na barra: as 4 da classe e, no nível 40, a suprema (tecla 5)
 const barSkills = () => ultOf() ? [...ACTIVE, ultOf()] : ACTIVE;
+// Botões no canto de baixo à direita (celular deitado): ataque grande no canto, as 4 habilidades em arco em volta dele
+// e, num arco de fora, a esquiva (à esquerda) e a suprema. Posição = ângulo (graus; 180 = esquerda, 90 = em cima) e raio a partir do centro do ataque.
+const SB_ATK = 88, SB_SK = 60, SB_M = 14, SB_R = 112, SB_R2 = 190;
+const SB_ARC = [192, 156, 120, 84], SB_DODGE = 180, SB_ULT = 136;
+function sbPos(ang, r, size){
+  const c = SB_M + SB_ATK/2, a = ang*Math.PI/180;
+  return `right:${Math.round(c - Math.cos(a)*r - size/2)}px;bottom:${Math.round(c + Math.sin(a)*r - size/2)}px`;
+}
 function buildSkillbar(){
-  // Esquiva fica à esquerda das habilidades (barra de espaço no PC)
-  $('#skillbar').innerHTML = `<button class="sk dodge" id="sb-dodge" data-act="dodge" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` + barSkills().map(id => `<button class="sk${SKD[id].ult ? ' ult' : ''}" id="sb-${id}" data-act="useSk" data-v="${id}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
+  const ult = ultOf();
+  $('#skillbar').innerHTML =
+    `<button class="sk atk" id="sb-atk" data-act="atk" style="${sbPos(0, 0, SB_ATK)}" aria-label="Atacar" title="Atacar (clique ou segure o mouse no mapa)">${WEAPON_ICON[clsOf()]}<span class="cdn"></span></button>` +
+    `<button class="sk dodge" id="sb-dodge" data-act="dodge" style="${sbPos(SB_DODGE, SB_R2, SB_SK)}" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` +
+    barSkills().map(id => `<button class="sk${SKD[id].ult ? ' ult' : ''}" id="sb-${id}" data-act="useSk" data-v="${id}" style="${id === ult ? sbPos(SB_ULT, SB_R2, SB_SK) : sbPos(SB_ARC[ACTIVE.indexOf(id)], SB_R, SB_SK)}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
@@ -120,6 +131,12 @@ function updateHud(){
   }
   setText('#stText', st); $('#stDot').style.background = dot;
   setText('#hpText', `Vida ${fmt(hero.hp)}/${fmt(ST.life)}`);
+  $('#skillbar').hidden = scene !== 'map';
+  const aEl = $('#sb-atk');
+  if(aEl){
+    aEl.classList.toggle('ready', cds.atk <= 0 && mode === 'hunt');
+    aEl.style.setProperty('--cd', (cds.atk/BASIC_CD).toFixed(3));
+  }
   const dEl = $('#sb-dodge');
   if(dEl){
     const cdMax = DODGE[clsOf()].cd*(1 - ST.cdr/100), cd = cds.dodge;
@@ -285,7 +302,7 @@ function panelHero(){
       <div class="ctl"><span class="rank">${base}${bonus ? ` <span style="color:var(--perf)">+${bonus}</span>` : ''}/${k.max}</span>
       <button class="plus" data-act="skUp" data-v="${id}" ${canUp ? '' : 'disabled'} aria-label="Adicionar ponto em ${k.n}">+</button>${tog}</div></div>`;
   };
-  h += `<p class="note">As habilidades ativas são manuais: toque nelas na barra embaixo do mapa para usar. O ataque normal sai sozinho em quem estiver ao alcance quando você para.</p>` + ACTIVE.map(row).join('') + `<h3 style="margin-top:6px">Passivas</h3>` + PASSIVE.map(row).join('');
+  h += `<p class="note">As habilidades ficam em volta do botão de ataque, no canto de baixo à direita. O ataque normal sai pelo botão grande (segure para repetir), no máximo a cada ${BASIC_CD} segundos; a velocidade de ataque deixa cada golpe mais forte.</p>` + ACTIVE.map(row).join('') + `<h3 style="margin-top:6px">Passivas</h3>` + PASSIVE.map(row).join('');
   const U = ultOf();
   if(U) h += `<h3 style="margin-top:6px;color:#ffd24a">Habilidade suprema</h3><div class="skill"><div class="ico" style="color:#ffd24a">${ICON_SK[U]}</div>
     <div><div class="sn">${SKD[U].n} <em>Suprema · ${n1(SKD[U].cd*(1 - st.cdr/100))}s · tecla 5</em></div><div class="sd">${skDesc(U, st)}</div></div><div class="ctl"><span class="rank">✦</span></div></div>`;
@@ -347,7 +364,7 @@ function panelRules(){
     <p class="note">A marca branca na barra de vida do herói mostra esse limite.</p></div>
     <div class="sec">${sw('retFull', 'Voltar quando a mochila encher', `${invMax()} espaços`)}
     ${sw('autoSell', 'Vender itens comuns ao chegar na vila')}
-    <p class="note">Andar é sempre manual. Celular: toque em qualquer lugar da tela, segure e arraste para o lado que quer andar; dois toques rápidos = esquiva. PC: WASD ou setas, espaço = esquiva. Parado, o herói ataca sozinho quem estiver ao alcance.</p>
+    <p class="note">Andar é sempre manual. Celular: toque em qualquer lugar da tela, segure e arraste para o lado que quer andar; dois toques rápidos = esquiva. PC: WASD ou setas, espaço = esquiva. Atacar: botão grande embaixo à direita (segure para repetir) ou, no PC, clique/segure o mouse no mapa — a cada ${BASIC_CD} segundos.</p>
     <div class="row"><label for="cfg-minPick">Pegar itens do chão a partir de</label><select id="cfg-minPick" data-cfg="minPick">${RAR.map((r, i) => `<option value="${i}" ${c.minPick === i ? 'selected' : ''}>${r.n}</option>`).join('')}</select></div></div>
     <div class="sec"><h3>Conta</h3>
       <div class="row"><label>${esc(fbUser ? (fbUser.email || fbUser.displayName || 'Conta Google') : 'Sem conta')}<small>${esc(heroName())} fica salvo na sua conta Google e aparece no ranking. Entre com a mesma conta em qualquer aparelho para continuar.</small></label><button class="btn" data-act="logout">Sair</button></div>
@@ -479,8 +496,8 @@ function renderDlg(){
   const req = `${it.cls ? ` · <span style="color:${canUse(it) ? 'var(--muted)' : '#ff8c80'}">só ${clsName(it.cls)}</span>` : ''} · <span style="color:${S.lv >= reqLv(it) ? 'var(--muted)' : '#ff8c80'}">requer nível ${reqLv(it)}</span>`;
   // Item equipado: só a ficha dele. Mochila/mercador: ficha do item clicado comparada com a do equipado embaixo (todos os status)
   const cards = isEq ? statCard(it, 'Equipado', null, '', req)
-    : cmpSummary(it, cur) + statCard(it, isShop ? 'À venda' : 'Na mochila', itemVals(cur), 'new', req)
-      + (cur ? statCard(cur, 'Equipado agora', itemVals(it), 'cur') : `<div class="scard none-eq">Nada equipado em ${itemSlotN(it)} — todos os status são ganho.</div>`);
+    : cmpSummary(it, cur) + `<div class="scards">${statCard(it, isShop ? 'À venda' : 'Na mochila', itemVals(cur), 'new', req)
+      + (cur ? statCard(cur, 'Equipado agora', itemVals(it), 'cur') : `<div class="scard none-eq">Nada equipado em ${itemSlotN(it)} — todos os status são ganho.</div>`)}</div>`;
   card.innerHTML = `${cards}
     ${isShop ? `<div class="dact"><button class="btn primary full" data-act="buy" data-v="${it.id}" ${town && S.gold >= buyPrice(it) && !invFull() ? '' : 'disabled'}>Comprar<small>${fmt(buyPrice(it))} ouro · você tem ${fmt(S.gold)}</small></button><button class="btn full" data-act="dlgClose">Fechar</button></div>` : `<div class="dact">
       ${isEq ? `<button class="btn" data-act="unequip" ${!invFull() ? '' : 'disabled'}>Guardar na mochila</button>` : !canUse(it) ? `<button class="btn" disabled>Só ${clsName(it.cls)} usa</button>` : S.lv < reqLv(it) ? `<button class="btn" disabled>Requer nível ${reqLv(it)}</button>` : `<button class="btn primary" data-act="equip">Equipar</button>`}
@@ -535,6 +552,7 @@ const ACT = {
   go: () => depart(),
   useSk: v => { if(performance.now() < skipClickT) return; manualCast(v); },
   dodge: () => { if(performance.now() < skipClickT) return; doDodge(false); },
+  atk: () => { if(performance.now() < skipClickT) return; basicAttack(); },
   mmToggle: () => { minimapBig = !minimapBig; drawMinimap(); },
   buy: v => {
     const it = S.shop.find(i => i.id === +v); if(!it || !inTown()) return;
@@ -664,7 +682,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { moveKeys[e.key.toLowerCase()] = false; if(aim && aim.src === 'key' && e.key === aim.key) aimRelease(); });
 window.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.on = true; });
 window.addEventListener('contextmenu', e => { if(aim){ e.preventDefault(); aim = null; } });
-window.addEventListener('blur', () => { aim = null; joy = null; for(const k in moveKeys) moveKeys[k] = false; });
+window.addEventListener('blur', () => { aim = null; joy = null; atkHeld = null; for(const k in moveKeys) moveKeys[k] = false; });
 // Mapa: clicar/tocar numa criatura troca o alvo; tocar no chão vazio volta ao alvo automático
 let tapT = 0, tapX = 0, tapY = 0; // último toque no mapa (para o toque duplo da esquiva)
 // Andar manual no celular: o toque vira joystick; se soltar sem arrastar, conta como toque normal (troca o alvo)
@@ -697,7 +715,9 @@ cv.addEventListener('pointerdown', e => {
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
     return;
   }
+  // PC: clicar numa criatura fixa o alvo e ataca; segurar o botão do mouse continua atacando (na direção do mouse se não houver ninguém)
   setFocus(monAt(x, y, e.pointerType === 'mouse' ? 6 : 22));
+  if(e.pointerType === 'mouse'){ const w = toWorld(x, y); atkHeld = {pid:e.pointerId, mouse:true}; basicAttack(Math.atan2(w.y - hero.y, w.x - hero.x)); }
 });
 window.addEventListener('pointermove', e => {
   if(!joy || e.pointerId !== joy.pid) return;
@@ -718,8 +738,15 @@ window.addEventListener('pointercancel', joyEnd);
 // Celular (multitoque): cada dedo é independente — um no joystick, outro na barra. Habilidade com mira: segura, arrasta e solta.
 // As outras (e a esquiva) saem no próprio toque, sem esperar o "click" (que o navegador às vezes não manda com outro dedo na tela).
 $('#skillbar').addEventListener('pointerdown', e => {
-  if(e.pointerType === 'mouse') return;
   const b = e.target.closest('.sk'); if(!b) return;
+  // Ataque: segurar o botão continua atacando a cada recarga (até soltar)
+  if(b.dataset.act === 'atk'){
+    e.preventDefault(); skipClickT = performance.now() + 600;
+    atkHeld = {pid:e.pointerId, mouse:false}; basicAttack();
+    try{ b.setPointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
+  if(e.pointerType === 'mouse') return;
   e.preventDefault();
   skipClickT = performance.now() + 600; // o click que viria depois não repete a ação
   if(b.dataset.act === 'dodge'){ doDodge(false); return; }
@@ -744,6 +771,9 @@ const touchEnd = cancel => e => {
 };
 window.addEventListener('pointerup', touchEnd(false));
 window.addEventListener('pointercancel', touchEnd(true));
+const atkEnd = e => { if(atkHeld && e.pointerId === atkHeld.pid) atkHeld = null; };
+window.addEventListener('pointerup', atkEnd);
+window.addEventListener('pointercancel', atkEnd);
 $('#skillbar').addEventListener('contextmenu', e => e.preventDefault());
 // Ao sair ou esconder a aba, salva e manda para a nuvem na hora
 document.addEventListener('visibilitychange', () => { if(document.hidden){ save(); cloudFlush(); } });
