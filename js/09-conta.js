@@ -210,7 +210,7 @@ function accountTick(dt){
 }
 
 /* ---------- RANKING ---------- */
-// Uma linha por personagem: ranking/{uid}_{cid}. Posição = nível + Paragon; a fração da barra de XP desempata.
+// Uma linha por personagem: ranking/{uid}_{cid}. Posição = nível + Maestria (par); a fração da barra de XP desempata.
 const rankScore = () => S.lv + S.par + Math.min(.999, S.lv >= MAX_LV ? S.pxp/parNeed(S.par) : S.xp/xpNeed(S.lv));
 function pushRank(){
   if(!fb || !fbUser || !accountReady || !S.char || !S.cid) return;
@@ -254,7 +254,7 @@ function panelRank(){
     h += `<div class="rk-tabs">${tabs.map(t => `<button class="${t.id === cur ? 'on' : ''}" data-act="rankCls" data-v="${t.id}">${t.ic}${t.n}</button>`).join('')}</div>`;
   }
   h += `<div class="sec"><h3>Top ${RANK_N} · ${isDun ? 'Masmorra' : cur === 'geral' ? 'Todas as classes' : (CLASSES.find(c => c.id === cur) || CLASSES[0]).n} <span class="r"><button class="tog" data-act="rankRefresh">${rankLoading ? 'Carregando…' : 'Atualizar'}</button></span></h3>
-    <p class="note">${isDun ? `Ordem pela maior Pedra da Masmorra concluída (Chefe derrotado). Todas as classes juntas.` : `Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Paragon fica na frente.`} Só aparece o nome do herói.</p>`;
+    <p class="note">${isDun ? `Ordem pela maior Pedra da Masmorra concluída (Chefe derrotado). Todas as classes juntas.` : `Ordem pelo nível. Depois do nível ${MAX_LV}, quem tem mais Maestria fica na frente.`} Só aparece o nome do herói.</p>`;
   const meId = fbUser && S.cid ? rankId(S.cid) : '', mine = id => fbUser && id.startsWith(fbUser.uid + '_');
   if(rankList === null){ if(!rankErr) h += `<p class="note">Carregando…</p>`; }
   else if(!rankList.length) h += `<p class="note">Ninguém no ranking ainda. Seja o primeiro.</p>`;
@@ -262,7 +262,7 @@ function panelRank(){
     const me = r.id === meId, cls = (CLASSES.find(c => c.id === r.cls) || CLASSES[0]).n;
     const bd = (BUILDS.find(b => b.id === r.build) || BUILDS.find(b => b.cls === r.cls) || BUILDS[0]).n;
     return `<li class="${me ? 'me' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.name)}${me ? ' (você)' : mine(r.id) ? ' (sua conta)' : ''}<small>${esc(cls)} · build ${esc(bd)} · ${fmt(r.kills || 0)} abates</small></span>
-      <span class="lv">${isDun ? `Pedra ${+r.dun || 0}<br><span class="p">Paragon ${+r.par || 0}</span>` : `Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Paragon ${+r.par}</span>` : ''}`}</span></li>`;
+      <span class="lv">${isDun ? `Pedra ${+r.dun || 0}<br><span class="p">Maestria ${+r.par || 0}</span>` : `Nv ${+r.lv || 0}${r.par ? `<br><span class="p">Maestria ${+r.par}</span>` : ''}`}</span></li>`;
   }).join('') + `</ol>`;
   if(meId && rankList && rankList.length >= RANK_N && !rankList.some(r => r.id === meId)) h += `<p class="note">${esc(heroName())} ainda não está no top ${RANK_N}.</p>`;
   return h + `</div>`;

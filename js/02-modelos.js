@@ -206,7 +206,7 @@ function calcStats(eq = S.eq){
   const L = S.lv, war = isWar();
   const rk = id => SKD[id] && SKD[id].ult ? (ULT[clsOf()] === id && S.lv >= MAX_LV ? 1 : 0) : S.sk[id] > 0 ? S.sk[id] + (bonus[id]||0) : 0;
   const pp = S.pp || {}, dm = (1 + L*.03) * (1 + .01*(pp.dmg || 0)), st = {rk, bonus};
-  // Paragon: cada nível dá +1 de dano (na arma) e +10 de vida, para todas as classes
+  // Maestria (S.par): cada nível dá +1 de dano (na arma) e +10 de vida, para todas as classes
   const par = S.par || 0;
   // Prefixos de dano: % da arma (só nela), dano adicionado (v a 2v) e % de dano geral
   const wm = (1 + a.wdp/100), gm = dm * (1 + a.dmg/100);

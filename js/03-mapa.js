@@ -263,11 +263,11 @@ function makeMon(type, x, y, ml, elite){
 // Grupo grande: cada criatura um pouco mais fraca (vida e dano × packF; 4 = 95% ... 7 = 80%, 10 = 70%), senão 10 juntas matam na hora
 const SOLO_MAP = 'campos', MAP_MONS = 80, PACK_MAX = 10, PACK_SOLO = .35;
 const packF = n => n <= 3 ? 1 : Math.max(.7, 1 - .05*(n - 3));
-const packMax = () => mapDef === DUN ? PACK_MAX : Math.min(PACK_MAX, 2 + MAPS.indexOf(mapDef));
+const packMax = () => mapDef === DUN || mapDef === RMAP ? PACK_MAX : Math.min(PACK_MAX, 2 + MAPS.indexOf(mapDef));
 const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; return Math.random() < PACK_SOLO ? 1 : rint(2, packMax()); };
 let mapTotal = 0, mapCleared = false, packId = 0;
 function spawnLevel(){
-  const total = mapDef === DUN ? DUN_KILLS : MAP_MONS;
+  const total = mapDef === DUN ? DUN_KILLS : mapDef === RMAP ? RMAP_KILLS : MAP_MONS;
   // lugares possíveis: chão a pelo menos 9 ladrilhos (pelo caminho) do início
   const spots = []; for(let i = 0; i < LV_N*LV_N; i++) if(LV.g[i] === 1 && LV.dist[i] >= 12) spots.push(i);
   let left = total, guard = 0;
@@ -280,7 +280,7 @@ function spawnLevel(){
       const m = makeMon(t, x, y, rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
       m.pack = pk;
       if(n > 3){ const f = packF(n); m.hpMax *= f; m.hp = m.hpMax; m.dmg *= f; }
-      if(inDun()) dunScale(m);
+      if(inDun()) dunScale(m); else if(inRmap()) rmapScale(m);
       m.lx = m.x; m.ly = m.y;
       mons.push(m); left--;
     }
@@ -290,33 +290,50 @@ function spawnLevel(){
 const monsLeft = () => mons.filter(m => !m.dead).length;
 // Masmorra: gasta 1 Pedra do nível escolhido, sorteia o elemento e entra com 0 abates; inDun() diz se o herói está lá
 const inDun = () => scene === 'map' && mapDef === DUN;
+// Tempo que falta na corrida (s): começa em DUN_TIME e só corre caçando (updateField em 06); não fica salvo
+let dunTime = 0;
+const dunClock = () => { const s = Math.max(0, Math.ceil(dunTime)); return `${Math.floor(s/60)}:${String(s % 60).padStart(2, '0')}`; };
 function enterDungeon(level){
   if(!(S.stones[level] > 0)) return false;
   S.stones[level]--; if(!S.stones[level]) delete S.stones[level];
-  S.dun.phase = level; S.dun.kills = 0; S.dun.boss = 0; S.dun.el = pick(DUN_ELEMS);
+  S.dun.phase = level; S.dun.kills = 0; S.dun.boss = 0; S.dun.el = pick(DUN_ELEMS); dunTime = DUN_TIME;
   if(S.tut === 1 || S.tut === 2) S.tut = 3;
   enterMap(DUN.id); save();
   return true;
 }
 // Criatura da Masmorra: vida e dano × 1,25^(Pedra−1) e o elemento da corrida
 function dunScale(m){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunEl(); }
-// Matou as DUN_KILLS criaturas: o Chefe aparece perto do herói (num chão livre, a uns 260 px) com BOSS_MINIONS ajudantes
+// Mapa Aleatório (nível 40, ver RMAP_ID em 01): RMAP é o mapa da entrada atual, com visual e criaturas de um dos MAPS sorteado
+let RMAP = null;
+const inRmap = () => scene === 'map' && !!RMAP && mapDef === RMAP;
+const rmapName = n => `Mapa Aleatório ${n}`;
+function rmapScale(m){ const k = dunMult(S.rmap.tier); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; }
+function makeRmap(){
+  const base = pick(MAPS);
+  RMAP = {...base, id:RMAP_ID, name:rmapName(S.rmap.tier), tier:S.rmap.tier, theme:base.name, lv:[MAX_LV, MAX_LV], req:MAX_LV};
+  return RMAP;
+}
+// Matou todas as criaturas (Masmorra: DUN_KILLS; Mapa Aleatório: RMAP_KILLS): o Chefe aparece perto do herói (num chão livre, a uns 260 px)
+// com BOSS_MINIONS ajudantes. Na Masmorra ele vem das criaturas de todos os mapas; no Mapa Aleatório, das criaturas do mapa sorteado.
 function spawnBoss(){
-  const withAoe = DUN.mons.filter(k => MONS[k].aoe), t = pick(withAoe.length ? withAoe : DUN.mons);
+  const R = inRmap(), pool = R ? mapDef.mons : DUN.mons, scale = R ? rmapScale : dunScale;
+  const withAoe = pool.filter(k => MONS[k].aoe), t = pick(withAoe.length ? withAoe : pool);
   let p = null;
   for(let i = 0; i < 40 && !p; i++){ const a = Math.random()*TAU, r = rnd(200, 320), x = hero.x + Math.cos(a)*r, y = hero.y + Math.sin(a)*r; if(walkable(x, y, 26) && losClear(hero, {x, y})) p = {x, y}; }
   if(!p) p = {x:hero.x + 120, y:hero.y};
   const pk = ++packId, b = makeMon(t, p.x, p.y, MAX_LV, true);
   b.boss = true; b.pack = pk; b.name = `${MONS[t].n} Ancestral`; b.r *= BOSS_R; b.spd *= .9;
-  b.hpMax *= BOSS_HP; b.dmg *= BOSS_DMG; dunScale(b); b.lx = b.x; b.ly = b.y; mons.push(b);
+  b.hpMax *= BOSS_HP; b.dmg *= BOSS_DMG; scale(b); b.lx = b.x; b.ly = b.y; mons.push(b);
+  if(R) b.el = MONS[t].el; // anel do Chefe na cor do elemento dele
   for(let i = 0; i < BOSS_MINIONS; i++){
     const a = i/BOSS_MINIONS*TAU, x = p.x + Math.cos(a)*55, y = p.y + Math.sin(a)*55;
-    const m = makeMon(pick(DUN.mons), walkable(x, y, 8) ? x : p.x, walkable(x, y, 8) ? y : p.y, MAX_LV, false);
-    m.minion = true; m.pack = pk; dunScale(m); m.lx = m.x; m.ly = m.y; mons.push(m);
+    const m = makeMon(pick(pool), walkable(x, y, 8) ? x : p.x, walkable(x, y, 8) ? y : p.y, MAX_LV, false);
+    m.minion = true; m.pack = pk; scale(m); m.lx = m.x; m.ly = m.y; mons.push(m);
   }
-  S.dun.boss = 1; tutStep(3, 4);
-  for(let i = 0; i < 30; i++){ const an = Math.random()*TAU, sp = rnd(60, 200); part({x:p.x, y:p.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.7, size:rnd(2, 4.5), c:ELEM[dunEl()].c}); }
-  ring(p.x, p.y, 140, ELEM[dunEl()].c, 1, 6); ring(p.x, p.y, 90, STONE_C, .8, 3);
+  if(R) S.rmap.boss = 1; else { S.dun.boss = 1; tutStep(3, 4); }
+  const ec = ELEM[b.el || dunEl()].c;
+  for(let i = 0; i < 30; i++){ const an = Math.random()*TAU, sp = rnd(60, 200); part({x:p.x, y:p.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.7, size:rnd(2, 4.5), c:ec}); }
+  ring(p.x, p.y, 140, ec, 1, 6); ring(p.x, p.y, 90, STONE_C, .8, 3);
   txt(hero.x, hero.y - 70, 'O CHEFE APARECEU!', '#ff8c80', 20, -16);
   log(`O Chefe apareceu: ${b.name}, com ${BOSS_MINIONS} ajudantes!`, '#ff8c80');
 }
@@ -324,7 +341,9 @@ let minimapBig = false; // minimapa grande (aberto ao tocar nele)
 function clearWorld(){ zones = []; hero.dodge = null; hero.buff = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
 function enterMap(id){
   // A Masmorra não muda S.map (o mapa de caça normal continua o mesmo para quando sair dela)
+  // No nível 40 os mapas normais somem: qualquer caçada vira o Mapa Aleatório (sorteado de novo a cada entrada)
   if(id === DUN.id && S.dun.phase > 0) mapDef = DUN;
+  else if(S.lv >= MAX_LV){ mapDef = makeRmap(); S.map = RMAP_ID; S.dun.phase = 0; S.rmap.kills = 0; S.rmap.boss = 0; }
   else { mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id; S.dun.phase = 0; }
   scene = 'map'; mode = 'hunt'; WORLD = {w:LV_N*TILE, h:LV_N*TILE}; clearWorld();
   LV = genLevel(mapDef); decor = LV.deco; minimapBig = false;
@@ -334,13 +353,15 @@ function enterMap(id){
   groundPat = makeGround(mapDef);
   spawnLevel(); markSeen();
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
-  if(mapDef === DUN){ log(`Masmorra · Pedra ${S.dun.phase} · ${ELEM[dunEl()].n}: mate as ${DUN_KILLS} criaturas e o Chefe`, ELEM[dunEl()].c); dirtyPanel(); return; }
+  if(mapDef === DUN){ log(`Masmorra · Pedra ${S.dun.phase} · ${ELEM[dunEl()].n}: mate as ${DUN_KILLS} criaturas e o Chefe em ${DUN_TIME/60} minutos`, ELEM[dunEl()].c); dirtyPanel(); return; }
+  if(mapDef === RMAP){ log(`${RMAP.name} (${RMAP.theme}): mate as ${RMAP_KILLS} criaturas e o Chefe · Pedras 1–${S.rmap.tier}`, STONE_C); dirtyPanel(); return; }
   log(`${mapDef.name}: ${mapTotal} criaturas para caçar`, '#c9e6a0');
   const xm = xpMult(mapDef); if(xm < 1) log(`Mapa abaixo do seu nível: XP reduzida em ${Math.round((1 - xm)*100)}%`, '#ff8c80');
   dirtyPanel();
 }
 function enterTown(){
   if(S.dun && S.dun.phase > 0){ if(S.dun.boss < 2) log(`Masmorra da Pedra ${S.dun.phase} encerrada sem matar o Chefe (a Pedra foi gasta)`, '#d9a0ff'); S.dun.phase = 0; S.dun.kills = 0; S.dun.boss = 0; }
+  S.rmap.kills = 0; S.rmap.boss = 0;
   scene = 'town'; mode = 'town'; WORLD = {w:TOWN_W, h:TOWN_H}; clearWorld(); decor = [];
   hero.x = TPORT.x; hero.y = TPORT.y - 40; hero.scale = 1; hero.alpha = 1; hero.face = -Math.PI/2; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.moving = false;
   cam.x = hero.x; cam.y = hero.y - 40; townWait = 0; townGoal = null; townZone = null; townIdle = true; townArmed = false;

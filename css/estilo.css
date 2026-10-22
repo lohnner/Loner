@@ -61,7 +61,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .btn small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
 
 /* Leque de botões redondos: caixa de tamanho zero presa no canto; cada botão tem right/bottom calculados em buildSkillbar (08) */
-.skillbar{position:absolute;right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);width:0;height:0;z-index:2;touch-action:none;-webkit-user-select:none;user-select:none}
+.skillbar{position:absolute;right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);width:0;height:0;z-index:2;touch-action:none;-webkit-user-select:none;user-select:none;transform:scale(var(--sbs,1));transform-origin:100% 100%}
 .sk{touch-action:none;-webkit-touch-callout:none;position:absolute;width:60px;height:60px;border-radius:50%;border:2px solid #3a4a32;background:radial-gradient(circle at 50% 32%,#2c3a26,#121810 75%);display:grid;place-items:center;color:var(--poison);padding:0;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),inset 0 2px 0 rgba(255,255,255,.08)}
 .sk svg{width:28px;height:28px}
 .sk::after{content:"";position:absolute;inset:0;background:conic-gradient(rgba(0,0,0,.7) calc(var(--cd,0)*360deg),transparent 0)}
@@ -90,6 +90,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #mm{width:96px;height:96px;border-radius:10px;border:1px solid #4a5a3a;background:rgba(6,8,6,.75);box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:pointer}
 #mmLeft{justify-self:stretch;font-size:12px;font-weight:800;color:#e9e3d1;background:rgba(8,10,9,.8);padding:2px 8px;border-radius:8px;text-align:right;max-width:170px}
 #mmLeft.done{color:#f5cf3a;border:1px solid #8a6a1a}
+#mmLeft.late{color:#ff8c80;border:1px solid #8a2a24}
 #mmWrap.big{top:50%;right:50%;transform:translate(50%,-50%);justify-items:center}
 #mmWrap.big #mm{width:min(86vw,440px);height:min(86vw,440px);border-color:#8a9a6a}
 #mmWrap.big #mmLeft{max-width:none;text-align:center}

@@ -86,10 +86,12 @@ function drawMinimap(){
   if(minimapBig){ g.font = `700 ${Math.round(px/26)}px "Alegreya Sans", sans-serif`; g.fillStyle = '#e9e3d1'; g.fillText('■ visitado', 8, px - 30); g.fillStyle = '#c86a6a'; g.fillText('■ ainda não visitado', 8, px - 10); }
   const el = $('#mmLeft');
   const dl = DUN_KILLS - S.dun.kills;
-  const txt2 = inDun() ? (S.dun.boss === 2 ? `Pedra ${S.dun.phase} concluída!` : S.dun.boss ? `Pedra ${S.dun.phase} · Chefe!` : `Pedra ${S.dun.phase} · ${ELEM[dunEl()].n} · faltam ${dl}`)
+  const txt2 = inDun() ? (S.dun.boss === 2 ? `Pedra ${S.dun.phase} concluída!` : `${S.dun.boss ? `Pedra ${S.dun.phase} · Chefe!` : `Pedra ${S.dun.phase} · ${ELEM[dunEl()].n} · faltam ${dl}`} · ⏱ ${dunClock()}`)
+    : inRmap() ? (S.rmap.boss === 2 ? `Mapa ${RMAP.tier} concluído! Volte para a vila` : S.rmap.boss ? `Mapa ${RMAP.tier} · Chefe!` : `Mapa ${RMAP.tier} · faltam ${RMAP_KILLS - S.rmap.kills}`)
     : left ? `Faltam ${left} criatura${left === 1 ? '' : 's'}` : 'Mapa limpo! Volte para a vila';
   if(el.textContent !== txt2) el.textContent = txt2;
-  el.classList.toggle('done', inDun() ? S.dun.boss === 2 : !left);
+  el.classList.toggle('done', inDun() ? S.dun.boss === 2 : inRmap() ? S.rmap.boss === 2 : !left);
+  el.classList.toggle('late', inDun() && S.dun.boss < 2 && dunTime <= 60); // último minuto da Masmorra: relógio em vermelho
 }
 // Habilidades na barra: as 4 da classe e, no nível 40, a suprema (tecla 5)
 const barSkills = () => ultOf() ? [...ACTIVE, ultOf()] : ACTIVE;
@@ -108,6 +110,15 @@ function buildSkillbar(){
     `<button class="sk dodge" id="sb-dodge" data-act="dodge" style="${sbPos(SB_DODGE, SB_R2, SB_SK)}" aria-label="${DODGE[clsOf()].n} (esquiva)" title="${DODGE[clsOf()].n} — esquiva (barra de espaço)">${ICON_DODGE}<span class="cdn"></span><span class="rk">Espaço</span></button>` +
     barSkills().map(id => `<button class="sk${SKD[id].ult ? ' ult' : ''}" id="sb-${id}" data-act="useSk" data-v="${id}" style="${id === ult ? sbPos(SB_ULT, SB_R2, SB_SK) : sbPos(SB_ARC[ACTIVE.indexOf(id)], SB_R, SB_SK)}" aria-label="Usar ${SKD[id].n}"${AIMABLE[id] ? ` title="Segure (ou segure a tecla ${ACTIVE.indexOf(id) + 1}) e mire; solte para lançar"` : ''}>${ICON_SK[id]}<span class="cdn"></span><span class="rk"></span><span class="off"></span></button>`).join('');
 }
+// Tamanho dos botões do leque (Opções): escala tudo em volta do canto de baixo à direita (--sbs no .skillbar); lembrado neste aparelho
+const SB_SCALE_MIN = 50, SB_SCALE_MAX = 130;
+let sbScale = 100;
+function setSbScale(v){
+  sbScale = clamp(Math.round(+v) || 100, SB_SCALE_MIN, SB_SCALE_MAX);
+  $('#skillbar').style.setProperty('--sbs', sbScale/100);
+  try{ localStorage.setItem('loner-btn', String(sbScale)); }catch(e){}
+}
+try{ const v = localStorage.getItem('loner-btn'); if(v) setSbScale(v); }catch(e){}
 // Menu de cima (abas): a seta esconde (fica só a seta para baixo) e mostra de novo; lembrado neste aparelho
 function setNav(shut){
   $('#nav').classList.toggle('shut', shut);
@@ -127,13 +138,14 @@ function updateHud(){
   setText('#heroName', heroName());
   const NC = lookOf('name'); $('#heroName').style.color = NC ? (NC.rainbow ? `hsl(${(T*90) % 360 | 0},90%,65%)` : NC.c) : '';
   const maxed = S.lv >= MAX_LV;
-  setText('#lvText', 'Nv ' + S.lv + (maxed ? ' · P' + S.par : ''));
+  setText('#lvText', 'Nv ' + S.lv + (maxed ? ' · M' + S.par : '')); // M = Maestria
   setText('#goldText', fmt(S.gold));
   $('#xpBar').style.width = clamp((maxed ? S.pxp/parNeed(S.par) : S.xp/xpNeed(S.lv))*100, 0, 100) + '%';
   $('#xpBar').classList.toggle('para', maxed);
   const pct = Math.round(hero.hp/ST.life*100);
   let st = '', dot = '#9bd84a';
-  if(mode === 'hunt' && inDun()){ st = `Masmorra · Pedra ${S.dun.phase} (${ELEM[dunEl()].n}) · ${S.dun.boss === 2 ? 'concluída' : S.dun.boss ? 'Chefe!' : `${S.dun.kills}/${DUN_KILLS} abates`}`; dot = ELEM[dunEl()].c; }
+  if(mode === 'hunt' && inDun()){ st = `Masmorra · Pedra ${S.dun.phase} (${ELEM[dunEl()].n}) · ${S.dun.boss === 2 ? 'concluída' : `${S.dun.boss ? 'Chefe!' : `${S.dun.kills}/${DUN_KILLS} abates`} · ${dunClock()}`}`; dot = ELEM[dunEl()].c; }
+  else if(mode === 'hunt' && inRmap()){ st = `${RMAP.name} · ${S.rmap.boss === 2 ? 'concluído! Volte para a vila' : S.rmap.boss ? 'Chefe!' : `${S.rmap.kills}/${RMAP_KILLS} abates`}`; dot = STONE_C; }
   else if(mode === 'hunt') st = mapCleared ? `${mapDef.name} limpo! Volte para a vila` : `${mapDef.name} · faltam ${monsLeft()} criaturas`;
   else if(mode === 'portal'){ st = 'Abrindo portal…'; dot = '#8ab4ff'; }
   else if(mode === 'dead'){ st = 'Caiu em combate. Voltando para a vila…'; dot = '#d4473b'; }
@@ -181,7 +193,7 @@ function updateHud(){
   drawMinimap();
   // Vila: só o botão Partir (canto de cima, à direita)
   const gb = $('#goBtn'); gb.hidden = !(inTown() && mode === 'town');
-  if(!gb.hidden) $('#goText').innerHTML = `Partir<small>${(MAPS.find(m => m.id === S.map) || MAPS[0]).name}</small>`;
+  if(!gb.hidden) $('#goText').innerHTML = `Partir<small>${S.lv >= MAX_LV ? rmapName(S.rmap.tier) : (MAPS.find(m => m.id === S.map) || MAPS[0]).name}</small>`;
   if(lastScene !== scene){ lastScene = scene; panelDirty = true; }
   if(panelDirty){ panelDirty = false; if(!$('#sheet').hidden) renderPanel(); if(!$('#dlg').hidden && dlgItem) renderDlg(); }
 }
@@ -199,7 +211,7 @@ function openTab(t){
 function closeSheet(){ $('#sheet').hidden = true; tab = null; document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on')); }
 function renderPanel(top){
   const body = $('#sheetBody'), sc = body.scrollTop;
-  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Regras da caçada', rank:'Ranking', forge:'Forja', dun:'A Fenda · Masmorra', chest:NPC_CHEST.n + ', o colecionador', runes:'Mesa Rúnica de ' + RIFT_NPC.n};
+  const T2 = {shop:'Mercador', maps:'Mapas', hero:'Herói e build', bag:'Mochila', rules:'Opções', rank:'Ranking', forge:'Forja', dun:'A Fenda · Masmorra', chest:NPC_CHEST.n + ', o colecionador', runes:'Mesa Rúnica de ' + RIFT_NPC.n};
   $('#sheetTitle').textContent = T2[tab];
   body.innerHTML = ({shop:panelShop, maps:panelMaps, hero:panelHero, bag:panelBag, rules:panelRules, rank:panelRank, forge:panelForge, dun:panelDun, chest:panelChest, runes:panelRunes})[tab]();
   body.scrollTop = top ? 0 : sc;
@@ -243,7 +255,29 @@ function panelShop(){
   }).join('') + `</div>`;
   return h;
 }
+// Nível 40: os mapas normais somem e o painel mostra só o Mapa Aleatório (escolhe o nível entre 1 e o maior liberado)
+function panelRmap(){
+  const R0 = S.rmap, n = R0.tier, k = dunMult(n), top = rmapMax(), here = inRmap();
+  const btn = here ? `<span class="chip">Caçando aqui</span>`
+    : `<button class="btn primary" data-act="map" data-v="${RMAP_ID}">${inTown() ? 'Caçar aqui' : 'Partir para cá'}</button>`;
+  return `<p class="note">No nível ${MAX_LV} os mapas viram o <b>Mapa Aleatório</b>: cada entrada sorteia o lugar e as criaturas de um dos ${MAPS.length} mapas. Mate as ${RMAP_KILLS} criaturas e o <b>Chefe</b> aparece. Vencer o Chefe do seu maior nível libera o próximo, com criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes.</p>
+    <div class="sec"><h3>Maior nível concluído <span class="r">${R0.best || '—'}</span></h3>
+    <div class="retbox"><label style="font-size:15px">Nível do mapa</label>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px">
+      <button class="plus" data-act="rmapPick" data-v="-1" ${n > 1 ? '' : 'disabled'} aria-label="Nível menor">−</button>
+      <div class="big" style="color:${STONE_C}">${n}</div>
+      <button class="plus" data-act="rmapPick" data-v="1" ${n < top ? '' : 'disabled'} aria-label="Nível maior">+</button></div>
+    <p class="note">Liberados: 1 a ${top}.</p></div></div>
+    <div class="mapc here"><span class="swatch" style="background:${STONE_C}"></span>
+      <div class="mh"><span class="mn">${rmapName(n)}</span><span class="ml">Nv ${MAX_LV}</span></div>
+      <div class="mm">Criaturas: ${RMAP_KILLS} + Chefe com ${BOSS_MINIONS} ajudantes · vida e dano ${fmt(k*100)}% · XP ${fmt(k*100)}%</div>
+      <div class="mi"><span>Itens que caem: ilvl ${MAX_LV}–${MAX_LV + 1} (Chefe: +3 itens)</span>
+        <span style="color:${STONE_C}">Pedras que caem: ${n === 1 ? 'Pedra 1' : `Pedras 1 a ${n}`} (o Chefe sempre deixa 1)</span></div>
+      ${dunOpen() ? '' : `<div class="mm" style="color:#ff8c80">As Pedras só caem depois que a Fenda despertar na vila.</div>`}
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${btn}</div></div>`;
+}
 function panelMaps(){
+  if(S.lv >= MAX_LV) return panelRmap();
   const my = avgIlvl();
   return `<p class="note">Escolha onde ${heroName()} caça. A ida e a volta seguem as suas regras. Acima do nível máximo de um mapa, cada nível a mais tira 12% da XP.</p><div class="maps">` + MAPS.map(m => {
     const lock = S.lv < m.req, here = S.map === m.id;
@@ -295,16 +329,16 @@ function panelHero(){
   </div><p class="note">As criaturas causam 4 tipos de dano: Fogo, Raio, Gelo e Veneno. Todo dano é reduzido pela armadura e pela resistência do tipo. Veja no painel de Mapas o que cada criatura causa.</p></div>`;
   if(S.lv >= MAX_LV){
     const pf = parFree();
-    h += `<div class="sec"><h3>Paragon ${S.par} <span class="r">${pf} ${pf === 1 ? 'ponto livre' : 'pontos livres'}</span></h3>
-      <p class="note">Depois do nível ${MAX_LV}, a XP vira níveis de Paragon. Cada um dá 1 ponto para gastar aqui, em qualquer lugar. O nível de Paragon conta no ranking.</p>`;
+    h += `<div class="sec"><h3>Maestria ${S.par} <span class="r">${pf} ${pf === 1 ? 'ponto livre' : 'pontos livres'}</span></h3>
+      <p class="note">Depois do nível ${MAX_LV}, a XP vira níveis de Maestria. Cada um dá 1 ponto para gastar aqui, em qualquer lugar. O nível de Maestria conta no ranking.</p>`;
     h += Object.keys(PARA).map(k => {
       const P = PARA[k], v = S.pp[k], can = pf > 0 && (!P.max || v < P.max);
       const ic = isWar() ? {dmg:'cleave', pois:'brutality', life:'iron', ias:'fury'} : isMage() ? {dmg:'firebolt', pois:'pyro', life:'ward', ias:'channel'} : {dmg:'arrow', pois:'potency', life:'hide', ias:'agility'};
       return `<div class="skill"><div class="ico" style="color:#c9a8ff">${ICON_SK[ic[k]]}</div>
         <div><div class="sn">${P.n} <em>${P.max ? `máx. ${P.max}` : 'sem limite'}</em></div><div class="sd">${P.d(v)} agora</div></div>
-        <div class="ctl"><span class="rank">${v}${P.max ? '/' + P.max : ''}</span><button class="plus" data-act="parUp" data-v="${k}" ${can ? '' : 'disabled'} aria-label="Adicionar ponto de Paragon em ${P.n}">+</button></div></div>`;
+        <div class="ctl"><span class="rank">${v}${P.max ? '/' + P.max : ''}</span><button class="plus" data-act="parUp" data-v="${k}" ${can ? '' : 'disabled'} aria-label="Adicionar ponto de Maestria em ${P.n}">+</button></div></div>`;
     }).join('');
-    h += `<button class="btn" data-act="parReset" ${S.par - pf > 0 ? '' : 'disabled'}>Redistribuir pontos de Paragon<small>Grátis</small></button></div>`;
+    h += `<button class="btn" data-act="parReset" ${S.par - pf > 0 ? '' : 'disabled'}>Redistribuir pontos de Maestria<small>Grátis</small></button></div>`;
   }
   h += `<div class="sec"><h3>Equipamento</h3><div class="eqgrid">${SLOTS.map(s => tileHTML(S.eq[s], 'eq', s)).join('')}</div></div>`;
   h += lookHTML();
@@ -379,7 +413,7 @@ function stonesHTML(){
   const ls = stoneLevels();
   return `<div class="sec"><h3>Pedras da Masmorra <span class="r">${fmt(stoneCount())}</span></h3>
     ${ls.length ? `<div class="inv-grid">${ls.map(l => `<div class="slot">${stoneTile(l)}</div>`).join('')}</div>` : ''}
-    <p class="legend">${ls.length ? `Encaixe uma Pedra na Fenda, na vila, para entrar na Masmorra. Na Mesa Rúnica do ${RIFT_NPC.n} (ao lado da Fenda): 3 Pedras iguais viram 1 do nível de cima, e dá para voltar uma Pedra para o nível de baixo.` : `Caem no ${MAPS[MAPS.length - 1].name} (Pedra 1) e dentro da Masmorra. O Chefe da Masmorra sempre deixa uma.`}</p></div>`;
+    <p class="legend">${ls.length ? `Encaixe uma Pedra na Fenda, na vila, para entrar na Masmorra. Na Mesa Rúnica do ${RIFT_NPC.n} (ao lado da Fenda): 3 Pedras iguais viram 1 do nível de cima, e dá para voltar uma Pedra para o nível de baixo.` : `Caem no Mapa Aleatório (Pedra 1 até o nível do mapa) e dentro da Masmorra. O Chefe da Masmorra sempre deixa uma.`}</p></div>`;
 }
 // Vender em lote por raridade (na Mochila e no Mercador; só na vila)
 function bulkSellHTML(){
@@ -390,7 +424,11 @@ function bulkSellHTML(){
 function panelRules(){
   const c = S.cfg;
   const sw = (key, label, small) => `<div class="row"><label for="cfg-${key}">${label}${small ? `<small>${small}</small>` : ''}</label><input type="checkbox" class="switch" id="cfg-${key}" data-cfg="${key}" ${c[key] ? 'checked' : ''}></div>`;
-  return `<div class="retbox"><label for="cfg-ret" style="font-size:15px">Voltar para a vila quando a vida chegar em</label>
+  return `<div class="retbox"><label for="cfg-sbs" style="font-size:15px">Tamanho dos botões de ataque e habilidades</label>
+    <div class="big" id="sbsVal">${sbScale}%</div>
+    <input type="range" id="cfg-sbs" min="${SB_SCALE_MIN}" max="${SB_SCALE_MAX}" step="5" value="${sbScale}">
+    <p class="note">Os botões continuam no canto de baixo à direita. Fica guardado neste aparelho.</p></div>
+    <div class="retbox"><label for="cfg-ret" style="font-size:15px">Voltar para a vila quando a vida chegar em</label>
     <div class="big" id="retVal">${c.ret}%</div>
     <input type="range" id="cfg-ret" min="10" max="90" step="5" value="${c.ret}">
     <p class="note">A marca branca na barra de vida do herói mostra esse limite.</p></div>
@@ -408,9 +446,9 @@ function findItem(where, id){ id = +id; if(where === 'shop') return S.shop.find(
 // Masmorra: escolhe qual Pedra usar (entre as que tem) e entra pelo portal da vila; a Pedra é gasta ao entrar
 function panelDun(){
   const D0 = S.dun, ls = stoneLevels();
-  const intro = `<p class="note">Cada entrada gasta 1 Pedra da Masmorra. Lá dentro: ${DUN_KILLS} criaturas de todos os mapas no nível ${MAX_LV}, todas com um elemento sorteado (Fogo, Gelo, Raio ou Veneno). Matou todas, aparece o <b>Chefe</b> com ${BOSS_MINIONS} ajudantes — ele sempre deixa uma Pedra do mesmo nível e itens. Cada nível de Pedra deixa as criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes (vida e dano) e dá mais XP. Morrer ou sair antes de matar o Chefe perde a Pedra. Sua maior Pedra concluída vai para o ranking.</p>`;
+  const intro = `<p class="note">Cada entrada gasta 1 Pedra da Masmorra. Lá dentro: ${DUN_KILLS} criaturas de todos os mapas no nível ${MAX_LV}, todas com um elemento sorteado (Fogo, Gelo, Raio ou Veneno). Matou todas, aparece o <b>Chefe</b> com ${BOSS_MINIONS} ajudantes — ele sempre deixa uma Pedra do mesmo nível e itens. Cada nível de Pedra deixa as criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes (vida e dano) e dá mais XP. Você tem <b>${DUN_TIME/60} minutos</b> para matar tudo e o Chefe. Morrer, sair ou deixar o tempo acabar perde a Pedra. Sua maior Pedra concluída vai para o ranking.</p>`;
   const best = `<div class="sec"><h3>Maior Pedra concluída <span class="r">${D0.best || '—'}</span></h3>`;
-  if(!ls.length) return intro + best + `<p class="note">Você não tem Pedras. A Pedra 1 cai no ${MAPS[MAPS.length - 1].name}; dentro da Masmorra caem Pedras do nível que você está fazendo.</p></div>`;
+  if(!ls.length) return intro + best + `<p class="note">Você não tem Pedras. Elas caem no Mapa Aleatório (do 1 até o nível do mapa); dentro da Masmorra caem Pedras do nível que você está fazendo.</p></div>`;
   if(!ls.includes(D0.start)) D0.start = ls[ls.length - 1];
   const i = ls.indexOf(D0.start), k = dunMult(D0.start);
   return intro + best + `<div class="retbox"><label style="font-size:15px">Usar a Pedra</label>
@@ -445,7 +483,7 @@ function forgeStonesHTML(){
       <button class="btn" data-act="stoneDown" data-v="${l}" ${town && l > 1 ? '' : 'disabled'}>Voltar 1</button></div></div>`;
   }).join('');
   return `<p class="note">Junte ${STONE_UP_N} Pedras do mesmo nível para criar 1 do nível de cima (criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes a cada nível, sem limite). Ou volte uma Pedra para o nível de baixo.${town ? '' : ' <span style="color:#ff8c80">A forja fica na vila.</span>'}</p>
-    <div class="sec"><h3>Pedras na mochila</h3>${rows || `<p class="note">Você não tem Pedras. A Pedra 1 cai no ${MAPS[MAPS.length - 1].name}.</p>`}</div>`;
+    <div class="sec"><h3>Pedras na mochila</h3>${rows || `<p class="note">Você não tem Pedras. Elas caem no Mapa Aleatório.</p>`}</div>`;
 }
 function forgeOrbsHTML(){
   const town = inTown();
@@ -600,6 +638,12 @@ const ACT = {
   tab: v => tab === v && !$('#sheet').hidden ? closeSheet() : openTab(v),
   close: () => closeSheet(),
   map: v => {
+    if(S.lv >= MAX_LV){ // Mapa Aleatório: o mapa é sorteado na entrada (enterMap)
+      S.map = RMAP_ID;
+      if(scene === 'town'){ closeSheet(); depart(); }
+      else if(mode === 'hunt'){ closeSheet(); startPortal('map', `Indo para ${rmapName(S.rmap.tier)}`); }
+      dirtyPanel(); return;
+    }
     const m = MAPS.find(x => x.id === v); if(!m || S.lv < m.req) return;
     S.map = v; mapDef = m;
     if(scene === 'town'){ closeSheet(); depart(); }
@@ -667,6 +711,7 @@ const ACT = {
   },
   look: v => { const [t, id] = v.split(':'); if(id && (!COS[id] || !cosOwned().includes(id))) return; S.look[t] = id || ''; applyLook(); save(); dirtyPanel(); },
   // Masmorra
+  rmapPick: v => { S.rmap.tier = clamp(S.rmap.tier + +v, 1, rmapMax()); dirtyPanel(); },
   dunPick: v => { const ls = stoneLevels(), i = clamp(ls.indexOf(S.dun.start) + +v, 0, ls.length - 1); if(ls.length) S.dun.start = ls[i]; dirtyPanel(); },
   dunGo: () => { const l = S.dun.start; if(!inTown() || trans || !(S.stones[l] > 0)) return; closeSheet(); transition(() => { if(!enterDungeon(l)) enterTown(); }); },
   stoneUp: v => { const l = +v; if(!inTown() || !(S.stones[l] >= STONE_UP_N)) return; S.stones[l] -= STONE_UP_N; if(!S.stones[l]) delete S.stones[l]; S.stones[l + 1] = (S.stones[l + 1] || 0) + 1; log(`${STONE_UP_N} Pedras ${l} viraram 1 Pedra ${l + 1}`, STONE_C); dirtyPanel(); save(); },
@@ -725,7 +770,10 @@ document.addEventListener('change', e => {
   if(el.dataset && el.dataset.look){ ACT.look(el.value); return; }
   if(k){ S.cfg[k] = el.type === 'checkbox' ? el.checked : +el.value; save(); }
 });
-document.addEventListener('input', e => { if(e.target.id === 'cfg-ret'){ S.cfg.ret = +e.target.value; $('#retVal').textContent = S.cfg.ret + '%'; } });
+document.addEventListener('input', e => {
+  if(e.target.id === 'cfg-ret'){ S.cfg.ret = +e.target.value; $('#retVal').textContent = S.cfg.ret + '%'; }
+  if(e.target.id === 'cfg-sbs'){ setSbScale(e.target.value); $('#sbsVal').textContent = sbScale + '%'; }
+});
 document.addEventListener('keydown', e => {
   if(e.target.closest('input,textarea')) return;
   if(talk){ if(e.key === 'Enter' || e.code === 'Space'){ e.preventDefault(); if(!e.repeat) talkNext(); } return; } // fala aberta: só passa a fala

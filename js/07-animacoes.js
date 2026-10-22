@@ -1019,6 +1019,7 @@ function render(){
       ctx.globalAlpha = .14 + .1*k; ell(z.x, z.y, z.r, z.r*.75);
       ctx.globalAlpha = .35 + .3*k; ell(z.x, z.y, z.r*k, z.r*.75*k);
       ctx.globalAlpha = .55 + .35*pul; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*.75, 0, 0, TAU); ctx.stroke();
+      if(z.k === 'leap' && z.mon.leapTo){ ctx.globalAlpha = .5 + .3*pul; ctx.lineWidth = 2; ctx.setLineDash([8, 7]); line(z.mon.x, z.mon.y, z.x, z.y); ctx.setLineDash([]); } // preparando o pulo: linha até a marca
       if(z.k === 'spell'){ ctx.globalAlpha = .4*k; ctx.lineWidth = 1.5; for(let i = 0; i < 3; i++){ const a = T*2 + i*TAU/3; line(z.x + Math.cos(a)*z.r*.6, z.y + Math.sin(a)*z.r*.45, z.x + Math.cos(a + 2)*z.r*.6, z.y + Math.sin(a + 2)*z.r*.45); } }
     }
     ctx.globalAlpha = 1;

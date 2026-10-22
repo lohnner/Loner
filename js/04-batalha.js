@@ -1,4 +1,4 @@
-// Batalha: dano, veneno e sangramento, morte, loot, XP/nível/Paragon, ataque básico e habilidades das classes (cast/doSkill).
+// Batalha: dano, veneno e sangramento, morte, loot, XP/nível/Maestria, ataque básico e habilidades das classes (cast/doSkill).
 // Carregado em ordem pelo index.html (ver CLAUDE.md).
 'use strict';
 
@@ -38,6 +38,7 @@ function kill(m){
   let xp = (8 + m.ml*6) * (m.elite ? 3.5 : 1); // ~35% a mais que antes (era 6 + nível × 4,5)
   xp *= xpMult(mapDef);
   if(inDun()){ xp *= dunMult(S.dun.phase) * (m.boss ? 6 : 1); if(m.boss) dunBossDown(m); else if(!m.minion) dunKill(); }
+  else if(inRmap()){ xp *= dunMult(S.rmap.tier) * (m.boss ? 6 : 1); if(m.boss) rmapBossDown(m); else if(!m.minion) rmapKill(); }
   dropStone(m);
   gainXp(xp);
   for(let i = 0; i < 10; i++) part({x:m.x, y:m.y, vx:rnd(-90,90), vy:rnd(-110,40), grav:240, life:rnd(.4,.8), size:rnd(1.5,3.5), c:m.d.c1});
@@ -73,14 +74,33 @@ function kill(m){
   if(m.elite && Math.random() < .35) dropItem(m);
   if(m.boss) for(let i = 0; i < 3; i++) dropItem(m); // Chefe: mais 3 itens (sorteio de elite)
 }
-// Pedras da Masmorra: só caem com a Fenda aberta (nível 40, depois da cena do Ezequiel). No último mapa, chance de Pedra 1;
-// na corrida da Pedra N, chance de Pedra N (ou N−1, menos comum). Elite 3×.
+// Pedras da Masmorra: só caem com a Fenda aberta (nível 40, depois da cena do Ezequiel). No Mapa Aleatório N, chance de uma Pedra
+// de nível sorteado entre 1 e N (rmapStone); na corrida da Pedra N, chance de Pedra N (ou N−1, menos comum). Elite 3×.
+const rmapStone = () => rint(1, S.rmap.tier);
 function dropStone(m){
-  const last = mapDef === MAPS[MAPS.length - 1];
-  if(m.boss || !dunOpen() || (!last && !inDun())) return;
-  if(Math.random() >= (last ? STONE_MAP_CH : STONE_DUN_CH) * (m.elite ? 3 : 1)) return;
-  const N = inDun() ? S.dun.phase : 1, lv = N > 1 && Math.random() < STONE_LOW_CH ? N - 1 : N;
+  const R = inRmap();
+  if(m.boss || !dunOpen() || (!R && !inDun())) return;
+  if(Math.random() >= (R ? STONE_MAP_CH : STONE_DUN_CH) * (m.elite ? 3 : 1)) return;
+  if(R){ spawnStone(m.x, m.y, rmapStone()); return; }
+  const N = S.dun.phase, lv = N > 1 && Math.random() < STONE_LOW_CH ? N - 1 : N;
   spawnStone(m.x, m.y, lv);
+}
+// Mapa Aleatório: conta os abates; com RMAP_KILLS aparece o Chefe (spawnBoss em 03)
+function rmapKill(){
+  const R0 = S.rmap; R0.kills++;
+  if(R0.kills >= RMAP_KILLS && !R0.boss) spawnBoss();
+  dirtyPanel();
+}
+// Chefe do Mapa Aleatório morto: Pedra garantida (1 a N), mapa limpo e, na 1ª vez no nível mais alto, libera o próximo e já o escolhe
+function rmapBossDown(m){
+  const R0 = S.rmap; R0.boss = 2; mapCleared = true;
+  if(dunOpen()) spawnStone(m.x, m.y, rmapStone());
+  let msg = `Chefe derrotado! ${rmapName(R0.tier)} concluído.`;
+  if(R0.tier > R0.best){ R0.best = R0.tier; R0.tier = R0.best + 1; msg += ` ${rmapName(R0.tier)} liberado (criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes).`; }
+  ring(m.x, m.y, 160, STONE_C, 1.1, 6); ring(m.x, m.y, 100, '#f5cf3a', .9, 4);
+  txt(hero.x, hero.y - 70, 'MAPA CONCLUÍDO!', '#f5cf3a', 20, -16);
+  log(msg + ' Volte para a vila.', '#f5cf3a');
+  save(); dirtyPanel();
 }
 function spawnStone(x, y, lv){
   drops.push({x:x + rnd(-16,16), y:y + rnd(-16,16), stone:lv, t:0, gone:false});
@@ -115,22 +135,22 @@ function gainXp(x){
     S.xp -= xpNeed(S.lv); S.lv++; refreshStats(); hero.hp = ST.life;
     ring(hero.x, hero.y, 80, '#e2ae4a', .9, 4); ring(hero.x, hero.y, 50, '#ffe39a', .7, 2);
     txt(hero.x, hero.y - 46, 'NÍVEL ' + S.lv, '#e2ae4a', 20, -24);
-    log(S.lv === MAX_LV ? `Nível máximo ${MAX_LV}! A XP agora vira níveis de Paragon.` : `Nível ${S.lv}! Ponto de habilidade para gastar no Herói.`, '#e2ae4a');
+    log(S.lv === MAX_LV ? `Nível máximo ${MAX_LV}! A XP agora vira níveis de Maestria.` : `Nível ${S.lv}! Ponto de habilidade para gastar no Herói.`, '#e2ae4a');
     if(S.lv === MAX_LV){ buildSkillbar(); log(`Habilidade suprema liberada: ${SKD[ULT[clsOf()]].n} (tecla 5)!`, '#ffd24a'); txt(hero.x, hero.y - 74, SKD[ULT[clsOf()]].n, '#ffd24a', 18, -18);
       if(!S.riftIntro) log('Alguém espera por você na vila…', '#c9a8ff'); }
     dirtyPanel(); rankDirty = true;
   }
   if(S.lv >= MAX_LV && S.xp > 0){ const rest = S.xp; S.xp = 0; gainParagon(rest); }
 }
-// Paragon (estilo Diablo 3): depois do 40 cada nível dá 1 ponto em bônus pequenos; o nível 40 não muda
+// Maestria (nome no jogo; no código continua par/gainParagon): depois do 40 cada nível dá 1 ponto em bônus pequenos; o nível 40 não muda
 const parNeed = p => Math.floor(xpNeed(MAX_LV) * (1 + p*.02));
 function gainParagon(x){
   S.pxp += x;
   while(S.pxp >= parNeed(S.par)){
     S.pxp -= parNeed(S.par); S.par++; refreshStats();
     ring(hero.x, hero.y, 80, '#b48cff', .9, 4); ring(hero.x, hero.y, 50, '#e2d4ff', .7, 2);
-    txt(hero.x, hero.y - 46, 'PARAGON ' + S.par, '#c9a8ff', 20, -24);
-    log(`Paragon ${S.par}! +1 de dano, +10 de vida e 1 ponto para gastar no Herói.`, '#c9a8ff');
+    txt(hero.x, hero.y - 46, 'MAESTRIA ' + S.par, '#c9a8ff', 20, -24);
+    log(`Maestria ${S.par}! +1 de dano, +10 de vida e 1 ponto para gastar no Herói.`, '#c9a8ff');
     dirtyPanel(); rankDirty = true;
   }
 }

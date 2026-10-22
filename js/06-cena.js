@@ -102,9 +102,10 @@ function monAoe(m, A){
     z.x = m.x; z.y = m.y; if(A.k === 'cone'){ z.ang = m.face; z.spread = A.spread; }
     m.wind = A.t;
   } else if(A.k === 'leap'){
-    // pula: sai do chão e cai na marca quando ela termina
+    // pula: marca o chão, fica parada se preparando (LEAP_WIND) e só então pula, caindo na marca quando ela termina
     const e = rayEnd(m.x, m.y, hero.x, hero.y, Math.min(14, m.r*.7));
-    z.x = e.x; z.y = e.y; m.leap = {x0:m.x, y0:m.y, x1:e.x, y1:e.y, t:0, dur:A.t};
+    z.x = e.x; z.y = e.y; z.dur = LEAP_WIND + LEAP_AIR;
+    m.wind = LEAP_WIND; m.leapTo = {x:e.x, y:e.y};
   } else if(A.k === 'bomb'){
     // arremesso: o objeto voa em arco até a marca
     z.bomb = {x0:m.x, y0:m.y - m.r*2, type:m.type};
@@ -122,8 +123,13 @@ function monUpdate(m, dt){
     if(k >= 1){ m.leap = null; m.leapH = 0; m.lx = m.x; m.ly = m.y; }
     return;
   }
-  // preparando cone/pisão: fica parada, tremendo
+  // preparando cone/pisão/pulo: fica parada, tremendo
   if(m.wind > 0){ m.wind -= dt; m.moving = false; }
+  // fim do preparo do pulo: sai do chão rumo à marca (rayEnd de novo: pode ter sido empurrada enquanto esperava)
+  if(m.leapTo && m.wind <= 0){
+    const e = rayEnd(m.x, m.y, m.leapTo.x, m.leapTo.y, Math.min(14, m.r*.7));
+    m.leap = {x0:m.x, y0:m.y, x1:e.x, y1:e.y, t:0, dur:LEAP_AIR}; m.leapTo = null;
+  }
   if(m.poisons.length || m.bleeds.length || m.burns.length){
     let dmg = 0;
     for(const p of m.poisons){ dmg += p.dps * Math.min(dt, p.t); p.t -= dt; }
@@ -168,7 +174,7 @@ function monUpdate(m, dt){
     if(m.aggro && mode === 'hunt' && m.aoeT <= 0 && d < reach && losClear(m, hero)){
       // pronto e ao alcance: 40% de chance de usar; se não usar, tenta de novo em 1 s
       if(Math.random() < AOE_CHANCE){ monAoe(m, A); return; }
-      m.aoeT = 1;
+      m.aoeT = A.cd; // falhou nos 40%: só tenta de novo depois da recarga inteira (5 s)
     }
   }
   if(m.aggro){
@@ -284,9 +290,18 @@ function updateField(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
   if(LV){ LV.flowT -= dt; if(LV.flowT <= 0){ LV.flowT = .2; updateFlow(); markSeen(); } }
   // Mapa limpo: matou todas as criaturas (Masmorra passa de fase em dunKill)
-  if(!mapCleared && mapTotal && mode === 'hunt' && !inDun() && monsLeft() === 0){
+  if(!mapCleared && mapTotal && mode === 'hunt' && !inDun() && !inRmap() && monsLeft() === 0){ // Mapa Aleatório termina no Chefe (rmapBossDown)
     mapCleared = true; log(`${mapDef.name} limpo! Volte para a vila.`, '#f5cf3a'); ring(hero.x, hero.y, 140, '#f5cf3a', 1, 5);
     txt(hero.x, hero.y - 70, 'Mapa limpo!', '#f5cf3a', 24, -18);
+  }
+  // Masmorra: relógio de DUN_TIME até o Chefe morrer; acabou, a Masmorra fecha e o herói volta para a vila (a Pedra é perdida em enterTown)
+  if(inDun() && mode === 'hunt' && S.dun.boss < 2 && dunTime > 0){
+    dunTime -= dt;
+    if(dunTime <= 0){
+      dunTime = 0; log('O tempo acabou! A Masmorra se fechou e a Pedra foi perdida.', '#ff8c80');
+      txt(hero.x, hero.y - 70, 'TEMPO ESGOTADO!', '#ff8c80', 22, -16);
+      transition(() => enterTown());
+    }
   }
   heroTimers(dt);
   if(mode === 'hunt'){ if(T - (hero.lastHit || 0) > 3 && hero.hp < ST.life) hero.hp = Math.min(ST.life, hero.hp + ST.life*.02*dt); heroAI(dt); }
@@ -377,7 +392,7 @@ const CUT_A = [
 const CUT_B = [
   'Sentiu? A Fenda acordou com a sua força. Do outro lado ficam criaturas de todos os cantos do mundo.',
   'Cada Pedra da Masmorra abre a Fenda uma vez, e cada nível de Pedra deixa tudo lá dentro mais forte. No fim, um Chefe — e ele sempre guarda uma Pedra.',
-  'Mais Pedras você encontra no Abismo Ardente e lá dentro. Traga 3 iguais para a minha Mesa Rúnica e eu forjo uma mais poderosa.',
+  'Mais Pedras você encontra no Mapa Aleatório e lá dentro. Traga 3 iguais para a minha Mesa Rúnica e eu forjo uma mais poderosa.',
   'Tome, leve esta Pedra 1 para conhecer a Fenda. Ela está na sua mochila, na aba Pedras. Boa caçada.',
 ];
 const CUT_START = {x:1065, y:900}, CUT_RIFT = {x:DPORT.x - 66, y:DPORT.y + 44};
@@ -406,7 +421,7 @@ function endCut(){
 }
 // Tutorial da 1ª Masmorra (S.tut): 1 ande até a Fenda · 2 encaixe a Pedra 1 · 3 mate as 50 · 4 mate o Chefe · 5 pegue a Pedra e volte
 // · −1 concluído. Se a corrida acabar antes do Chefe, o Ezequiel dá outra Pedra 1 e volta para o passo 1.
-const TUT_TXT = {1:'Ande até a Fenda (seta roxa) para abrir a Masmorra', 2:'Toque em "Encaixar a Pedra 1 e entrar"', 3:'Mate as 50 criaturas da Masmorra', 4:'O Chefe apareceu! Derrote-o (e desvie das marcas no chão)', 5:'Pegue a Pedra que o Chefe deixou e volte para a vila'};
+const TUT_TXT = {1:'Ande até a Fenda (seta roxa) para abrir a Masmorra', 2:'Toque em "Encaixar a Pedra 1 e entrar"', 3:`Mate as ${DUN_KILLS} criaturas da Masmorra em ${DUN_TIME/60} minutos`, 4:'O Chefe apareceu! Derrote-o (e desvie das marcas no chão)', 5:'Pegue a Pedra que o Chefe deixou e volte para a vila'};
 function tutStep(from, to){ if(S.tut === from){ S.tut = to; dirtyPanel(); } }
 // chamado ao voltar para a vila: termina o tutorial ou, se a corrida falhou, dá outra Pedra 1 para tentar de novo
 function tutTown(){

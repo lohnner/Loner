@@ -113,12 +113,13 @@ const MON_EL = {
 // toda criatura tem elemento; tiro de quem ataca de longe fica da cor do elemento
 for(const k in MONS){ MONS[k].el = MON_EL[k] || 'poison'; if(MONS[k].ranged) MONS[k].ranged = ELEM[MONS[k].el].c; }
 // Masmorra (fim de jogo) com Pedras da Masmorra: cada corrida gasta 1 Pedra de nível N (S.stones[N], sem limite de nível).
-// A Pedra 1 cai no último mapa (STONE_MAP_CH por criatura). Na corrida: DUN_KILLS criaturas de todos os mapas no nível 40, todas com
+// As Pedras caem no Mapa Aleatório (STONE_MAP_CH por criatura, nível 1 a N; ver RMAP_ID). Na corrida: DUN_KILLS criaturas de todos os mapas no nível 40, todas com
 // o mesmo elemento sorteado (S.dun.el); matou todas, aparece o Chefe com BOSS_MINIONS ajudantes. O Chefe sempre deixa uma Pedra N
 // e itens; as criaturas da corrida podem deixar Pedra N ou N−1 (STONE_DUN_CH). Pedra N = criaturas × 1,25^(N−1) de vida e dano (dunMult).
 // Forja: 3 Pedras N viram 1 Pedra N+1; 1 Pedra N volta a ser 1 Pedra N−1. S.dun.best = maior Pedra concluída (Chefe morto) → ranking.
 // S.dun.phase = nível da Pedra da corrida em andamento (0 = fora da Masmorra).
-const DUN_KILLS = 50, DUN_STEP = 1.25;
+// DUN_TIME = tempo para matar tudo e o Chefe (5 min); acabou antes, a Masmorra fecha, o herói volta para a vila e a Pedra é perdida.
+const DUN_KILLS = 100, DUN_STEP = 1.25, DUN_TIME = 300;
 const DUN = {id:'masmorra', name:'Masmorra', lv:[MAX_LV, MAX_LV], req:MAX_LV, seed:97, ground:['#1c1820','#272030','#120e16'], decor:'citadel', tuft:'#3a3044', mons:Object.keys(MONS), desc:'Criaturas de todos os mapas, cada Pedra mais forte.'};
 const dunMult = p => Math.pow(DUN_STEP, Math.max(0, p - 1));
 // Elemento da corrida: sorteado ao entrar (todas as criaturas causam esse dano — o jogador precisa da resistência certa)
@@ -127,11 +128,17 @@ const dunEl = () => S.dun.el || DUN_ELEMS[0];
 const STONE_MAP_CH = .012, STONE_DUN_CH = .02, STONE_UP_N = 3, STONE_LOW_CH = .35; // queda da Pedra N−1 na corrida: 35% das Pedras
 const BOSS_HP = 6, BOSS_DMG = 1.15, BOSS_R = 1.5, BOSS_MINIONS = 3;
 const STONE_C = '#b07cff';
+// Mapa Aleatório (nível 40): os 9 mapas somem do painel e o herói só caça aqui. Cada entrada sorteia o visual e as criaturas de um
+// dos MAPS; RMAP_KILLS criaturas no nível 40 × dunMult(nível do mapa) e, mortas todas, um Chefe. Não gasta nada nem tem tempo.
+// Pedras: cada criatura tem STONE_MAP_CH (elite 3×) e o Chefe sempre deixa 1 — nível sorteado entre 1 e o nível do mapa.
+// Chefe do nível N morto pela 1ª vez libera o N+1 (S.rmap.best = maior concluído; S.rmap.tier = nível escolhido).
+const RMAP_ID = 'aleatorio', RMAP_KILLS = 100;
+const rmapMax = () => (S.rmap.best || 0) + 1; // maior nível liberado
 const stoneCount = () => Object.values(S.stones || {}).reduce((a, n) => a + (n || 0), 0);
 const stoneLevels = () => Object.keys(S.stones || {}).map(Number).filter(l => S.stones[l] > 0).sort((a, b) => a - b);
 // A Fenda (portal da Masmorra) só abre no nível 40, depois da cena com o Ezequiel (S.riftIntro); antes fica selada na vila
 const dunOpen = () => S.lv >= MAX_LV && !!S.riftIntro;
-// Golpes em área: a criatura marca o chão e, depois de AOE_T (0,7 s), o golpe acerta quem ainda estiver dentro (m × AOE_DMG × o dano dela).
+// Golpes em área: a criatura marca o chão e, depois de AOE_T (0,7 s; pulo: LEAP_WIND + LEAP_AIR), o golpe acerta quem ainda estiver dentro (m × AOE_DMG × o dano dela).
 // Cada um tem um jeito (k) que combina com a criatura:
 //   leap  = pula e cai na marca (onde o herói estava): lobos, cães, sapo, carniçal, gárgula, brutamonte
 //   cone  = golpe em cone à frente dela (spread = abertura em radianos): espada, ferrão, baforada
@@ -141,7 +148,10 @@ const dunOpen = () => S.lv >= MAX_LV && !!S.riftIntro;
 // reach = distância máxima para começar o golpe. O ataque normal continua. Elites: área 20% maior.
 // AOE_T = tempo entre marcar e acertar (0,7 s). AOE_DMG = penalidade extra: ser pego pela área dói muito (multiplica o m de cada golpe).
 const AOE_T = .7, AOE_DMG = 2.5;
-// AOE_CD = recarga de todo golpe em área (5 s). Com ele pronto e o herói ao alcance, a criatura tenta a cada 1 s com AOE_CHANCE (40%) de usar.
+// Pulo (leap): a criatura fica parada LEAP_WIND (2 s) com a marca no chão e uma linha até ela; depois pula e cai em LEAP_AIR (0,6 s)
+const LEAP_WIND = 2, LEAP_AIR = .6;
+// AOE_CD = recarga de todo golpe em área (5 s). Com ele pronto e o herói ao alcance, a criatura tenta com AOE_CHANCE (40%) de usar;
+// se não sair, espera AOE_CD de novo para a próxima tentativa.
 const AOE_CD = 5, AOE_CHANCE = .4;
 const MON_AOE = {
   // à distância
@@ -340,14 +350,15 @@ const startWeapon = cls => cls === 'guerreiro'
 const defaults = cls => {
   const sk = {}; for(const id in SKD) sk[id] = 0;
   sk[(CLASS_KIT[cls] || CLASS_KIT.arqueiro).active[0]] = 1; // começa com a 1ª habilidade da classe
-  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:8,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1,el:'',boss:0},stones:{},riftIntro:false,riftGift:false,tut:0};
+  return {lv:1,xp:0,par:0,pp:{dmg:0,pois:0,life:0,ias:0},pxp:0,gold:0,inv:[],orbs:{desp:0,asc:0,exa:0,lenda:0,anul:0},eq:{bow:startWeapon(cls)},sk,auto:{},cfg:{ret:35,retFull:true,autoGo:true,autoSell:false,minPick:0,manual:false},map:'campos',speed:1,kills:0,uid:1,legs:0,char:null,ver:8,shop:[],invX:0,look:{skin:'',trail:'',fx:'',name:''},dun:{best:0,phase:0,kills:0,start:1,el:'',boss:0},stones:{},riftIntro:false,riftGift:false,tut:0,rmap:{best:0,tier:1,kills:0,boss:0}};
 };
 // O save usa sempre a mesma chave: versões novas do jogo leem o progresso antigo.
 function normalize(s){
   const cls = (s.char && s.char.cls) || 'arqueiro', d = defaults(cls);
-  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})},look:{...d.look,...(s.look||{})},dun:{...d.dun,...(s.dun||{}),phase:0,kills:0,boss:0}});
+  Object.assign(d, s, {sk:{...d.sk,...(s.sk||{})},auto:{...d.auto,...(s.auto||{})},cfg:{...d.cfg,...(s.cfg||{})},pp:{...d.pp,...(s.pp||{})},look:{...d.look,...(s.look||{})},dun:{...d.dun,...(s.dun||{}),phase:0,kills:0,boss:0},rmap:{...d.rmap,...(s.rmap||{}),kills:0,boss:0}});
+  d.rmap.tier = clamp(Math.floor(d.rmap.tier) || 1, 1, (d.rmap.best || 0) + 1);
   d.stones = {}; for(const l in (s.stones || {})) if(+l >= 1 && s.stones[l] > 0) d.stones[+l] = Math.floor(s.stones[l]);
-  // Saves antigos sem limite de nível: o que passou de 40 vira Paragon
+  // Saves antigos sem limite de nível: o que passou de 40 vira Maestria (S.par)
   if(d.lv > MAX_LV){ d.par += d.lv - MAX_LV; d.lv = MAX_LV; d.xp = 0; }
   d.orbs = {...defaults(cls).orbs, ...(s.orbs || {})};
   for(const id in d.sk) if(SKD[id]) d.sk[id] = Math.min(d.sk[id], SKD[id].max); // rank acima do novo máximo vira ponto livre
