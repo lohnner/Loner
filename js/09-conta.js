@@ -5,9 +5,12 @@
 /* ---------- FIREBASE ---------- */
 // Configuração do app Web do Firebase (Console › Configurações do projeto › Seus apps). Esses valores são públicos.
 // O projeto loner-hq é dividido com o jogo Loner: as regras do Firestore ficam em firestore.rules (nunca apague as do Loner).
+// No site publicado o login usa o próprio lohnner.github.io (arquivos do Firebase em /__/auth/, pasta raiz-lohnner.github.io):
+// assim o login por redirecionamento funciona no app (APK) e nos navegadores que separam o armazenamento de outros sites.
+const SITE_HOST = 'lohnner.github.io';
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyCfHLrtPMnLtfU-PvsVf5QCOXKmuZya51I',
-  authDomain: 'loner-hq.firebaseapp.com',
+  authDomain: location.hostname === SITE_HOST ? SITE_HOST : 'loner-hq.firebaseapp.com',
   projectId: 'loner-hq',
   storageBucket: 'loner-hq.firebasestorage.app',
   messagingSenderId: '290842361996',
@@ -74,10 +77,15 @@ function renderChars(){
     ${list.length < MAX_CHARS ? `<button class="btn primary" data-act="newChar" style="padding:14px;font-size:17px">Criar novo personagem</button>` : `<p class="note">Limite de ${MAX_CHARS} personagens. Apague um para criar outro.</p>`}
     <button class="btn" data-act="logout">Sair da conta</button>`;
 }
+// Dentro do app instalado (APK/TWA ou atalho na tela inicial) a janela do Google não consegue devolver o login para o jogo:
+// lá o login sai por redirecionamento (a página vai para o Google e volta; getRedirectResult em fbInit).
+try{ if(document.referrer.startsWith('android-app://')) sessionStorage.setItem('inApp', '1'); }catch(e){}
+const inApp = () => { try{ if(sessionStorage.getItem('inApp')) return true; }catch(e){} return matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches && !document.fullscreenElement; };
 async function accountLogin(){
   if(!fbInit()) return;
   const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({prompt:'select_account'});
   loginErr = ''; renderLogin();
+  if(inApp() && location.hostname === SITE_HOST){ loginState = 'wait'; renderLogin(); return fb.auth.signInWithRedirect(prov); }
   try{ await fb.auth.signInWithPopup(prov); }
   catch(e){
     if(e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return fb.auth.signInWithRedirect(prov);
