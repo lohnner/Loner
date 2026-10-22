@@ -16,6 +16,8 @@
   <h1>Wiki do Loner</h1>
   <p class="lead">Loner é um RPG de ação para celular (sempre deitado) e PC. Você anda com o herói, ataca, usa habilidades, junta itens e sobe até o nível 40. Depois disso começa o fim de jogo: o Mapa Aleatório, a Fenda e as Pedras da Masmorra.</p>
 
+  <div id="apkBox"></div>
+
   <figure class="wide"><img class="shot" src="img/vila.jpg" alt="A vila vista de cima: fonte no meio, Mercador à esquerda, Forja à direita, portal de saída embaixo e a Fenda no canto" width="1100" height="960"><figcaption>A vila, onde tudo começa: Mercador, Forja, Tobias e o Baú de Visuais, o portal de saída e, no nível 40, a Fenda.</figcaption></figure>
 
   <h2 id="paginas">Páginas da wiki</h2>
@@ -62,6 +64,7 @@
 <script src="wiki.js"></script>
 <script>
 wikiLayout();
+put('#apkBox', apkBox());
 const DESC = {
   'classes.html':'As 3 classes, todas as habilidades, esquivas e supremas.',
   'builds.html':'Como distribuir pontos e quais atributos procurar em cada classe.',
