@@ -6,7 +6,7 @@
 // Canvas opaco (alpha:false): o render pinta a tela inteira todo quadro, e o navegador não precisa misturar com a página atrás
 // ctx é let: na câmera 3D o render (07) troca por um canvas à parte enquanto desenha o chão
 const cv = $('#cv'), CTX = cv.getContext('2d', {alpha:false}); let ctx = CTX;
-let cw = 360, ch = 480, dpr = 1, zoom = 1;
+let cw = 360, ch = 480, dpr = 1, dprBase = 1, zoom = 1; // dprBase = dpr sem o renderScale (o cache de poses usa ele: não refaz tudo quando a qualidade muda)
 // Resolução interna: no máximo MAX_PX pixels (telas 2K/4K ou Windows em 125–150% desenhariam 4–8 milhões por quadro) e
 // renderScale (0,7–1), que o frame() (07) baixa sozinho se os quadros ficarem pesados e sobe de volta quando sobra tempo.
 const MAX_PX = 3e6;
@@ -23,12 +23,16 @@ let camD = 1000, camTop = -300, camBot = 300, camSTop = 1;
 function resize(){
   const r = cv.parentElement.getBoundingClientRect();
   cw = Math.max(1, r.width); ch = Math.max(1, r.height);
-  dpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PX/(cw*ch))) * renderScale;
-  cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
+  dprBase = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PX/(cw*ch)));
+  dpr = dprBase * renderScale;
+  // mudar width/height apaga o canvas (mesmo com o mesmo valor): só muda se precisar e redesenha na hora — senão a tela pisca um quadro preto
+  const W = Math.round(cw*dpr), H = Math.round(ch*dpr), changed = cv.width !== W || cv.height !== H;
+  if(changed){ cv.width = W; cv.height = H; }
   cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
   zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3) * CAM_NEAR;
   const hh = ch/2/zoom; camD = hh*CAM_K;
   camTop = camDy(-hh); camBot = camDy(hh); camSTop = camS(camTop);
+  if(changed && typeof render === 'function') try{ render(); }catch(e){} // render vem do 07 (no carregamento ainda não existe)
 }
 // Ponto do chão dy à frente do herói (dy > 0 = mais para baixo, mais perto da câmera): escala e altura na tela (unidades do
 // mundo, antes do zoom); camDy faz o contrário (altura na tela → dy).
@@ -106,8 +110,10 @@ function log(msg, color){
   while(el.children.length > 4) el.removeChild(el.firstChild);
   setTimeout(() => d.remove(), 5000);
 }
-function txt(x, y, s, c, size, vy){ if(texts.length > 70) texts.shift(); texts.push({x, y, s, c, size:size||13, t:0, vy:vy||-38}); }
-function part(o){ if(parts.length > 420) parts.shift(); parts.push(Object.assign({vx:0,vy:0,life:.6,t:0,size:2,grav:0,kind:'dot'}, o)); }
+// Limites de efeitos na tela (muita habilidade junta): passando, o novo entra no lugar de um antigo qualquer (O(1); shift() custava caro)
+const TEXT_MAX = 50, PART_MAX = 360;
+function txt(x, y, s, c, size, vy){ const t = {x, y, s, c, size:size||13, t:0, vy:vy||-38}; if(texts.length >= TEXT_MAX) texts[Math.random()*texts.length | 0] = t; else texts.push(t); }
+function part(o){ const p = Object.assign({vx:0,vy:0,life:.6,t:0,size:2,grav:0,kind:'dot'}, o); if(parts.length >= PART_MAX) parts[Math.random()*parts.length | 0] = p; else parts.push(p); }
 function ring(x, y, r, c, life, w){ rings.push({x, y, r, c, life:life||.5, t:0, w:w||3}); }
 
 /* ---------- MUNDO ---------- */
@@ -370,6 +376,7 @@ function enterMap(id){
   cam.x = hero.x; cam.y = hero.y;
   groundPat = makeGround(mapDef);
   spawnLevel(); markSeen();
+  warmSprites([...new Set(mons.map(m => m.type))]); // poses de caminhada prontas antes da luta (07)
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
   if(mapDef === DUN){ log(`Masmorra · Pedra ${S.dun.phase} · ${ELEM[dunEl()].n}: mate as ${DUN_KILLS} criaturas e o Chefe em ${DUN_TIME/60} minutos`, ELEM[dunEl()].c); dirtyPanel(); return; }
   if(mapDef === atlDef){ atlasSetup(); dirtyPanel(); return; }

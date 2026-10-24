@@ -137,11 +137,16 @@ function drawLevelFloor(vis){
   if(inDun()){ ctx.globalAlpha = .1; ctx.fillStyle = ELEM[dunEl()].c; ctx.fill(LV.prep.floor); ctx.globalAlpha = 1; }
 }
 // Paredes e obstáculos visíveis entram na ordenação por y junto com o herói e as criaturas
-function levelProps(vis, out){
-  for(const w of LV.prep.walls) if(vis({x:w.x + TILE/2, y:w.y - TILE/2})) out.push({y:w.y, draw:() => drawWall3d(w)});
-  for(const o of LV.solids) if(vis(o)) out.push({y:o.y, draw:() => drawDecor(o)});
+// Cada parede/obstáculo/enfeite ganha UMA vez um objeto de ordenação (o._e = {y, k, o}; k: ENT_WALL/ENT_DECOR/ENT_TORCH) e ele é
+// reaproveitado todo quadro — antes eram centenas de objetos com função novos por quadro, e o coletor de lixo dava trancos.
+const ENT_WALL = 1, ENT_DECOR = 2, ENT_TORCH = 3;
+const entOf = (o, y, k) => o._e || (o._e = {y, k, o});
+function drawEnt(e){ if(e.k === ENT_WALL) drawWall3d(e.o); else if(e.k === ENT_DECOR) drawDecor(e.o); else drawWallTorch(e.o); }
+function levelProps(inb, out){
+  for(const w of LV.prep.walls) if(inb(w.x + TILE/2, w.y - TILE/2)) out.push(entOf(w, w.y, ENT_WALL));
+  for(const o of LV.solids) if(inb(o.x, o.y)) out.push(entOf(o, o.y, ENT_DECOR));
   // enfeites das bordas: em cima das paredes e tochas na face (logo depois da parede deles)
-  for(const p of LV.prep.props){ const at = p.o || p.torch; if(vis(at)) out.push({y:p.ys, draw:p.o ? () => drawDecor(p.o) : () => drawWallTorch(p.torch)}); }
+  for(const p of LV.prep.props){ const at = p.o || p.torch; if(inb(at.x, at.y)) out.push(p._e || (p._e = {y:p.ys, k:p.o ? ENT_DECOR : ENT_TORCH, o:at})); }
 }
 /* ---------- HERÓIS (corpo em pé com volume: luz vindo de cima à esquerda) ---------- */
 const hexRGB = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -190,7 +195,7 @@ function drawHero(){
     if(isMage()) ctx.globalAlpha *= Math.abs(1 - 2*k)*.8 + .05;
     else if(isWar()) ctx.rotate(fx*.3);
     else { ctx.translate(0, -12); ctx.rotate(fx*k*TAU); ctx.translate(0, 12); }
-  } else if(h.invul > 0) ctx.globalAlpha *= .6 + .4*Math.sin(T*40);
+  } else if(h.invul > 0 && !h.frenzy) ctx.globalAlpha *= .82 + .18*Math.sin(T*14); // sem levar dano: pulsa de leve (piscar forte incomodava)
   const war = isWar(), gc = war ? '224,87,74' : isMage() ? '255,150,50' : '155,216,74';
   if(h.cast){ const k = Math.sin(clamp(h.cast.t/h.cast.dur, 0, 1)*Math.PI); const g = ctx.createRadialGradient(0, -18, 4, 0, -18, 40); g.addColorStop(0, `rgba(${gc},${.45*k})`); g.addColorStop(1, `rgba(${gc},0)`); ctx.fillStyle = g; circ(0, -18, 40); }
   if(war) drawWarrior(h); else if(isMage()) drawMage(h); else drawArcher(h);
@@ -492,20 +497,21 @@ function volPath(p, c, cx, y0, y1, half){
 // num canvas pequeno, e depois só copiado com drawImage. Os volumes com degradê custam caro para refazer a cada quadro.
 // SPR_BOX = área do desenho em unidades de herói por tipo de corpo [x, y, largura, altura]; SPR_MAX poses guardadas (as mais antigas saem).
 const SPR_BOX = {biped:[-38, -66, 82, 78], quad:[-36, -50, 74, 58], spider:[-30, -44, 62, 50], blob:[-24, -44, 54, 52]};
-const SPR_MAX = 180, SPR_T = {ghost:1, rock:1, wings:1, imp:1, frog:1, leech:1, scorp:1};
+const SPR_MAX = 200, SPR_T = {ghost:1, rock:1, wings:1, imp:1, frog:1, leech:1, scorp:1};
 const sprCache = new Map(), sprPool = [];
 function monSprite(m, ap, hit, s){
   const d = m.d, k = MON_DECO[m.type], blobIdle = !m.moving && d.kind === 'blob';
   const ph = m.moving ? Math.round(((m.anim*11) % TAU)/TAU*12) % 12 : blobIdle ? 12 + Math.round((m.anim % 1.6)/1.6*12) % 12 : -1;
-  const tq = SPR_T[k] || d.ranged ? Math.floor((T % 2)*8) : 0;
-  const sc = Math.round(clamp(dpr*zoom*s*1.25, 1, 8)*2)/2; // pixels por unidade no sprite (passos de 0,5)
+  // detalhes com o tempo (asas, olhos acesos, fogo...): parada, 8 quadros a cada 2 s; andando, seguem o próprio passo (sem poses a mais)
+  const tq = SPR_T[k] && !m.moving ? Math.floor((T % 2)*4) : 0;
+  const sc = Math.round(clamp(dprBase*zoom*s*1.25, 1, 8)*2)/2; // pixels por unidade no sprite (passos de 0,5)
   const key = m.type + '|' + ph + '|' + ap + '|' + tq + '|' + (hit ? 1 : 0) + '|' + sc;
   let e = sprCache.get(key);
   if(e){ sprCache.delete(key); sprCache.set(key, e); return e; } // usado agora: vai para o fim da fila
   const B = SPR_BOX[d.kind] || SPR_BOX.biped, px = sc/s, c = sprPool.pop() || document.createElement('canvas');
   c.width = Math.ceil(B[2]*px); c.height = Math.ceil(B[3]*px);
   const g = c.getContext('2d'), keepCtx = ctx, keepT = T;
-  ctx = g; if(tq || SPR_T[k] || d.ranged) T = tq/8;
+  ctx = g; T = !SPR_T[k] ? 0 : m.moving ? (ph/12)*1.8 : tq/4;
   try{
     g.setTransform(px, 0, 0, px, -B[0]*px, -B[1]*px); g.lineCap = 'round'; g.lineJoin = 'round';
     const anim = ph < 0 ? 0 : ph < 12 ? ph/12*TAU/11 : (ph - 12)/12*1.6, W = c => hit ? '#ffffff' : c;
@@ -517,6 +523,15 @@ function monSprite(m, ap, hit, s){
   e = {c, B}; sprCache.set(key, e);
   if(sprCache.size > SPR_MAX){ const old = sprCache.keys().next().value; sprPool.push(sprCache.get(old).c); sprCache.delete(old); }
   return e;
+}
+// Ao entrar num mapa: já desenha as poses de caminhada (e parada) das criaturas dele, para não desenhar no meio da luta (trancos)
+function warmSprites(types){
+  for(const t of types){
+    const d = MONS[t]; if(!d) continue;
+    const fm = {type:t, d, anim:0, moving:true}, s = d.r/13;
+    for(let i = 0; i < 12; i++){ fm.anim = (i/12*TAU)/11 + 1e-6; monSprite(fm, 0, false, s); }
+    fm.moving = false; fm.anim = 0; monSprite(fm, 0, false, s);
+  }
 }
 function drawMon(m){
   const d = m.d, r = m.r, s = r/13, fx = Math.cos(m.face) >= 0 ? 1 : -1, H = monH(m), foot = r*.6;
@@ -537,8 +552,10 @@ function drawMon(m){
   ctx.scale(fx*s, s);
   if(!d.ranged) ctx.translate(aq*7, 0);
   if(!m.moving && d.kind !== 'blob') ctx.translate(0, -Math.sin(T*2 + m.x)*.5); // respirando parada
-  const e = monSprite(m, aq, m.hit > 0, s);
+  const e = monSprite(m, aq, false, s);
   ctx.drawImage(e.c, e.B[0], e.B[1], e.B[2], e.B[3]);
+  // levou dano: a mesma pose somada por cima ('lighter') clareia na hora — sem criar outra pose branca no cache
+  if(m.hit > 0 && !m.dead){ const op = ctx.globalCompositeOperation, a = ctx.globalAlpha; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a*.75; ctx.drawImage(e.c, e.B[0], e.B[1], e.B[2], e.B[3]); ctx.globalCompositeOperation = op; ctx.globalAlpha = a; }
   ctx.restore();
   // dano ao longo do tempo: brilho por cima do corpo
   if(!m.dead){
@@ -1321,7 +1338,7 @@ function groundBegin(x0, y0, w, h, bg){
   gctx.fillStyle = bg; gctx.fillRect(x0, y0, w, h);
 }
 function groundBlit(x0, y0){
-  const g = dpr*zoom, GW = gcv.width, GH = gcv.height, H = cv.height, band = Math.max(2, Math.round(3*dpr));
+  const g = dpr*zoom, GW = gcv.width, GH = gcv.height, H = cv.height, band = Math.max(3, Math.round(5*dpr)); // faixas de ~5 px: metade das cópias de antes, sem degrau visível
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   for(let Y = 0; Y < H; Y += band){
     const Y1 = Math.min(H, Y + band), v0 = (Y/dpr - ch/2)/zoom, v1 = (Y1/dpr - ch/2)/zoom;
@@ -1331,6 +1348,42 @@ function groundBlit(x0, y0){
     ctx.drawImage(gcv, 0, sy0, GW, sy1 - sy0, dpr*(cw/2 + zoom*s*(x0 - cam.x)), Y, zoom*s*GW/g*dpr, Y1 - Y);
   }
 }
+// Partículas em lote: posição e tamanho calculados direto na tela (mesma conta do atY, sem trocar a transformação a cada uma) e
+// agrupadas por cor + transparência (5 níveis): um fill/stroke por grupo em vez de um por partícula.
+const PART_A = [.2, .4, .6, .8, 1];
+let vigKey = '', vigGrad = null; // vinheta da tela (render)
+function drawParts(){
+  if(!parts.length) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const groups = new Map(), W = cv.width, H = cv.height, zd = zoom*dpr;
+  for(const p of parts){
+    const k = 1 - p.t/p.life; if(k <= 0) continue;
+    const dy = p.y - cam.y, s = camS(dy), sx = dpr*cw/2 + zd*s*(p.x - cam.x), sy = dpr*(ch/2 + zoom*camV(dy)), z = zd*s;
+    if(sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+    const ai = Math.min(4, k*5 | 0), key = p.kind + (p.kind === 'streak' ? Math.round(p.size*2) : '') + '|' + p.c + '|' + ai;
+    let g = groups.get(key); if(!g){ g = {kind:p.kind, c:p.c, a:PART_A[ai], w:p.size*z, pts:[]}; groups.set(key, g); }
+    if(p.kind === 'streak') g.pts.push(sx, sy, sx - p.vx*.04*z, sy - p.vy*.04*z);
+    else g.pts.push(sx, sy, Math.max(.6, (p.kind === 'bubble' ? p.size : p.size*(.5 + .5*k))*z));
+  }
+  for(const g of groups.values()){
+    ctx.globalAlpha = g.a; const P = g.pts; ctx.beginPath();
+    if(g.kind === 'streak'){ for(let i = 0; i < P.length; i += 4){ ctx.moveTo(P[i], P[i + 1]); ctx.lineTo(P[i + 2], P[i + 3]); } ctx.strokeStyle = g.c; ctx.lineWidth = Math.max(.8, g.w); ctx.stroke(); }
+    else { for(let i = 0; i < P.length; i += 3){ ctx.moveTo(P[i] + P[i + 2], P[i + 1]); ctx.arc(P[i], P[i + 1], P[i + 2], 0, TAU); } if(g.kind === 'bubble'){ ctx.strokeStyle = g.c; ctx.lineWidth = dpr; ctx.stroke(); } else { ctx.fillStyle = g.c; ctx.fill(); } }
+  }
+  ctx.globalAlpha = 1;
+}
+// Brilhos prontos (canvas com o degradê desenhado uma vez) para bola de fogo/brasa e nuvens: desenhar uma imagem é bem mais barato
+// que criar e pintar um degradê novo para cada um a cada quadro. glowImg(stops) guarda por cores.
+const glowCache = new Map();
+function glowImg(stops){
+  const key = stops.join('|'); let c = glowCache.get(key); if(c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  for(let i = 0; i < stops.length; i += 2) gr.addColorStop(stops[i], stops[i + 1]);
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); glowCache.set(key, c); return c;
+}
+const GLOW_FIRE = [0, 'rgba(255,245,200,1)', .35, 'rgba(255,170,60,.9)', 1, 'rgba(255,80,20,0)'];
+const CLOUD_FIRE = [0, 'rgba(255,150,50,.42)', .06, 'rgba(255,150,50,.42)', .7, 'rgba(200,60,20,.28)', 1, 'rgba(120,30,10,0)'];
+const CLOUD_ACID = [0, 'rgba(155,216,74,.42)', .06, 'rgba(155,216,74,.42)', .7, 'rgba(110,170,50,.28)', 1, 'rgba(90,140,40,0)'];
 function render(){
   ctx = CTX; // se um quadro anterior quebrou no meio do chão, volta para o canvas da tela
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1339,7 +1392,7 @@ function render(){
   // área do mundo que aparece (na câmera 3D o alto da tela vê mais longe e mais largo)
   const z = zoom, hw = cw/2/z/camSTop;
   const vx0 = cam.x - hw - 80, vx1 = cam.x + hw + 80, vy0 = cam.y + camTop - 80, vy1 = cam.y + camBot + 80;
-  const vis = o => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
+  const inb = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1, vis = o => inb(o.x, o.y);
   ctx.save();
   const main = ctx, gx0 = cam.x - hw - 4, gy0 = cam.y + camTop - 4;
   groundBegin(gx0, gy0, hw*2 + 8, camBot - camTop + 8, bg); ctx = gctx;
@@ -1350,11 +1403,10 @@ function render(){
   } else if(LV) drawLevelFloor(vis);
   for(const c of clouds){
     const k = Math.min(1, c.t*3) * Math.min(1, (c.dur - c.t)*2), pul = 1 + Math.sin(T*6)*.04;
-    // Nuvem ácida (verde) ou chão em chamas do Meteoro (laranja)
-    const C0 = c.fire ? '255,150,50' : '155,216,74', C1 = c.fire ? '200,60,20' : '110,170,50', C2 = c.fire ? '120,30,10' : '90,140,40';
-    const g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, c.r*pul); g.addColorStop(0, `rgba(${C0},${.42*k})`); g.addColorStop(.7, `rgba(${C1},${.28*k})`); g.addColorStop(1, `rgba(${C2},0)`);
-    ctx.fillStyle = g; ell(c.x, c.y, c.r*pul, c.r*.8*pul);
-    ctx.strokeStyle = c.fire ? `rgba(255,200,120,${.5*k})` : `rgba(190,240,120,${.5*k})`; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    // Nuvem ácida (verde) ou chão em chamas do Meteoro (laranja): brilho pronto (glowImg) esticado na elipse + borda tracejada
+    ctx.globalAlpha = k; ctx.drawImage(glowImg(c.fire ? CLOUD_FIRE : CLOUD_ACID), c.x - c.r*pul, c.y - c.r*.8*pul, c.r*2*pul, c.r*1.6*pul);
+    ctx.globalAlpha = .5*k; ctx.strokeStyle = c.fire ? 'rgb(255,200,120)' : 'rgb(190,240,120)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.8, T*.3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
   }
   // Áreas marcadas pelas criaturas: contorno + miolo que cresce até a hora do golpe (cone para golpes à frente)
   for(const z of zones){
@@ -1390,13 +1442,13 @@ function render(){
     if(dunOpen() || cut) ents.push({y:riftNpc.y, draw:drawEzequiel}); // Ezequiel anda na cena: entra com o y de agora
   }
   else if(LV){
-    levelProps(vis, ents); // paredes e obstáculos do mapa
+    levelProps(inb, ents); // paredes e obstáculos do mapa
     atlasProps(vis, ents); // Brecha e altar do Ritual (10)
     for(const g of bloodFx) ents.push({y:g.y + (g.k === 'slash' ? 2 : -1), draw:() => drawBloodFx(g)}); // Frenesi Sangrento
-    for(const o of decor) if(vis(o) && !FLAT_DECOR[o.t]) ents.push({y:o.y, draw:() => drawDecor(o)}); // enfeites em pé
+    for(const o of decor) if(vis(o) && !FLAT_DECOR[o.t]) ents.push(entOf(o, o.y, ENT_DECOR)); // enfeites em pé
   }
   ents.sort((a, b) => a.y - b.y);
-  for(const e of ents){ atY(e.y); e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e); }
+  for(const e of ents){ atY(e.y); e === hero ? drawHero() : e.k ? drawEnt(e) : e.draw ? e.draw() : drawMon(e); }
   if(scene === 'town') drawTownLabels();
   // Arremessos das criaturas (bomba, poção, bloco de gelo, teia) voando em arco até a marca
   for(const z of zones){
@@ -1416,10 +1468,8 @@ function render(){
     if(p.hostile){ ctx.fillStyle = p.c; circ(p.x, p.y, 4.5); ctx.globalAlpha = .35; circ(p.x, p.y, 8); ctx.globalAlpha = 1; continue; }
     if(p.kind === 'ember' || p.kind === 'fireball'){
       // Fogo do Mago: núcleo claro com halo laranja (ou na cor do visual de efeito)
-      const R = p.kind === 'fireball' ? 9 : 5, g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, R*2.2);
-      if(FX){ g.addColorStop(0, FX.c2); g.addColorStop(.35, FX.c + 'e6'); g.addColorStop(1, FX.c + '00'); }
-      else { g.addColorStop(0, 'rgba(255,245,200,1)'); g.addColorStop(.35, 'rgba(255,170,60,.9)'); g.addColorStop(1, 'rgba(255,80,20,0)'); }
-      ctx.fillStyle = g; circ(p.x, p.y, R*2.2);
+      const R = (p.kind === 'fireball' ? 9 : 5)*2.2;
+      ctx.drawImage(glowImg(FX ? [0, FX.c2, .35, FX.c + 'e6', 1, FX.c + '00'] : GLOW_FIRE), p.x - R, p.y - R, R*2, R*2);
       continue;
     }
     const c = FX ? (p.kind === 'arrow' ? FX.c2 : FX.c) : p.kind === 'arrow' ? '#e8e2d0' : p.kind === 'farrow' ? '#d8f07a' : '#9bd84a';
@@ -1431,24 +1481,28 @@ function render(){
     ctx.fillStyle = '#c94a3a'; ctx.fillRect(-15, -2.5, 4, 5);
     ctx.restore();
   }
-  for(const p of parts){
-    const k = 1 - p.t/p.life; ctx.globalAlpha = Math.max(0, k); atY(p.y);
-    if(p.kind === 'streak'){ ctx.strokeStyle = p.c; ctx.lineWidth = p.size; line(p.x, p.y, p.x - p.vx*.04, p.y - p.vy*.04); }
-    else if(p.kind === 'bubble'){ ctx.strokeStyle = p.c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.stroke(); }
-    else { ctx.fillStyle = p.c; circ(p.x, p.y, p.size*(.5 + .5*k)); }
-  }
-  ctx.globalAlpha = 1;
+  drawParts();
   for(const r of rings){ const k = r.t/r.life; atY(r.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = r.c; ctx.lineWidth = r.w; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r*k + 4, (r.r*k + 4)*.75, 0, 0, TAU); ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawBars(vis);
   ctx.textAlign = 'center';
-  for(const t of texts){ atY(t.y); ctx.globalAlpha = Math.min(1, (1 - t.t/.9)*1.6); ctx.font = `800 ${t.size}px "Alegreya Sans", sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(t.s, t.x, t.y); ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y); }
+  // números/textos: sombra escura deslocada (fillText) em vez de contorno (strokeText custa bem mais com dezenas de números na tela)
+  let font = '';
+  for(const t of texts){
+    atY(t.y); ctx.globalAlpha = Math.min(1, (1 - t.t/.9)*1.6);
+    const f = `800 ${t.size}px "Alegreya Sans", sans-serif`; if(f !== font){ ctx.font = f; font = f; }
+    ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillText(t.s, t.x + 1.2, t.y + 1.4); ctx.fillText(t.s, t.x - .8, t.y + .6);
+    ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y);
+  }
   ctx.globalAlpha = 1;
   ctx.restore();
   // vinheta
-  const vg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw, ch)*.28, cw/2, ch/2, Math.max(cw, ch)*.72);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, scene === 'map' && mapDef.decor === 'hell' ? 'rgba(40,6,0,.75)' : 'rgba(0,0,0,.7)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, cw, ch);
+  const hell = scene === 'map' && mapDef.decor === 'hell', vk = cw + 'x' + ch + (hell ? 'h' : '');
+  if(vigKey !== vk){ // o degradê só é refeito quando a tela muda de tamanho (ou entra/sai do Abismo)
+    vigKey = vk; vigGrad = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw, ch)*.28, cw/2, ch/2, Math.max(cw, ch)*.72);
+    vigGrad.addColorStop(0, 'rgba(0,0,0,0)'); vigGrad.addColorStop(1, hell ? 'rgba(40,6,0,.75)' : 'rgba(0,0,0,.7)');
+  }
+  ctx.fillStyle = vigGrad; ctx.fillRect(0, 0, cw, ch);
   drawJoy();
   if(mode === 'dead'){ ctx.fillStyle = `rgba(90,0,0,${Math.min(.45, deadT*.3)})`; ctx.fillRect(0, 0, cw, ch); }
   if(fade > 0){ ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, cw, ch); }
@@ -1466,21 +1520,23 @@ function tickTrans(dt){
 // Qualidade automática: médias do trabalho por quadro (simular + desenhar, em ms) e do intervalo real entre quadros (pega também
 // o trabalho da placa de vídeo, que não aparece no tempo do JS). Pesado (trabalho > FRAME_HEAVY ou intervalo > FRAME_SLOW) por
 // ~1,5 s baixa renderScale (03) em 0,1 até RS_MIN; leve por ~3 s sobe de volta. Assim o PC fraco segura 60 FPS e o forte fica nítido.
-const FRAME_HEAVY = 11, FRAME_LIGHT = 5.5, FRAME_SLOW = 19.5, FRAME_OK = 17.5, RS_MIN = .7;
+const FRAME_HEAVY = 11, FRAME_LIGHT = 5.5, FRAME_SLOW = 19.5, FRAME_OK = 17.5, RS_MIN = .7, RS_UP_WAIT = 8;
 let frameCost = 0, frameGap = 16.7, heavyT = 0, lightT = 0;
 function frame(now){
   const gap = now - last;
   let dt = Math.min(.05, gap/1000); last = now;
+  // qualidade: muda ANTES de desenhar (resize apaga o canvas; mudar depois do render mostrava um quadro vazio = piscada).
+  // Depois de baixar, só sobe de novo com RS_UP_WAIT s seguidos de folga (antes subia e descia sem parar e piscava a cada troca)
+  const heavy = frameCost > FRAME_HEAVY || frameGap > FRAME_SLOW, light = frameCost < FRAME_LIGHT && frameGap < FRAME_OK;
+  heavyT = heavy ? heavyT + dt : 0; lightT = light ? lightT + dt : 0;
+  if(heavyT > 1.5 && renderScale > RS_MIN){ renderScale = Math.round((renderScale - .1)*10)/10; heavyT = 0; lightT = 0; resize(); }
+  else if(lightT > RS_UP_WAIT && renderScale < 1){ renderScale = Math.round((renderScale + .1)*10)/10; lightT = 0; resize(); }
   const w0 = performance.now();
   if(S.speed !== 0) step(dt); // jogo sempre em 1x (S.speed = 0 só para pausar em testes)
   tickTrans(dt);
   render();
   frameCost += (performance.now() - w0 - frameCost)*.05;
   if(gap < 250) frameGap += (gap - frameGap)*.05; // ignora a volta de aba escondida
-  const heavy = frameCost > FRAME_HEAVY || frameGap > FRAME_SLOW, light = frameCost < FRAME_LIGHT && frameGap < FRAME_OK;
-  heavyT = heavy ? heavyT + dt : 0; lightT = light ? lightT + dt : 0;
-  if(heavyT > 1.5 && renderScale > RS_MIN){ renderScale = Math.round((renderScale - .1)*10)/10; heavyT = 0; resize(); }
-  else if(lightT > 3 && renderScale < 1){ renderScale = Math.round((renderScale + .1)*10)/10; lightT = 0; resize(); }
   uiT -= dt; if(uiT <= 0){ uiT = .1; updateHud(); }
   saveT -= dt; if(saveT <= 0){ saveT = 5; save(); }
   accountTick(dt);
