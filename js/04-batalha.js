@@ -38,8 +38,9 @@ function kill(m){
   let xp = (8 + m.ml*6) * (m.elite ? 3.5 : 1); // ~35% a mais que antes (era 6 + nível × 4,5)
   xp *= xpMult(mapDef);
   if(inDun()){ xp *= dunMult(S.dun.phase) * (m.boss ? 6 : 1); if(m.boss) dunBossDown(m); else if(!m.minion) dunKill(); }
-  else if(inRmap()){ xp *= dunMult(S.rmap.tier) * (m.boss ? 6 : 1); if(m.boss) rmapBossDown(m); else if(!m.minion) rmapKill(); }
+  else if(inAtlas()){ xp *= atlMult(atlRun.tier) * atlRun.xp * (m.boss ? 6 : 1); atlasKill(m); }
   dropStone(m);
+  const lm = atlLoot(); // Atlas: +% de itens (atributos da Pedra de Passagem, Tabuleta da Fortuna, mapa corrompido)
   gainXp(xp);
   for(let i = 0; i < 10; i++) part({x:m.x, y:m.y, vx:rnd(-90,90), vy:rnd(-110,40), grav:240, life:rnd(.4,.8), size:rnd(1.5,3.5), c:m.d.c1});
   const cr = ST.rk('contagion');
@@ -69,38 +70,21 @@ function kill(m){
     for(let i = 0; i < n; i++) coins.push({x:m.x + rnd(-14,14), y:m.y + rnd(-14,14), v:Math.ceil(v/n), t:rnd(0,.2)});
   }
   // Orbes: chance própria em qualquer criatura
-  for(const k in ORBS) if(Math.random() < ORBS[k].chance){ drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), orb:k, t:0, gone:false}); log(`${ORBS[k].n} caiu!`, ORBS[k].c); ring(m.x, m.y, 50, ORBS[k].c, .6, 3); }
-  if(Math.random() < (m.elite ? .75 : .12)) dropItem(m);
-  if(m.elite && Math.random() < .35) dropItem(m);
+  for(const k in ORBS) if(Math.random() < ORBS[k].chance*lm){ drops.push({x:m.x + rnd(-16,16), y:m.y + rnd(-16,16), orb:k, t:0, gone:false}); log(`${ORBS[k].n} caiu!`, ORBS[k].c); ring(m.x, m.y, 50, ORBS[k].c, .6, 3); }
+  if(Math.random() < (m.elite ? .75 : .12)*lm) dropItem(m);
+  if(m.elite && Math.random() < .35*lm) dropItem(m);
   if(m.boss) for(let i = 0; i < 3; i++) dropItem(m); // Chefe: mais 3 itens (sorteio de elite)
 }
-// Pedras da Masmorra: só caem com a Fenda aberta (nível 40, depois da cena do Ezequiel). No Mapa Aleatório N, chance de uma Pedra
-// de nível sorteado entre 1 e N (rmapStone); na corrida da Pedra N, chance de Pedra N (ou N−1, menos comum). Elite 3×.
-const rmapStone = () => rint(1, S.rmap.tier);
+// Pedras da Masmorra: só caem com a Fenda aberta (nível 40, depois da cena do Ezequiel). Num mapa do Atlas com Pedra de Passagem N,
+// chance de uma Pedra de nível sorteado entre 1 e N (até 10; o Chefe do mapa sempre deixa uma, em atlasKill); na corrida da Pedra N,
+// chance de Pedra N (ou N−1, menos comum). Elite 3×.
 function dropStone(m){
-  const R = inRmap();
+  const R = inAtlas() && atlRun;
   if(m.boss || !dunOpen() || (!R && !inDun())) return;
   if(Math.random() >= (R ? STONE_MAP_CH : STONE_DUN_CH) * (m.elite ? 3 : 1)) return;
-  if(R){ spawnStone(m.x, m.y, rmapStone()); return; }
+  if(R){ spawnStone(m.x, m.y, rint(1, Math.min(atlRun.tier, 10))); return; }
   const N = S.dun.phase, lv = N > 1 && Math.random() < STONE_LOW_CH ? N - 1 : N;
   spawnStone(m.x, m.y, lv);
-}
-// Mapa Aleatório: conta os abates; com RMAP_KILLS aparece o Chefe (spawnBoss em 03)
-function rmapKill(){
-  const R0 = S.rmap; R0.kills++;
-  if(R0.kills >= RMAP_KILLS && !R0.boss) spawnBoss();
-  dirtyPanel();
-}
-// Chefe do Mapa Aleatório morto: Pedra garantida (1 a N), mapa limpo e, na 1ª vez no nível mais alto, libera o próximo e já o escolhe
-function rmapBossDown(m){
-  const R0 = S.rmap; R0.boss = 2; mapCleared = true;
-  if(dunOpen()) spawnStone(m.x, m.y, rmapStone());
-  let msg = `Chefe derrotado! ${rmapName(R0.tier)} concluído.`;
-  if(R0.tier > R0.best){ R0.best = R0.tier; R0.tier = R0.best + 1; msg += ` ${rmapName(R0.tier)} liberado (criaturas ${Math.round((DUN_STEP - 1)*100)}% mais fortes).`; }
-  ring(m.x, m.y, 160, STONE_C, 1.1, 6); ring(m.x, m.y, 100, '#f5cf3a', .9, 4);
-  txt(hero.x, hero.y - 70, 'MAPA CONCLUÍDO!', '#f5cf3a', 20, -16);
-  log(msg + ' Volte para a vila.', '#f5cf3a');
-  save(); dirtyPanel();
 }
 function spawnStone(x, y, lv){
   drops.push({x:x + rnd(-16,16), y:y + rnd(-16,16), stone:lv, t:0, gone:false});
@@ -184,7 +168,7 @@ function hurtHero(dmg, src){
   if(hero.invul > 0){ txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
   // Todo dano é de um dos 4 tipos (Fogo, Raio, Gelo, Veneno): reduzido pela armadura e pela resistência do tipo.
   const el = (src && (src.el || src.d.el)) || 'poison', arm = ST.armor;
-  const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = (ST.res[el] || 0)/100;
+  const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = ((ST.res[el] || 0) - atlResPen())/100; // Atlas: Pedra com −% de resistência
   const d = dmg * (1 - red) * (1 - res) * (1 - (ST.dr || 0));
   hero.hp -= d; hero.hit = .14; hero.lastHit = T;
   txt(hero.x + rnd(-6,6), hero.y - 28, fmt(d), ELEM[el].c, 14);
@@ -194,6 +178,7 @@ function hurtHero(dmg, src){
 }
 function die(){
   hero.hp = 0; mode = 'dead'; deadT = 0; hero.atk = hero.cast = hero.whirl = hero.dash = null; portal = null;
+  atlasDie(); // mapa do Atlas: morrer fecha o mapa (10)
   const lost = Math.floor(S.gold * .1); S.gold -= lost;
   for(let i = 0; i < 24; i++) part({x:hero.x, y:hero.y, vx:rnd(-120,120), vy:rnd(-140,40), grav:260, life:rnd(.5,1.1), size:rnd(2,4), c:'#b32d22'});
   log(`${heroName()} caiu! Perdeu ${fmt(lost)} de ouro.`, '#ff8c80');

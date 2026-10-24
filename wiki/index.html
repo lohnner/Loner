@@ -14,7 +14,7 @@
 <body>
 <main>
   <h1>Wiki do Loner</h1>
-  <p class="lead">Loner é um RPG de ação para celular (sempre deitado) e PC. Você anda com o herói, ataca, usa habilidades, junta itens e sobe até o nível 40. Depois disso começa o fim de jogo: o Mapa Aleatório, a Fenda e as Pedras da Masmorra.</p>
+  <p class="lead">Loner é um RPG de ação para celular (sempre deitado) e PC. Você anda com o herói, ataca, usa habilidades, junta itens e sobe até o nível 40. Depois disso começa o fim de jogo: o Atlas de Mundos (Pedras de Passagem, Torres, Cidadelas e o Árbitro das Cinzas), a Fenda e as Pedras da Masmorra.</p>
 
   <!-- Download do app Android: HTML fixo (aparece mesmo se o JavaScript falhar ou estiver em cache) -->
   <div class="dl" id="apk">
@@ -67,8 +67,8 @@
   <h2 id="resumo">O jogo em números</h2>
   <div id="numeros"></div>
 </main>
-<script src="../js/01-base.js?v=39"></script>
-<script src="../js/02-modelos.js?v=39"></script>
+<script src="../js/01-base.js?v=42"></script>
+<script src="../js/02-modelos.js?v=42"></script>
 <script src="icones.js?v=2"></script>
 <script src="wiki.js?v=2"></script>
 <script>
@@ -79,7 +79,7 @@ const DESC = {
   'equipamentos.html':'Espaços, bases, raridades, nível exigido e de onde vêm os itens.',
   'atributos.html':'Todos os prefixos e sufixos, onde cada um cai, os tiers T1–T10 e as chances.',
   'orbes.html':'Os 5 orbes, a Forja de itens e a Forja de orbes.',
-  'mapas.html':'Os 9 mapas, as 45 criaturas, os golpes em área e o Mapa Aleatório.',
+  'mapas.html':'Os 9 mapas, as 45 criaturas, os golpes em área e o Atlas de Mundos.',
   'masmorra.html':'Tutorial da Fenda: Pedras, Mesa Rúnica, a corrida de 5 minutos e o Chefe.',
   'combate.html':'Tipos de dano, resistências, armadura, crítico, esquiva e morte.',
   'progressao.html':'XP, níveis, pontos de habilidade, Maestria e ranking.',
@@ -98,7 +98,7 @@ put('#numeros', table(['O quê', {t:'Quanto', c:'num'}], [
   ['Mapas', num(MAPS.length)],
   ['Criaturas diferentes', num(Object.keys(MONS).length)],
   ['Criaturas por mapa', num(80)],
-  ['Criaturas na Masmorra / no Mapa Aleatório', num(`${DUN_KILLS} / ${RMAP_KILLS} + Chefe`)],
+  ['Criaturas na Masmorra / num mapa do Atlas', num(`${DUN_KILLS} + Chefe / 90 + raras`)],
   ['Tempo da Masmorra', num(`${DUN_TIME/60} minutos`)],
   ['Visuais no Baú', num(Object.keys(COS).length)],
 ]));

@@ -18,7 +18,7 @@ function moveTo(p, dt, mul){
   hero.face = Math.atan2(p.y - hero.y, p.x - hero.x); moveDir(hero.face, dt, mul); return false;
 }
 // Dá para pegar? Orbe sempre (vai para a aba Orbes); item precisa de espaço na mochila e da raridade mínima das Regras.
-const canPick = d => d.orb || d.stone ? true : d.it.rar >= S.cfg.minPick && !invFull(); // orbe e Pedra sempre cabem (aba Orbes sem limite)
+const canPick = d => d.atl ? atlCanPick(d) : d.orb || d.stone ? true : d.it.rar >= S.cfg.minPick && !invFull(); // orbe e Pedra sempre cabem (aba Orbes sem limite); Atlas: 10
 function heroAI(dt){
   const pct = hero.hp / ST.life * 100;
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
@@ -290,7 +290,8 @@ function updateField(dt){
   for(const k in cds) cds[k] = Math.max(0, cds[k] - dt);
   if(LV){ LV.flowT -= dt; if(LV.flowT <= 0){ LV.flowT = .2; updateFlow(); markSeen(); } }
   // Mapa limpo: matou todas as criaturas (Masmorra passa de fase em dunKill)
-  if(!mapCleared && mapTotal && mode === 'hunt' && !inDun() && !inRmap() && monsLeft() === 0){ // Mapa Aleatório termina no Chefe (rmapBossDown)
+  if(inAtlas()) atlasUpdate(dt); // Brecha, Ritual e ondas do Árbitro (10)
+  if(!mapCleared && mapTotal && mode === 'hunt' && !inDun() && !inAtlas() && monsLeft() === 0){ // o Atlas termina na missão (atlasComplete)
     mapCleared = true; log(`${mapDef.name} limpo! Volte para a vila.`, '#f5cf3a'); ring(hero.x, hero.y, 140, '#f5cf3a', 1, 5);
     txt(hero.x, hero.y - 70, 'Mapa limpo!', '#f5cf3a', 24, -18);
   }
@@ -304,7 +305,7 @@ function updateField(dt){
     }
   }
   heroTimers(dt);
-  if(mode === 'hunt'){ if(T - (hero.lastHit || 0) > 3 && hero.hp < ST.life) hero.hp = Math.min(ST.life, hero.hp + ST.life*.02*dt); heroAI(dt); }
+  if(mode === 'hunt'){ if(T - (hero.lastHit || 0) > 3 && hero.hp < ST.life && !atlNoRegen()) hero.hp = Math.min(ST.life, hero.hp + ST.life*.02*dt); heroAI(dt); }
   else if(mode === 'portal'){
     portal.t += dt;
     if(portal.t > .9) moveTo(portal, dt, .7);
@@ -355,13 +356,14 @@ function updateField(dt){
     d.t += dt;
     if(!d.gone && D(d, hero) < 26 && canPick(d) && mode === 'hunt'){
       d.gone = true;
-      if(d.stone){ S.stones[d.stone] = (S.stones[d.stone] || 0) + 1; log(`Pegou Pedra da Masmorra ${d.stone} (${S.stones[d.stone]})`, STONE_C); save(); }
+      if(d.atl) atlasPick(d); // Pedra de Passagem, Tabuleta ou Fragmento (10)
+      else if(d.stone){ S.stones[d.stone] = (S.stones[d.stone] || 0) + 1; log(`Pegou Pedra da Masmorra ${d.stone} (${S.stones[d.stone]})`, STONE_C); save(); }
       else if(d.orb){ S.orbs[d.orb]++; log(`Pegou ${ORBS[d.orb].n} (${S.orbs[d.orb]})`, ORBS[d.orb].c); }
       else { S.inv.push(d.it); if(d.it.rar >= 1) log(`Pegou ${d.it.name}`, RAR[d.it.rar].c); }
       dirtyPanel();
     }
   }
-  drops = drops.filter(d => !d.gone && (d.t < 90 || d.stone)); // Pedra não some do chão
+  drops = drops.filter(d => !d.gone && (d.t < 90 || d.stone || d.atl)); // Pedras (e o que é do Atlas) não somem do chão
   for(const c of coins){
     c.t += dt;
     if(c.t > .5 && mode !== 'dead'){
@@ -392,7 +394,7 @@ const CUT_A = [
 const CUT_B = [
   'Sentiu? A Fenda acordou com a sua força. Do outro lado ficam criaturas de todos os cantos do mundo.',
   'Cada Pedra da Masmorra abre a Fenda uma vez, e cada nível de Pedra deixa tudo lá dentro mais forte. No fim, um Chefe — e ele sempre guarda uma Pedra.',
-  'Mais Pedras você encontra no Mapa Aleatório e lá dentro. Traga 3 iguais para a minha Mesa Rúnica e eu forjo uma mais poderosa.',
+  'Mais Pedras você encontra nos mapas do Atlas e lá dentro. Traga 3 iguais para a minha Mesa Rúnica e eu forjo uma mais poderosa.',
   'Tome, leve esta Pedra 1 para conhecer a Fenda. Ela está na sua mochila, na aba Pedras. Boa caçada.',
 ];
 const CUT_START = {x:1065, y:900}, CUT_RIFT = {x:DPORT.x - 66, y:DPORT.y + 44};

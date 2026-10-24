@@ -13,8 +13,8 @@
 <body>
 <main>
   <h1>Mapas e criaturas</h1>
-  <p class="lead">São 9 mapas do nível 1 ao 40, cada um com 5 criaturas e 1 ou 2 tipos de dano. Todo mapa é gerado de novo a cada entrada. No nível 40 eles viram o Mapa Aleatório.</p>
-  <div class="toc"><a href="#como">Como os mapas funcionam</a><a href="#lista">Os 9 mapas</a><a href="#grupos">Grupos e elites</a><a href="#aleatorio">Mapa Aleatório (nível 40)</a><a href="#todos">Todas as criaturas</a></div>
+  <p class="lead">São 9 mapas do nível 1 ao 40, cada um com 5 criaturas e 1 ou 2 tipos de dano. Todo mapa é gerado de novo a cada entrada. No nível 40 eles viram o Atlas de Mundos.</p>
+  <div class="toc"><a href="#como">Como os mapas funcionam</a><a href="#lista">Os 9 mapas</a><a href="#grupos">Grupos e elites</a><a href="#atlas">Atlas de Mundos (nível 40)</a><a href="#todos">Todas as criaturas</a></div>
 
   <h2 id="como">Como os mapas funcionam</h2>
   <ul>
@@ -37,16 +37,27 @@
     <li><b>Elites</b> têm nome com título (<span id="elite"></span>), 3,2× vida, 1,5× dano, são maiores e dão 3,5× XP, mais ouro e quase sempre item.</li>
   </ul>
 
-  <h2 id="aleatorio">Mapa Aleatório (nível 40)</h2>
+  <h2 id="atlas">Atlas de Mundos (nível 40)</h2>
   <div class="card">
-    <p>Ao chegar no nível 40, os 9 mapas somem da aba Mapas e no lugar aparece o <b>Mapa Aleatório</b>:</p>
+    <p>Ao chegar no nível 40, os 9 mapas somem e a aba Mapas vira o <b>Atlas de Mundos</b> (no estilo do fim de jogo do Path of Exile 2): um mapa grande de lugares ligados, só seu, que começa no seu <b>Esconderijo</b>.</p>
     <ul>
-      <li>Cada entrada sorteia o lugar e as criaturas de um dos 9 mapas, todas no nível 40.</li>
-      <li><b id="rk"></b> criaturas; mortas todas, aparece um <b>Chefe</b> com 3 ajudantes. Sem tempo e fora do ranking.</li>
-      <li>Tem níveis 1, 2, 3...: escolha com − e + na aba Mapas. Vencer o Chefe do seu maior nível libera o próximo.</li>
-      <li>Cada nível deixa as criaturas <b>25% mais fortes</b> (vida e dano) e dá 25% mais XP.</li>
-      <li>É onde caem as <b>Pedras da Masmorra</b>: no Mapa N caem Pedras do 1 até o N. Veja <a href="masmorra.html#pedras">Pedras</a>.</li>
+      <li><b>Pedras de Passagem</b> (tier 1 a 16) abrem os mapas. Escolha um lugar ligado a um já concluído, escolha a Pedra e toque em <b>Colocar a Pedra e abrir o mapa</b> (só na vila; o botão Partir também abre o Atlas). O primeiro Atlas dá 3 Pedras tier 1.</li>
+      <li>Cada tier deixa as criaturas <b>15% mais fortes</b> (vida e dano) e dá 15% mais XP. O tier 16 é cerca de 8 vezes o tier 1.</li>
+      <li><b>Missão:</b> matar as <b>criaturas raras</b> (5 + 1 a cada 3 tiers; azuis no minimapa) e, nos lugares com coroa, o <b>Chefe</b> (na sala mais longe, laranja no minimapa). Concluído, os lugares ligados a ele liberam e cai uma Pedra de Passagem (às vezes do tier de cima).</li>
+      <li>Cada mapa tem <b>6 portais</b>: dá para voltar à vila e entrar de novo, e o mapa continua como estava. <b>Morrer fecha o mapa</b> (a Pedra se perde e o lugar fica marcado com X; dá para tentar de novo com outra Pedra). Recarregar o jogo também fecha o mapa aberto.</li>
+      <li>As criaturas deixam Pedras de Passagem (1% cada, raras 4%; o Chefe sempre deixa 1, às vezes 2) e <b>Tabuletas</b>.</li>
     </ul>
+    <p><b>Atributos das Pedras:</b> os mesmos orbes dos itens servem nelas (Despertar, Ascensão, Exaltação, Lenda; a Anulação tira um). Cada atributo deixa o mapa mais difícil — criaturas com mais vida, mais dano, mais rápidas, mais criaturas, mais raras, menos resistência para você ou sem recuperar vida — e dá <b>+8 a 16% de itens</b> e +1,5× isso de chance de Pedra. Na aba <b>Atlas</b> da mochila: 3 Pedras do mesmo tier viram 1 do tier de cima (na vila).</p>
+    <p><b>Lugares especiais:</b></p>
+    <ul>
+      <li><b>Torre Precursora</b> (retângulo): o Guardião deixa uma Tabuleta. Concluída, revela a região em volta e recebe até 3 <b>Tabuletas</b> que valem para os lugares no círculo dela (Brecha, Ritual, Fortuna +30% de itens, Viajante +50% de Pedras, Caçada +50% de raras, Saber +25% de XP). Cada mapa concluído no alcance gasta 1 dos 10 usos.</li>
+      <li><b>Brecha</b> (bolinha roxa): encoste na fenda e ela se abre por 18 s, soltando criaturas sem parar. Quando fecha, deixa um tesouro (itens e orbes; mais quanto mais você matou).</li>
+      <li><b>Ritual</b> (bolinha vermelha): pise no altar e vença 3 ondas dentro do círculo. O altar deixa itens, orbes e talvez uma Pedra ou Tabuleta.</li>
+      <li><b>Corrompido</b> (contorno vermelho tracejado): criaturas 30% mais fortes, +50% de itens e +20% de XP.</li>
+      <li><b>Cidadelas de Ferro, Cobre e Pedra</b> (hexágonos, bem longe e escondidas até uma Torre perto revelar): um Chefe forte que deixa um <b>Fragmento</b>. Podem ser feitas de novo.</li>
+      <li><b>Monólito Ardente</b> (triângulo, sempre visível): com os 3 Fragmentos, acenda-o e enfrente o <b>Árbitro das Cinzas</b> (tier 10, chama criaturas de fogo a cada 12 s). Recompensa: 2 Lendários, orbes e uma Pedra 16 Rara.</li>
+    </ul>
+    <p>Nos mapas do Atlas também caem as <b>Pedras da Masmorra</b> (do 1 até o tier da Pedra de Passagem, no máximo 10; o Chefe sempre deixa uma). Veja <a href="masmorra.html#pedras">Pedras</a>. O Atlas não tem tempo e fica fora do ranking.</p>
   </div>
   <div id="rmap"></div>
 
@@ -55,21 +66,21 @@
   <div id="all"></div>
   <p>Os golpes em área (pulo, cone, pisão, arremesso, magia) estão explicados com imagens em <a href="combate.html#areas">Combate › Golpes em área</a>.</p>
 </main>
-<script src="../js/01-base.js?v=39"></script>
-<script src="../js/02-modelos.js?v=39"></script>
+<script src="../js/01-base.js?v=42"></script>
+<script src="../js/02-modelos.js?v=42"></script>
 <script src="icones.js?v=2"></script>
 <script src="wiki.js?v=2"></script>
 <script>
 wikiLayout();
 put('#elite', ELITE_TAG.join(', '));
-put('#rk', RMAP_KILLS);
 put('#maps', MAPS.map((m, i) => `<h3 id="m-${m.id}" style="display:flex;align-items:center;gap:10px"><span style="width:18px;height:18px;border-radius:5px;background:${m.ground[1]};border:1px solid var(--line)"></span>${i + 1}. ${m.name} <small>· nível ${m.lv[0]}–${m.lv[1]}</small></h3>
   <p>${m.desc}</p>
   <p><b>Dano das criaturas:</b> ${mapEls(m).map(ELN).join(' + ')} · <b>Libera no nível</b> ${m.req} · <b>Itens:</b> ilvl ${m.lv[0]}–${m.lv[1] + 1} · <b>Grupos:</b> ${m.id === 'campos' ? 'sozinhas' : `até ${Math.min(10, 2 + i)}`}</p>
   <figure><img class="shot" src="img/criaturas-${m.id}.jpg" alt="As 5 criaturas do mapa ${m.name}, em fila" loading="lazy" width="832" height="272"><figcaption>${m.mons.map(k => MONS[k].n).join(' · ')}</figcaption></figure>
   ${monTable(m.mons)}`).join(''));
-put('#rmap', table(['Nível do Mapa Aleatório', {t:'Vida e dano das criaturas', c:'num'}, {t:'XP', c:'num'}, 'Pedras que caem'],
-  [1, 2, 3, 4, 5, 10, 15, 20].map(n => [`<b>${n}</b>`, num(fmt(dunMult(n)*100) + '%'), num(fmt(dunMult(n)*100) + '%'), n === 1 ? 'Pedra 1' : `Pedras 1 a ${n}`])));
+// Atlas: tier N = × 1,15^(N−1) (ATL_STEP em js/10-atlas.js, que a wiki não carrega)
+put('#rmap', table(['Pedra de Passagem', {t:'Vida e dano das criaturas', c:'num'}, {t:'XP', c:'num'}, {t:'Criaturas raras', c:'num'}, 'Pedras da Masmorra que caem'],
+  [1, 2, 3, 4, 6, 8, 10, 12, 14, 16].map(n => [`<b>Tier ${n}</b>`, num(fmt(Math.pow(1.15, n - 1)*100) + '%'), num(fmt(Math.pow(1.15, n - 1)*100) + '%'), num(5 + Math.floor(n/3)), n === 1 ? 'Pedra 1' : `Pedras 1 a ${Math.min(n, 10)}`])));
 put('#all', monTable(Object.keys(MONS).sort((a, b) => MONS[a].n.localeCompare(MONS[b].n))));
 </script>
 </body>

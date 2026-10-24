@@ -16,9 +16,8 @@ let renderScale = 1;
 // o chão fica "deitado" (achatado na profundidade por sen(CAM_PITCH)), foge para o alto da tela e tudo encolhe com a distância.
 // O chão é esticado assim (groundBlit em 07) e as paredes do mapa são prismas 3D (drawWall3d); heróis, criaturas, prédios e
 // enfeites continuam desenhos em pé, só com a escala da distância (atY). CAM_NEAR = câmera mais perto (zoom), CAM_K = distância
-// da câmera em meias-alturas de tela (menor = perspectiva mais forte). Ligada por aparelho: Opções › Câmera 3D (localStorage['loner-cam']).
+// da câmera em meias-alturas de tela (menor = perspectiva mais forte). É a única câmera do jogo (a plana saiu).
 const CAM_NEAR = 1.3, CAM_K = 3, CAM_PITCH = 50*Math.PI/180, CAM_SIN = Math.sin(CAM_PITCH), CAM_COS = Math.cos(CAM_PITCH);
-let cam3d = true; try{ cam3d = localStorage.getItem('loner-cam') !== '0'; }catch(e){}
 // camTop/camBot = distância em y (no mundo) do herói até o alto/pé da tela; camSTop = escala no alto da tela
 let camD = 1000, camTop = -300, camBot = 300, camSTop = 1;
 function resize(){
@@ -27,25 +26,22 @@ function resize(){
   dpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PX/(cw*ch))) * renderScale;
   cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
   cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
-  zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3) * (cam3d ? CAM_NEAR : 1);
+  zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3) * CAM_NEAR;
   const hh = ch/2/zoom; camD = hh*CAM_K;
   camTop = camDy(-hh); camBot = camDy(hh); camSTop = camS(camTop);
 }
-function setCam3d(on){ cam3d = !!on; try{ localStorage.setItem('loner-cam', cam3d ? '1' : '0'); }catch(e){} resize(); }
 // Ponto do chão dy à frente do herói (dy > 0 = mais para baixo, mais perto da câmera): escala e altura na tela (unidades do
-// mundo, antes do zoom); camDy faz o contrário (altura na tela → dy). Na câmera plana: escala 1 e sem achatar.
-const camS = dy => cam3d ? camD/(camD - Math.min(dy*CAM_COS, camD*.9)) : 1;
-const camV = dy => cam3d ? camS(dy)*dy*CAM_SIN : dy;
-const camDy = v => cam3d ? v*camD/(camD*CAM_SIN + v*CAM_COS) : v;
+// mundo, antes do zoom); camDy faz o contrário (altura na tela → dy).
+const camS = dy => camD/(camD - Math.min(dy*CAM_COS, camD*.9));
+const camV = dy => camS(dy)*dy*CAM_SIN;
+const camDy = v => v*camD/(camD*CAM_SIN + v*CAM_COS);
 // Ponto 3D do mundo (x, y no chão, h = altura) → tela em px (CSS). Usado pelas paredes 3D.
 function camP(x, y, h){
   const dy = y - cam.y, s = camD/(camD - dy*CAM_COS - h*CAM_SIN);
   return [cw/2 + zoom*s*(x - cam.x), ch/2 + zoom*s*(dy*CAM_SIN - h*CAM_COS)];
 }
 // Antes de desenhar algo em pé no y do mundo (pés da criatura, base do prédio): põe a escala da distância e a posição certa.
-// Na câmera plana não faz nada (o render já deixou a translação/zoom de sempre).
 function atY(y){
-  if(!cam3d) return;
   const dy = y - cam.y, s = camS(dy), a = dpr*zoom*s;
   ctx.setTransform(a, 0, 0, a, dpr*(cw/2 - zoom*s*cam.x), dpr*(ch/2 + zoom*(camV(dy) - s*y)));
 }
@@ -294,11 +290,11 @@ function makeMon(type, x, y, ml, elite){
 // Grupo grande: cada criatura um pouco mais fraca (vida e dano × packF; 4 = 95% ... 7 = 80%, 10 = 70%), senão 10 juntas matam na hora
 const SOLO_MAP = 'campos', MAP_MONS = 80, PACK_MAX = 10, PACK_SOLO = .35;
 const packF = n => n <= 3 ? 1 : Math.max(.7, 1 - .05*(n - 3));
-const packMax = () => mapDef === DUN || mapDef === RMAP ? PACK_MAX : Math.min(PACK_MAX, 2 + MAPS.indexOf(mapDef));
+const packMax = () => mapDef === DUN || inAtlas() ? PACK_MAX : Math.min(PACK_MAX, 2 + MAPS.indexOf(mapDef));
 const packSize = () => { if(mapDef.id === SOLO_MAP) return 1; return Math.random() < PACK_SOLO ? 1 : rint(2, packMax()); };
 let mapTotal = 0, mapCleared = false, packId = 0;
 function spawnLevel(){
-  const total = mapDef === DUN ? DUN_KILLS : mapDef === RMAP ? RMAP_KILLS : MAP_MONS;
+  const total = mapDef === DUN ? DUN_KILLS : inAtlas() ? atlTotal() : MAP_MONS;
   // lugares possíveis: chão a pelo menos 9 ladrilhos (pelo caminho) do início
   const spots = []; for(let i = 0; i < LV_N*LV_N; i++) if(LV.g[i] === 1 && LV.dist[i] >= 12) spots.push(i);
   let left = total, guard = 0;
@@ -311,7 +307,7 @@ function spawnLevel(){
       const m = makeMon(t, x, y, rint(mapDef.lv[0], mapDef.lv[1]), i === eliteIdx);
       m.pack = pk;
       if(n > 3){ const f = packF(n); m.hpMax *= f; m.hp = m.hpMax; m.dmg *= f; }
-      if(inDun()) dunScale(m); else if(inRmap()) rmapScale(m);
+      if(inDun()) dunScale(m); else if(inAtlas()) atlScale(m);
       m.lx = m.x; m.ly = m.y;
       mons.push(m); left--;
     }
@@ -334,20 +330,10 @@ function enterDungeon(level){
 }
 // Criatura da Masmorra: vida e dano × 1,25^(Pedra−1) e o elemento da corrida
 function dunScale(m){ const k = dunMult(S.dun.phase); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; m.el = dunEl(); }
-// Mapa Aleatório (nível 40, ver RMAP_ID em 01): RMAP é o mapa da entrada atual, com visual e criaturas de um dos MAPS sorteado
-let RMAP = null;
-const inRmap = () => scene === 'map' && !!RMAP && mapDef === RMAP;
-const rmapName = n => `Mapa Aleatório ${n}`;
-function rmapScale(m){ const k = dunMult(S.rmap.tier); m.hpMax *= k; m.hp = m.hpMax; m.dmg *= k; }
-function makeRmap(){
-  const base = pick(MAPS);
-  RMAP = {...base, id:RMAP_ID, name:rmapName(S.rmap.tier), tier:S.rmap.tier, theme:base.name, lv:[MAX_LV, MAX_LV], req:MAX_LV};
-  return RMAP;
-}
-// Matou todas as criaturas (Masmorra: DUN_KILLS; Mapa Aleatório: RMAP_KILLS): o Chefe aparece perto do herói (num chão livre, a uns 260 px)
-// com BOSS_MINIONS ajudantes. Na Masmorra ele vem das criaturas de todos os mapas; no Mapa Aleatório, das criaturas do mapa sorteado.
+// Masmorra: matou as DUN_KILLS criaturas, o Chefe aparece perto do herói (num chão livre, a uns 260 px) com BOSS_MINIONS ajudantes,
+// das criaturas de todos os mapas. (Os Chefes do Atlas ficam na sala mais longe desde o começo: atlasBoss em 10.)
 function spawnBoss(){
-  const R = inRmap(), pool = R ? mapDef.mons : DUN.mons, scale = R ? rmapScale : dunScale;
+  const pool = DUN.mons, scale = dunScale;
   const withAoe = pool.filter(k => MONS[k].aoe), t = pick(withAoe.length ? withAoe : pool);
   let p = null;
   for(let i = 0; i < 40 && !p; i++){ const a = Math.random()*TAU, r = rnd(200, 320), x = hero.x + Math.cos(a)*r, y = hero.y + Math.sin(a)*r; if(walkable(x, y, 26) && losClear(hero, {x, y})) p = {x, y}; }
@@ -355,13 +341,12 @@ function spawnBoss(){
   const pk = ++packId, b = makeMon(t, p.x, p.y, MAX_LV, true);
   b.boss = true; b.pack = pk; b.name = `${MONS[t].n} Ancestral`; b.r *= BOSS_R; b.spd *= .9;
   b.hpMax *= BOSS_HP; b.dmg *= BOSS_DMG; scale(b); b.lx = b.x; b.ly = b.y; mons.push(b);
-  if(R) b.el = MONS[t].el; // anel do Chefe na cor do elemento dele
   for(let i = 0; i < BOSS_MINIONS; i++){
     const a = i/BOSS_MINIONS*TAU, x = p.x + Math.cos(a)*55, y = p.y + Math.sin(a)*55;
     const m = makeMon(pick(pool), walkable(x, y, 8) ? x : p.x, walkable(x, y, 8) ? y : p.y, MAX_LV, false);
     m.minion = true; m.pack = pk; scale(m); m.lx = m.x; m.ly = m.y; mons.push(m);
   }
-  if(R) S.rmap.boss = 1; else { S.dun.boss = 1; tutStep(3, 4); }
+  S.dun.boss = 1; tutStep(3, 4);
   const ec = ELEM[b.el || dunEl()].c;
   for(let i = 0; i < 30; i++){ const an = Math.random()*TAU, sp = rnd(60, 200); part({x:p.x, y:p.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:.7, size:rnd(2, 4.5), c:ec}); }
   ring(p.x, p.y, 140, ec, 1, 6); ring(p.x, p.y, 90, STONE_C, .8, 3);
@@ -372,11 +357,12 @@ let minimapBig = false; // minimapa grande (aberto ao tocar nele)
 function clearWorld(){ zones = []; hero.dodge = null; hero.buff = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
 function enterMap(id){
   // A Masmorra não muda S.map (o mapa de caça normal continua o mesmo para quando sair dela)
-  // No nível 40 os mapas normais somem: qualquer caçada vira o Mapa Aleatório (sorteado de novo a cada entrada)
+  // No nível 40 os mapas normais somem: só se entra no mapa aberto do Atlas (atlasEnter em 10); sem mapa aberto, fica na vila
   if(id === DUN.id && S.dun.phase > 0) mapDef = DUN;
-  else if(S.lv >= MAX_LV){ mapDef = makeRmap(); S.map = RMAP_ID; S.dun.phase = 0; S.rmap.kills = 0; S.rmap.boss = 0; }
+  else if(S.lv >= MAX_LV){ if(!atlasEnter()){ enterTown(); return; } }
   else { mapDef = MAPS.find(m => m.id === id) || MAPS[0]; S.map = mapDef.id; S.dun.phase = 0; }
   scene = 'map'; mode = 'hunt'; WORLD = {w:LV_N*TILE, h:LV_N*TILE}; clearWorld();
+  if(mapDef === atlDef && atlRun.snap){ atlasRestore(); dirtyPanel(); return; } // voltou pelo portal: o mapa continua como estava
   LV = genLevel(mapDef); decor = LV.deco; minimapBig = false;
   hero.x = LV.startPos.x; hero.y = LV.startPos.y;
   hero.scale = 1; hero.alpha = 1; hero.atk = hero.cast = hero.whirl = hero.dash = null;
@@ -385,14 +371,14 @@ function enterMap(id){
   spawnLevel(); markSeen();
   ring(hero.x, hero.y, 50, '#8ab4ff', .6, 4);
   if(mapDef === DUN){ log(`Masmorra · Pedra ${S.dun.phase} · ${ELEM[dunEl()].n}: mate as ${DUN_KILLS} criaturas e o Chefe em ${DUN_TIME/60} minutos`, ELEM[dunEl()].c); dirtyPanel(); return; }
-  if(mapDef === RMAP){ log(`${RMAP.name} (${RMAP.theme}): mate as ${RMAP_KILLS} criaturas e o Chefe · Pedras 1–${S.rmap.tier}`, STONE_C); dirtyPanel(); return; }
+  if(mapDef === atlDef){ atlasSetup(); dirtyPanel(); return; }
   log(`${mapDef.name}: ${mapTotal} criaturas para caçar`, '#c9e6a0');
   const xm = xpMult(mapDef); if(xm < 1) log(`Mapa abaixo do seu nível: XP reduzida em ${Math.round((1 - xm)*100)}%`, '#ff8c80');
   dirtyPanel();
 }
 function enterTown(){
+  atlasLeave(); // mapa do Atlas sem concluir fica guardado para voltar pelo portal (10)
   if(S.dun && S.dun.phase > 0){ if(S.dun.boss < 2) log(`Masmorra da Pedra ${S.dun.phase} encerrada sem matar o Chefe (a Pedra foi gasta)`, '#d9a0ff'); S.dun.phase = 0; S.dun.kills = 0; S.dun.boss = 0; }
-  S.rmap.kills = 0; S.rmap.boss = 0;
   scene = 'town'; mode = 'town'; WORLD = {w:TOWN_W, h:TOWN_H}; clearWorld(); decor = [];
   hero.x = TPORT.x; hero.y = TPORT.y - 40; hero.scale = 1; hero.alpha = 1; hero.face = -Math.PI/2; hero.atk = hero.cast = hero.whirl = hero.dash = null; hero.moving = false;
   cam.x = hero.x; cam.y = hero.y - 40; townWait = 0; townGoal = null; townZone = null; townIdle = true; townArmed = false;
@@ -413,9 +399,11 @@ function startPortal(dest, reason){
 }
 function transition(fn){ if(trans) return; trans = {t:0, fn, did:false}; }
 // Partir: perto do portal da vila anda até ele; longe, abre um portal ao lado do herói (townExit)
+// No nível 40 o portal é o Dispositivo do Atlas: sem mapa aberto, Partir abre o Atlas para escolher o nó e a Pedra
 let townExit = TPORT;
 function depart(){
   if(scene !== 'town' || mode === 'townLeave' || trans) return;
+  if(S.lv >= MAX_LV && !atlOpenRun()){ townArmed = false; if(tab !== 'atlas' || $('#sheet').hidden) openTab('atlas'); return; }
   townExit = D(hero, TPORT) < 140 ? TPORT : {x:clamp(hero.x + 40, 40, TOWN_W - 40), y:clamp(hero.y - 6, 130, TOWN_H - 40), temp:1};
   mode = 'townLeave'; townWait = 0; townGoal = null;
 }

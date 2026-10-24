@@ -54,7 +54,7 @@
     <li><b><span id="upn"></span> Pedras N viram 1 Pedra N+1.</b> É o jeito de subir de nível mais rápido.</li>
     <li><b>1 Pedra N volta a ser 1 Pedra N−1</b>, se quiser fazer uma corrida mais fácil.</li>
   </ul>
-  <div class="tip">Conta: uma Pedra 5 pela Mesa custa <b id="p5"></b> Pedras 1. Por isso vale fazer o Mapa Aleatório no nível mais alto que você aguenta: lá caem Pedras maiores.</div>
+  <div class="tip">Conta: uma Pedra 5 pela Mesa custa <b id="p5"></b> Pedras 1. Por isso vale fazer o Atlas com a maior Pedra de Passagem que você aguenta: lá caem Pedras maiores (até 10).</div>
 
   <h2 id="corrida">A corrida</h2>
   <ul>
@@ -80,8 +80,8 @@
     <li>Suba de Pedra devagar: se a corrida ficou apertada no tempo, junte Pedras na Mesa Rúnica antes de subir.</li>
   </ul>
 </main>
-<script src="../js/01-base.js?v=39"></script>
-<script src="../js/02-modelos.js?v=39"></script>
+<script src="../js/01-base.js?v=42"></script>
+<script src="../js/02-modelos.js?v=42"></script>
 <script src="icones.js?v=2"></script>
 <script src="wiki.js?v=2"></script>
 <script>
@@ -91,14 +91,14 @@ put('#stoneIc', WICON.stone);
 put('#upn', STONE_UP_N);
 put('#p5', fmt(STONE_UP_N**4));
 put('#onde', table(['Onde', 'Chance', 'Qual Pedra'], [
-  ['<b>Mapa Aleatório N</b> (nível 40)', `${pct(STONE_MAP_CH)} por criatura (elite ${pct(STONE_MAP_CH*3)})`, 'Sorteada entre 1 e N'],
-  ['<b>Chefe do Mapa Aleatório N</b>', 'Sempre 1', 'Sorteada entre 1 e N'],
+  ['<b>Mapa do Atlas com Pedra de Passagem N</b> (nível 40)', `${pct(STONE_MAP_CH)} por criatura (elite ${pct(STONE_MAP_CH*3)})`, 'Sorteada entre 1 e N'],
+  ['<b>Chefe de um mapa do Atlas N</b>', 'Sempre 1', 'Sorteada entre 1 e N (até 10)'],
   ['<b>Masmorra, corrida da Pedra N</b>', `${pct(STONE_DUN_CH)} por criatura (elite ${pct(STONE_DUN_CH*3)})`, `Pedra N, ou N−1 em ${pct(STONE_LOW_CH)} das vezes`],
   ['<b>Chefe da Masmorra (Pedra N)</b>', 'Sempre 1', 'Pedra N'],
   ['<b>Ezequiel</b> (cena do nível 40)', '1 vez', 'Pedra 1'],
 ]));
 put('#boss', table(['', 'Chefe'], [
-  ['Quem é', 'Uma criatura com golpe em área, sorteada (na Masmorra, de todos os mapas; no Mapa Aleatório, do mapa sorteado). Sempre elite.'],
+  ['Quem é', 'Uma criatura com golpe em área, sorteada (de todos os mapas). Sempre elite.'],
   ['Vida', `${BOSS_HP}× a de uma elite`], ['Dano', `${n1(BOSS_DMG)}× o de uma elite`], ['Tamanho', `${n1(BOSS_R)}× maior`],
   ['Ajudantes', `${BOSS_MINIONS} criaturas normais (não contam nas ${DUN_KILLS})`], ['XP', '6× a de uma elite'],
   ['Recompensa', 'Pedra garantida + 3 itens extras'],

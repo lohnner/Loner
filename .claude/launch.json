@@ -7,6 +7,13 @@
       "runtimeArgs": ["-m", "http.server", "4190", "--bind", "127.0.0.1"],
       "port": 4190,
       "url": "http://localhost:4190"
+    },
+    {
+      "name": "loner-teste",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4191", "--bind", "127.0.0.1", "--directory", "C:\\Users\\rodri\\AppData\\Local\\Temp\\claude\\C--Users-rodri-OneDrive-Documentos-GitHub-Loner\\2cd6cf02-0c5f-4cab-a5b4-5c29f1023bc6\\scratchpad\\teste"],
+      "port": 4191,
+      "url": "http://localhost:4191"
     }
   ]
 }

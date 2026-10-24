@@ -317,3 +317,47 @@ input,textarea{user-select:text;-webkit-user-select:text}
 textarea{width:100%;min-height:110px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
 .saveok{font-size:13px;color:var(--poison)}
 @media (prefers-reduced-motion:reduce){#log div{animation:none}}
+
+/* Atlas de Mundos (10-atlas.js): mapa em SVG à esquerda (arrastar move), ficha do nó à direita; ocupa a tela toda */
+#sheet.atl .sheet-head,#sheet.atl .sheet-body{max-width:none}
+#sheet.atl .sheet-body{overflow:hidden;padding-bottom:8px;grid-template-rows:minmax(0,1fr)}
+.atlas{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,34%);gap:10px;min-height:0;height:100%}
+.atl-map{position:relative;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#18202a,#07090c 75%)}
+#atlSvg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.atl-e{stroke:#3a4452;stroke-width:2.5}
+.atl-e.d{stroke:#b8963a;stroke-width:3.5}
+.atl-range{fill:rgba(127,208,200,.06);stroke:rgba(127,208,200,.35);stroke-width:2;stroke-dasharray:8 6}
+.atl-n{cursor:pointer}
+.atl-n .b{stroke:#6a7280;stroke-width:3}
+.atl-n.done .b{stroke:#f5cf3a}
+.atl-n.av .b{stroke:#f2eee2;animation:atlPulse 1.3s ease-in-out infinite}
+.atl-n.lock{opacity:.5}
+.atl-n.fail .b{stroke:#ff5a4a}
+.atl-n text{font:700 13px var(--body);fill:#ece6d4;text-anchor:middle;paint-order:stroke;stroke:#05070a;stroke-width:3.5px;pointer-events:none}
+@keyframes atlPulse{50%{stroke-opacity:.3}}
+.atl-top{position:absolute;left:8px;top:6px;right:52px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-size:12px;color:var(--muted);pointer-events:none;text-shadow:0 1px 2px #000}
+.atl-top b{color:var(--fg)}
+.atl-fr{display:inline-flex;gap:10px;align-items:center}
+.atl-fr span{display:inline-flex;align-items:center;gap:3px;font-weight:800}
+.atl-fr svg{width:15px;height:15px}
+.atl-fr.big-fr{display:grid;gap:4px;font-size:14px}
+.atl-fr.big-fr svg{width:18px;height:18px}
+.atl-zoom{position:absolute;right:6px;top:6px;display:grid;gap:6px}
+.atl-zoom button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(12,15,13,.88);font-weight:800;font-size:18px;padding:0}
+.atl-side{overflow-y:auto;min-height:0;display:grid;gap:12px;align-content:start;padding-right:2px;-webkit-overflow-scrolling:touch}
+.atl-card{display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.atl-card h3{margin:0;font-family:var(--display);font-size:24px;line-height:1}
+.atl-card .mm,.atl-way .mm,.atl-tab .mm{font-size:13px;color:var(--muted)}
+.atl-tags{display:flex;flex-wrap:wrap;gap:4px}
+.atl-ways{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.tile.sel{outline:2px solid #fff;outline-offset:1px}
+.atl-way{display:grid;gap:4px;padding:10px;border-radius:10px;background:#0b0f0c;border:1px solid var(--line)}
+.atl-way .sn{font-weight:800;font-size:15px}
+.atl-mods{margin:0;padding-left:18px;font-size:13px;display:grid;gap:2px}
+.atl-mods em{color:var(--muted);font-style:normal;font-size:12px}
+.atl-tab{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;border-radius:10px;background:#0b0f0c;border:1px solid var(--line);font-size:14px}
+.atl-tab.empty{opacity:.5;color:var(--muted)}
+.atl-tab .ico svg{width:26px;height:26px;display:block}
+.atl-help summary{cursor:pointer;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@media (max-height:460px){.atlas{grid-template-columns:minmax(0,1fr) minmax(230px,40%)}.atl-card h3{font-size:20px}}
+.atl-fog{fill:#2a3038;opacity:.7}
