@@ -91,6 +91,40 @@ function drawWall(w){
   if(leaf){ for(let i = 0; i < 4; i++){ const hx = X + TILE*.2 + ((w.h >> (i*3)) % (TILE*.6)), hy = top + TILE*.2 + ((w.h >> (i*3 + 2)) % (TILE*.6)); sphere(hx, hy, TILE*.16 + (w.h >> i & 3)*1.5, i % 2 ? C[0] : shade(C[0], .1)); } }
   else { ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1; line(X, top + TILE/2, X + TILE, top + TILE/2); line(X + ((w.tx % 2) ? TILE/2 : TILE/4), top, X + ((w.tx % 2) ? TILE/2 : TILE/4), top + TILE/2); line(X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE/2, X + ((w.tx % 2) ? TILE/4 : TILE*.75), top + TILE); }
 }
+// Câmera 3D (03): parede como bloco de verdade (topo, face de baixo e o lado virado para o meio da tela), em px de tela via camP.
+// WALL_H3 = altura no mundo (mais alta que WALL_H porque a câmera inclinada achata a altura).
+const WALL_H3 = 50;
+function drawWall3d(w){
+  const C = WALL_C[mapDef.decor] || WALL_C.crypt, leaf = WALL_LEAF[mapDef.decor], N = LV_N, g = LV.g, H = WALL_H3;
+  const at = (x, y) => x < 0 || y < 0 || x >= N || y >= N ? 0 : g[y*N + x];
+  const X0 = w.x, X1 = w.x + TILE, Y0 = w.y - TILE, Y1 = w.y;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = .8; ctx.lineJoin = 'round';
+  // parede na frente do herói (entre ele e a câmera) fica meio transparente, como no Diablo
+  const front = w.y > hero.y && w.y - hero.y < TILE*2.2 && X0 < hero.x + TILE && X1 > hero.x - TILE;
+  if(front) ctx.globalAlpha = .4;
+  // contorno da mesma cor: fecha a fresta clara entre blocos vizinhos
+  const q = (pts, c) => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle = c; ctx.fill(); ctx.stroke(); };
+  if(X1 < cam.x && at(w.tx + 1, w.ty)) q([camP(X1, Y0, 0), camP(X1, Y1, 0), camP(X1, Y1, H), camP(X1, Y0, H)], shade(C[1], -.35));
+  if(X0 > cam.x && at(w.tx - 1, w.ty)) q([camP(X0, Y0, 0), camP(X0, Y1, 0), camP(X0, Y1, H), camP(X0, Y0, H)], shade(C[1], -.1));
+  if(w.south){
+    const a = camP(X0, Y1, 0), b = camP(X1, Y1, 0), c = camP(X1, Y1, H), d = camP(X0, Y1, H);
+    q([a, b, c, d], C[1]);
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] - (b[1] - c[1])*.35); ctx.lineTo(a[0], a[1] - (a[1] - d[1])*.35); ctx.fill(); // pé da parede mais escuro
+    if(!leaf){ ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 1; for(const k of [.33, .66]) line(a[0], a[1] + (d[1] - a[1])*k, b[0], b[1] + (c[1] - b[1])*k); }
+  }
+  const t = [camP(X0, Y0, H), camP(X1, Y0, H), camP(X1, Y1, H), camP(X0, Y1, H)];
+  q(t, shade(C[0], (leaf ? 0 : -.22) + ((w.h & 7) - 3.5)*.012));
+  // quinas de cima viradas para o chão, iluminadas (mostram a altura mesmo quando só o topo aparece)
+  ctx.strokeStyle = shade(C[0], .25); ctx.lineWidth = 1.4;
+  if(w.south) line(t[3][0], t[3][1], t[2][0], t[2][1]);
+  if(at(w.tx, w.ty - 1)) line(t[0][0], t[0][1], t[1][0], t[1][1]);
+  if(at(w.tx - 1, w.ty)) line(t[0][0], t[0][1], t[3][0], t[3][1]);
+  if(at(w.tx + 1, w.ty)) line(t[1][0], t[1][1], t[2][0], t[2][1]);
+  if(leaf){ const r = (t[2][0] - t[3][0])*.24; for(let i = 0; i < 3; i++){ const p = camP(X0 + TILE*(.22 + i*.28), Y0 + TILE*(.3 + ((w.h >> (i*2)) & 3)*.13), H + 3); sphere(p[0], p[1], r*(.8 + ((w.h >> i) & 1)*.3), i % 2 ? C[0] : shade(C[0], .1)); } }
+  ctx.globalAlpha = 1;
+}
+// Câmera 3D: enfeites em pé (árvores, pedras, trigo...) saem do chão esticado e são desenhados em pé (atY); estes ficam no chão
+const FLAT_DECOR = {puddle:1, lava:1, bones:1};
 // Chão (padrão do mapa só onde tem sala/corredor), sombra das paredes no chão e enfeites
 function drawLevelFloor(vis){
   prepLevel();
@@ -107,13 +141,13 @@ function drawLevelFloor(vis){
   ctx.globalAlpha = .45; ctx.fillStyle = shade(frc, .25); blobs(.45, -.3, -.35, 6);
   if(FR.glow){ ctx.fillStyle = '#ff5a1a'; ctx.globalAlpha = .28 + .15*Math.sin(T*3); blobs(.55, 0, 0, 6.5); }
   ctx.globalAlpha = 1;
-  for(const o of decor) if(vis(o)) drawDecor(o);
+  for(const o of decor) if(vis(o) && (!cam3d || FLAT_DECOR[o.t])) drawDecor(o);
   // Masmorra: o chão fica com a cor do elemento da fase
   if(inDun()){ ctx.globalAlpha = .1; ctx.fillStyle = ELEM[dunEl()].c; ctx.fill(LV.prep.floor); ctx.globalAlpha = 1; }
 }
 // Paredes e obstáculos visíveis entram na ordenação por y junto com o herói e as criaturas
 function levelProps(vis, out){
-  for(const w of LV.prep.walls) if(vis({x:w.x + TILE/2, y:w.y - TILE/2})) out.push({y:w.y, draw:() => drawWall(w)});
+  for(const w of LV.prep.walls) if(vis({x:w.x + TILE/2, y:w.y - TILE/2})) out.push({y:w.y, draw:cam3d ? () => drawWall3d(w) : () => drawWall(w)});
   for(const o of LV.solids) if(vis(o)) out.push({y:o.y, draw:() => drawDecor(o)});
   // enfeites das bordas: em cima das paredes e tochas na face (logo depois da parede deles)
   for(const p of LV.prep.props){ const at = p.o || p.torch; if(vis(at)) out.push({y:p.ys, draw:p.o ? () => drawDecor(p.o) : () => drawWallTorch(p.torch)}); }
@@ -617,6 +651,7 @@ function drawBars(vis){
   ctx.font = '700 10px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
   for(const m of mons){
     if(m.dead || !vis(m)) continue;
+    atY(m.y);
     const w = m.boss ? 84 : m.elite ? 44 : 32, y = m.y + m.r*.6 - monH(m) - 8;
     const bl = bleedLeft(m), fl = burnLeft(m);
     // Chefe da Masmorra: anel do elemento no chão, barra maior e nome em laranja
@@ -626,7 +661,7 @@ function drawBars(vis){
     else if(m.elite){ ctx.fillStyle = '#9fbaff'; ctx.fillText(m.name, m.x, y - 5); }
   }
   if(hero.scale > .3 && hero.alpha > .1){
-    const p = hero.hp/ST.life;
+    const p = hero.hp/ST.life; atY(hero.y);
     bar(hero.x, hero.y - 64*hero.scale, 44, 6, p, p > .5 ? '#4fbf5a' : p > .3 ? '#d9b23a' : '#d4473b', 0, scene === 'map' ? S.cfg.ret/100 : undefined);
     // Cor do nome (Baú de Visuais): o nome aparece em cima da barra
     const NC = lookOf('name');
@@ -898,13 +933,18 @@ function drawTownGround(){
 }
 function drawTown(){
   drawTownGround();
-  drawPortal(TPORT.x, TPORT.y, 1);
-  if(mode === 'townLeave' && townExit.temp) drawPortal(townExit.x, townExit.y, 1);
+  if(!cam3d) drawTownPortals(); // câmera 3D: em pé, depois do chão (render)
+}
+function drawTownPortals(){
+  atY(TPORT.y); drawPortal(TPORT.x, TPORT.y, 1);
+  if(mode === 'townLeave' && townExit.temp){ atY(townExit.y); drawPortal(townExit.x, townExit.y, 1); }
 }
 // Placas com o nome dos lugares (por cima de tudo); a de perto do herói fica mais forte
 function drawTownLabels(){
   ctx.font = '800 13px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
-  const tag = (x, y, s, c, near) => {
+  // ay = y do chão embaixo da placa (câmera 3D: a placa fica no tamanho da distância dela)
+  const tag = (x, y, s, c, near, ay) => {
+    atY(ay);
     const w = ctx.measureText(s).width + 16;
     ctx.globalAlpha = near ? 1 : .82; ctx.fillStyle = 'rgba(10,12,10,.78)'; rrect(x - w/2, y - 15, w, 21, 8);
     ctx.strokeStyle = c; ctx.lineWidth = near ? 2 : 1; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x - w/2, y - 15, w, 21, 8); ctx.stroke();
@@ -913,14 +953,14 @@ function drawTownLabels(){
   for(const z of townZones()){
     const b = TOWN_B.find(b => b.id === z.id), near = D(hero, z) < 110;
     const y = b ? b.y - b.h - b.h*.72 - b.dep*.22 - 16 : z.ly;
-    tag(b ? b.x + b.dep*.3 : z.lx, y, z.n, {dun:'#e0b0ff', forge:'#ffb070', shop:'#f5cf3a', chest:'#ffd27a', runes:'#c9a8ff'}[z.id] || '#c9a8ff', near);
+    tag(b ? b.x + b.dep*.3 : z.lx, y, z.n, {dun:'#e0b0ff', forge:'#ffb070', shop:'#f5cf3a', chest:'#ffd27a', runes:'#c9a8ff'}[z.id] || '#c9a8ff', near, b ? b.y : z.y);
   }
-  if(!dunOpen() && !cut) tag(DPORT.x, DPORT.y - 44, 'Fenda selada · nível ' + MAX_LV, '#8a8098', D(hero, DPORT) < 110);
+  if(!dunOpen() && !cut) tag(DPORT.x, DPORT.y - 44, 'Fenda selada · nível ' + MAX_LV, '#8a8098', D(hero, DPORT) < 110, DPORT.y);
   // tutorial: seta roxa pulando em cima da Fenda
-  if(S.tut === 1 && !cut){ const ay = DPORT.y - 136 + Math.sin(T*5)*6; ctx.fillStyle = '#c08aff'; poly([[DPORT.x - 10, ay], [DPORT.x + 10, ay], [DPORT.x, ay + 14]]); }
-  tag(TPORT.x, TPORT.y + 30, 'Portal · Partir', '#a9c4ff', D(hero, TPORT) < 110);
+  if(S.tut === 1 && !cut){ atY(DPORT.y); const ay = DPORT.y - 136 + Math.sin(T*5)*6; ctx.fillStyle = '#c08aff'; poly([[DPORT.x - 10, ay], [DPORT.x + 10, ay], [DPORT.x, ay + 14]]); }
+  tag(TPORT.x, TPORT.y + 30, 'Portal · Partir', '#a9c4ff', D(hero, TPORT) < 110, TPORT.y + 30);
   // destino do toque
-  if(townGoal){ ctx.strokeStyle = 'rgba(220,240,180,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(townGoal.x, townGoal.y, 10 + Math.sin(T*8)*2, 4, 0, 0, TAU); ctx.stroke(); }
+  if(townGoal){ atY(townGoal.y); ctx.strokeStyle = 'rgba(220,240,180,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(townGoal.x, townGoal.y, 10 + Math.sin(T*8)*2, 4, 0, 0, TAU); ctx.stroke(); }
 }
 function drawPortal(x, y, k){
   const g = ctx.createRadialGradient(x, y - 22, 2, x, y - 22, 34*k); g.addColorStop(0, 'rgba(170,200,255,.9)'); g.addColorStop(.5, 'rgba(90,110,220,.55)'); g.addColorStop(1, 'rgba(60,40,160,0)');
@@ -986,13 +1026,40 @@ function drawItemDrop(d){
     ctx.fillStyle = col; ctx.fillText(it.name, d.x, d.y - 15);
   }
 }
+// Câmera 3D (03): o chão e o que fica deitado nele (nuvens, marcas, mira) são desenhados retos em gcv e depois esticados
+// na tela em faixas de poucos pixels, cada uma na escala da sua distância (groundBlit). O resto é desenhado com atY(y).
+let gcv = null, gctx = null;
+function groundBegin(x0, y0, w, h, bg){
+  const g = dpr*zoom, W = Math.ceil(w*g), H = Math.ceil(h*g);
+  if(!gcv){ gcv = document.createElement('canvas'); gctx = gcv.getContext('2d', {alpha:false}); }
+  if(gcv.width !== W || gcv.height !== H){ gcv.width = W; gcv.height = H; }
+  gctx.setTransform(g, 0, 0, g, -x0*g, -y0*g);
+  gctx.fillStyle = bg; gctx.fillRect(x0, y0, w, h);
+}
+function groundBlit(x0, y0){
+  const g = dpr*zoom, GW = gcv.width, GH = gcv.height, H = cv.height, band = Math.max(2, Math.round(3*dpr));
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for(let Y = 0; Y < H; Y += band){
+    const Y1 = Math.min(H, Y + band), v0 = (Y/dpr - ch/2)/zoom, v1 = (Y1/dpr - ch/2)/zoom;
+    const sy0 = clamp((cam.y + camDy(v0) - y0)*g, 0, GH), sy1 = clamp((cam.y + camDy(v1) - y0)*g, 0, GH);
+    if(sy1 - sy0 < .01) continue;
+    const s = camS(camDy((v0 + v1)/2));
+    ctx.drawImage(gcv, 0, sy0, GW, sy1 - sy0, dpr*(cw/2 + zoom*s*(x0 - cam.x)), Y, zoom*s*GW/g*dpr, Y1 - Y);
+  }
+}
 function render(){
+  ctx = CTX; // se um quadro anterior quebrou no meio do chão, volta para o canvas da tela
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = scene === 'town' ? '#17140f' : '#060807'; ctx.fillRect(0, 0, cw, ch);
-  const z = zoom, hw = cw/2/z, hh = ch/2/z;
-  const vx0 = cam.x - hw - 80, vx1 = cam.x + hw + 80, vy0 = cam.y - hh - 80, vy1 = cam.y + hh + 80;
+  const bg = scene === 'town' ? '#17140f' : '#060807';
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, cw, ch);
+  // área do mundo que aparece (na câmera 3D o alto da tela vê mais longe e mais largo)
+  const z = zoom, hw = cw/2/z/camSTop;
+  const vx0 = cam.x - hw - 80, vx1 = cam.x + hw + 80, vy0 = cam.y + camTop - 80, vy1 = cam.y + camBot + 80;
   const vis = o => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
-  ctx.save(); ctx.translate(cw/2, ch/2); ctx.scale(z, z); ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
+  ctx.save();
+  const main = ctx, gx0 = cam.x - hw - 4, gy0 = cam.y + camTop - 4;
+  if(cam3d){ groundBegin(gx0, gy0, hw*2 + 8, camBot - camTop + 8, bg); ctx = gctx; }
+  else { ctx.translate(cw/2, ch/2); ctx.scale(z, z); ctx.translate(-Math.round(cam.x), -Math.round(cam.y)); }
   if(scene === 'town'){
     if(townPat){ ctx.fillStyle = townPat; ctx.fillRect(0, 0, WORLD.w, WORLD.h); }
     ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 16; ctx.strokeRect(-8, -8, WORLD.w + 16, WORLD.h + 16);
@@ -1024,24 +1091,35 @@ function render(){
     }
     ctx.globalAlpha = 1;
   }
-  for(const d of drops) if(vis(d)) drawItemDrop(d);
-  for(const c of coins){ ctx.fillStyle = '#8a6420'; circ(c.x, c.y + 1, 3.6); ctx.fillStyle = '#e2ae4a'; circ(c.x, c.y, 3.4); ctx.fillStyle = '#ffe39a'; circ(c.x - 1, c.y - 1, 1.2); }
-  for(const m of mons) if(m.dead && vis(m)) drawMon(m);
   if(scene === 'map') drawFocus();
-  if(portal) drawPortal(portal.x, portal.y, clamp(portal.t/.6, 0, 1));
+  drawAim();
+  if(cam3d){
+    ctx = main; groundBlit(gx0, gy0);
+    if(scene === 'town') drawTownPortals();
+  }
+  for(const d of drops) if(vis(d)){ atY(d.y); drawItemDrop(d); }
+  for(const c of coins){ atY(c.y); ctx.fillStyle = '#8a6420'; circ(c.x, c.y + 1, 3.6); ctx.fillStyle = '#e2ae4a'; circ(c.x, c.y, 3.4); ctx.fillStyle = '#ffe39a'; circ(c.x - 1, c.y - 1, 1.2); }
+  for(const m of mons) if(m.dead && vis(m)){ atY(m.y); drawMon(m); }
+  if(portal){ atY(portal.y); drawPortal(portal.x, portal.y, clamp(portal.t/.6, 0, 1)); }
   const ents = mons.filter(m => !m.dead && vis(m)); ents.push(hero);
   if(scene === 'town'){
-    for(const p of townProps()) ents.push(p); // prédios, árvores e postes entram na ordem por y
+    // prédios, árvores e postes entram na ordem por y (na câmera 3D, os muito abaixo da tela cresceriam demais: ficam de fora)
+    const far = cam.y + Math.min(camBot + 200, camD*.75);
+    for(const p of townProps()) if(!cam3d || p.y < far) ents.push(p);
     if(dunOpen() || cut) ents.push({y:riftNpc.y, draw:drawEzequiel}); // Ezequiel anda na cena: entra com o y de agora
   }
-  else if(LV) levelProps(vis, ents); // paredes e obstáculos do mapa
+  else if(LV){
+    levelProps(vis, ents); // paredes e obstáculos do mapa
+    if(cam3d) for(const o of decor) if(vis(o) && !FLAT_DECOR[o.t]) ents.push({y:o.y, draw:() => drawDecor(o)}); // enfeites em pé
+  }
   ents.sort((a, b) => a.y - b.y);
-  for(const e of ents) e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e);
+  for(const e of ents){ atY(e.y); e === hero ? drawHero() : e.draw ? e.draw() : drawMon(e); }
   if(scene === 'town') drawTownLabels();
   // Arremessos das criaturas (bomba, poção, bloco de gelo, teia) voando em arco até a marca
   for(const z of zones){
     if(!z.bomb) continue;
     const k = clamp(z.t/z.dur, 0, 1), b = z.bomb, x = b.x0 + (z.x - b.x0)*k, y = b.y0 + (z.y - b.y0)*k - Math.sin(k*Math.PI)*110;
+    atY(b.y0 + (z.y - b.y0)*k);
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ell(b.x0 + (z.x - b.x0)*k, (b.y0 + 30) + (z.y - b.y0 - 30)*k, 7, 3);
     if(b.type === 'goblin'){ sphere(x, y, 6, '#3a3a40'); ctx.strokeStyle = '#c9a24a'; ctx.lineWidth = 1.5; line(x + 3, y - 4, x + 7, y - 9); ctx.fillStyle = `rgba(255,${200 + 55*Math.random() | 0},80,1)`; circ(x + 7, y - 10, 2.5); }
     else if(b.type === 'yeti'){ ctx.save(); ctx.translate(x, y); ctx.rotate(T*6); ctx.fillStyle = vgrad(-10, 10, '#f0f8ff', '#8fc8e8'); rrect(-10, -10, 20, 20, 4); ctx.restore(); }
@@ -1051,6 +1129,7 @@ function render(){
   }
   const FX = fxLook();
   for(const p of projs){
+    atY(p.y);
     if(p.hostile){ ctx.fillStyle = p.c; circ(p.x, p.y, 4.5); ctx.globalAlpha = .35; circ(p.x, p.y, 8); ctx.globalAlpha = 1; continue; }
     if(p.kind === 'ember' || p.kind === 'fireball'){
       // Fogo do Mago: núcleo claro com halo laranja (ou na cor do visual de efeito)
@@ -1070,18 +1149,17 @@ function render(){
     ctx.restore();
   }
   for(const p of parts){
-    const k = 1 - p.t/p.life; ctx.globalAlpha = Math.max(0, k);
+    const k = 1 - p.t/p.life; ctx.globalAlpha = Math.max(0, k); atY(p.y);
     if(p.kind === 'streak'){ ctx.strokeStyle = p.c; ctx.lineWidth = p.size; line(p.x, p.y, p.x - p.vx*.04, p.y - p.vy*.04); }
     else if(p.kind === 'bubble'){ ctx.strokeStyle = p.c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.stroke(); }
     else { ctx.fillStyle = p.c; circ(p.x, p.y, p.size*(.5 + .5*k)); }
   }
   ctx.globalAlpha = 1;
-  for(const r of rings){ const k = r.t/r.life; ctx.globalAlpha = 1 - k; ctx.strokeStyle = r.c; ctx.lineWidth = r.w; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r*k + 4, (r.r*k + 4)*.75, 0, 0, TAU); ctx.stroke(); }
+  for(const r of rings){ const k = r.t/r.life; atY(r.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = r.c; ctx.lineWidth = r.w; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r*k + 4, (r.r*k + 4)*.75, 0, 0, TAU); ctx.stroke(); }
   ctx.globalAlpha = 1;
-  drawAim();
   drawBars(vis);
   ctx.textAlign = 'center';
-  for(const t of texts){ ctx.globalAlpha = Math.min(1, (1 - t.t/.9)*1.6); ctx.font = `800 ${t.size}px "Alegreya Sans", sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(t.s, t.x, t.y); ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y); }
+  for(const t of texts){ atY(t.y); ctx.globalAlpha = Math.min(1, (1 - t.t/.9)*1.6); ctx.font = `800 ${t.size}px "Alegreya Sans", sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(t.s, t.x, t.y); ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y); }
   ctx.globalAlpha = 1;
   ctx.restore();
   // vinheta

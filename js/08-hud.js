@@ -432,7 +432,8 @@ function panelRules(){
     <div class="big" id="retVal">${c.ret}%</div>
     <input type="range" id="cfg-ret" min="10" max="90" step="5" value="${c.ret}">
     <p class="note">A marca branca na barra de vida do herói mostra esse limite.</p></div>
-    <div class="sec">${sw('retFull', 'Voltar quando a mochila encher', `${invMax()} espaços`)}
+    <div class="sec"><div class="row"><label for="cfg-cam">Câmera 3D<small>Vista inclinada, estilo Diablo (guardado neste aparelho)</small></label><input type="checkbox" class="switch" id="cfg-cam" ${cam3d ? 'checked' : ''}></div>
+    ${sw('retFull', 'Voltar quando a mochila encher', `${invMax()} espaços`)}
     ${sw('autoSell', 'Vender itens comuns ao chegar na vila')}
     <p class="note">Andar é sempre manual. Celular: toque em qualquer lugar da tela, segure e arraste para o lado que quer andar; dois toques rápidos = esquiva. PC: WASD ou setas, espaço = esquiva. Atacar: botão grande embaixo à direita (segure para repetir) ou, no PC, clique/segure o mouse no mapa — a cada ${BASIC_CD} segundos.</p>
     <div class="row"><label for="cfg-minPick">Pegar itens do chão a partir de</label><select id="cfg-minPick" data-cfg="minPick">${RAR.map((r, i) => `<option value="${i}" ${c.minPick === i ? 'selected' : ''}>${r.n}</option>`).join('')}</select></div></div>
@@ -768,6 +769,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-act]
 document.addEventListener('change', e => {
   const el = e.target; const k = el.dataset && el.dataset.cfg;
   if(el.dataset && el.dataset.look){ ACT.look(el.value); return; }
+  if(el.id === 'cfg-cam'){ setCam3d(el.checked); return; }
   if(k){ S.cfg[k] = el.type === 'checkbox' ? el.checked : +el.value; save(); }
 });
 document.addEventListener('input', e => {

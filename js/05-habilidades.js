@@ -21,7 +21,11 @@ function fanPointBlank(base){
 }
 let aim = null, skipClickT = 0;
 const mouse = {x:0, y:0, on:false};
-const toWorld = (sx, sy) => ({x: cam.x + (sx - cw/2)/zoom, y: cam.y + (sy - ch/2)/zoom});
+// Tela → mundo (na câmera 3D desfaz a perspectiva de atY/camV em 03)
+const toWorld = (sx, sy) => {
+  const v = (sy - ch/2)/zoom; if(!cam3d) return {x: cam.x + (sx - cw/2)/zoom, y: cam.y + v};
+  const dy = camDy(v); return {x: cam.x + (sx - cw/2)/zoom/camS(dy), y: cam.y + dy};
+};
 const canAim = id => !!AIMABLE[id] && ST.rk(id) > 0 && scene === 'map' && mode === 'hunt' && cds[id] <= 0;
 
 /* ---------- ANDAR MANUAL (Regras › Andar manual) ---------- */

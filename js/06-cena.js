@@ -488,8 +488,8 @@ function step(dt){
   cam.x += (hero.x - cam.x)*k; cam.y += (ty - cam.y)*k;
   // vila: a câmera não mostra o vazio fora dela (tela deitada vê pouco na altura)
   if(scene === 'town'){
-    const hw = cw/2/zoom, hh = ch/2/zoom;
+    const hw = cw/2/zoom, up = -camTop, dn = camBot; // na câmera 3D vê mais para cima que para baixo (03)
     cam.x = TOWN_W > hw*2 ? clamp(cam.x, hw, TOWN_W - hw) : TOWN_W/2;
-    cam.y = TOWN_H > hh*2 ? clamp(cam.y, hh, TOWN_H - hh) : TOWN_H/2;
+    cam.y = TOWN_H > up + dn ? clamp(cam.y, up, TOWN_H - dn) : TOWN_H/2;
   }
 }

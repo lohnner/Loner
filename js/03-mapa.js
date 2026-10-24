@@ -4,19 +4,50 @@
 
 /* ---------- RUNTIME ---------- */
 // Canvas opaco (alpha:false): o render pinta a tela inteira todo quadro, e o navegador não precisa misturar com a página atrás
-const cv = $('#cv'), ctx = cv.getContext('2d', {alpha:false});
+// ctx é let: na câmera 3D o render (07) troca por um canvas à parte enquanto desenha o chão
+const cv = $('#cv'), CTX = cv.getContext('2d', {alpha:false}); let ctx = CTX;
 let cw = 360, ch = 480, dpr = 1, zoom = 1;
 // Resolução interna: no máximo MAX_PX pixels (telas 2K/4K ou Windows em 125–150% desenhariam 4–8 milhões por quadro) e
 // renderScale (0,7–1), que o frame() (07) baixa sozinho se os quadros ficarem pesados e sobe de volta quando sobra tempo.
 const MAX_PX = 3e6;
 let renderScale = 1;
+/* ---------- CÂMERA 3D (estilo Diablo 3) ---------- */
+// Câmera de verdade (como uma câmera 3D), presa no alto a camD do herói e inclinada CAM_PITCH para baixo, seguindo o herói:
+// o chão fica "deitado" (achatado na profundidade por sen(CAM_PITCH)), foge para o alto da tela e tudo encolhe com a distância.
+// O chão é esticado assim (groundBlit em 07) e as paredes do mapa são prismas 3D (drawWall3d); heróis, criaturas, prédios e
+// enfeites continuam desenhos em pé, só com a escala da distância (atY). CAM_NEAR = câmera mais perto (zoom), CAM_K = distância
+// da câmera em meias-alturas de tela (menor = perspectiva mais forte). Ligada por aparelho: Opções › Câmera 3D (localStorage['loner-cam']).
+const CAM_NEAR = 1.3, CAM_K = 3, CAM_PITCH = 50*Math.PI/180, CAM_SIN = Math.sin(CAM_PITCH), CAM_COS = Math.cos(CAM_PITCH);
+let cam3d = true; try{ cam3d = localStorage.getItem('loner-cam') !== '0'; }catch(e){}
+// camTop/camBot = distância em y (no mundo) do herói até o alto/pé da tela; camSTop = escala no alto da tela
+let camD = 1000, camTop = -300, camBot = 300, camSTop = 1;
 function resize(){
   const r = cv.parentElement.getBoundingClientRect();
   cw = Math.max(1, r.width); ch = Math.max(1, r.height);
   dpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PX/(cw*ch))) * renderScale;
   cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
   cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
-  zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3);
+  zoom = clamp(Math.min(cw/500, ch/520), .66, 1.3) * (cam3d ? CAM_NEAR : 1);
+  const hh = ch/2/zoom; camD = hh*CAM_K;
+  camTop = camDy(-hh); camBot = camDy(hh); camSTop = camS(camTop);
+}
+function setCam3d(on){ cam3d = !!on; try{ localStorage.setItem('loner-cam', cam3d ? '1' : '0'); }catch(e){} resize(); }
+// Ponto do chão dy à frente do herói (dy > 0 = mais para baixo, mais perto da câmera): escala e altura na tela (unidades do
+// mundo, antes do zoom); camDy faz o contrário (altura na tela → dy). Na câmera plana: escala 1 e sem achatar.
+const camS = dy => cam3d ? camD/(camD - Math.min(dy*CAM_COS, camD*.9)) : 1;
+const camV = dy => cam3d ? camS(dy)*dy*CAM_SIN : dy;
+const camDy = v => cam3d ? v*camD/(camD*CAM_SIN + v*CAM_COS) : v;
+// Ponto 3D do mundo (x, y no chão, h = altura) → tela em px (CSS). Usado pelas paredes 3D.
+function camP(x, y, h){
+  const dy = y - cam.y, s = camD/(camD - dy*CAM_COS - h*CAM_SIN);
+  return [cw/2 + zoom*s*(x - cam.x), ch/2 + zoom*s*(dy*CAM_SIN - h*CAM_COS)];
+}
+// Antes de desenhar algo em pé no y do mundo (pés da criatura, base do prédio): põe a escala da distância e a posição certa.
+// Na câmera plana não faz nada (o render já deixou a translação/zoom de sempre).
+function atY(y){
+  if(!cam3d) return;
+  const dy = y - cam.y, s = camS(dy), a = dpr*zoom*s;
+  ctx.setTransform(a, 0, 0, a, dpr*(cw/2 - zoom*s*cam.x), dpr*(ch/2 + zoom*(camV(dy) - s*y)));
 }
 if(window.ResizeObserver) new ResizeObserver(resize).observe(cv.parentElement); else window.addEventListener('resize', resize);
 resize();
