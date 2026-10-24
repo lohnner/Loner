@@ -138,7 +138,7 @@ function atlasGen(seed){
     n.cor = R() < .08;
   }
   const edges = []; adj.forEach((s, i) => s.forEach(j => { if(i < j) edges.push([i, j]); }));
-  return {seed, nodes, adj:adj.map(s => [...s]), edges};
+  return {seed, nodes, adj:adj.map(s => [...s]), edges, cents};
 }
 // Estado do Atlas do personagem (cria no 1º uso, no nível 40): S.atlas = {seed, done, fail, tow, top, arb, cur}
 //   done/fail = nós concluídos/que falharam · tow = Tabuletas em cada Torre · top = maior Pedra concluída · arb = vezes que o Árbitro caiu
@@ -474,6 +474,123 @@ function atlasHudText(){
 }
 const atlasGoText = () => atlOpenRun() ? `Voltar: ${atlDef.name}` : 'Atlas de Mundos';
 
+/* ---------- PINTURA DO ATLAS (terreno de fundo do painel) ---------- */
+// Pintada uma vez por semente num canvas (ART_K px por unidade do Atlas) e virada imagem (atlArt.url) que fica embaixo dos nós no SVG:
+// chão de cada região na cor do bioma (fronteiras onduladas, atlBiomeAt), detalhes por bioma (árvores, plantações, montanhas com neve,
+// dunas, poças do pântano, lápides, torres, rachaduras de lava...), rios e lagos, sombra nas bordas. A névoa das áreas não exploradas é
+// outra imagem pequena (atlFogUrl), refeita só quando muda o que se vê.
+const ART_X0 = -1300, ART_Y0 = -1040, ART_W = 2600, ART_H = 2080, ART_K = .7;
+const BIOME_ART = {
+  campos:{g:'#8a9a42', d:'#5e6e2a'}, floresta:{g:'#33602e', d:'#1e3e1c'}, pantano:{g:'#4e5c36', d:'#2c3820'},
+  mina:{g:'#75604a', d:'#4a3a2c'}, catacumbas:{g:'#5c5c62', d:'#38383e'}, picos:{g:'#9aa8b6', d:'#6a7888'},
+  deserto:{g:'#b8925e', d:'#8a6a40'}, cidadela:{g:'#4c4060', d:'#2c243a'}, abismo:{g:'#4e1e14', d:'#2a0e08'},
+};
+let atlArt = null, atlFog = null; // {seed, url} · {key, url}
+function atlBiomeAt(x, y){
+  const wx = x + Math.sin(y*.012 + 1.3)*42 + Math.sin(y*.031 + x*.004)*15, wy = y + Math.sin(x*.011 + .7)*42 + Math.sin(x*.027)*15;
+  let b = 'campos', bd = 1e18; for(const c of ATLAS.cents){ const d = (c.x - wx)*(c.x - wx) + (c.y - wy)*(c.y - wy); if(d < bd){ bd = d; b = c.b; } } return b;
+}
+const artNoise = (x, y) => Math.sin(x*.013 + 2.1)*Math.sin(y*.011 + .4) + .5*Math.sin(x*.037 + y*.021 + 1.7) + .25*Math.sin(x*.091 - y*.083);
+function atlasPaint(){
+  const R = atlRand(ATLAS.seed + 7), rp = a => a[Math.floor(R()*a.length)], W = Math.round(ART_W*ART_K), H = Math.round(ART_H*ART_K);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', {alpha:false});
+  // 1) chão: grade grossa com a cor do bioma + manchas, esticada com suavização (fronteiras macias)
+  const CELL = 8, gw = Math.ceil(ART_W/CELL), gh = Math.ceil(ART_H/CELL), lo = document.createElement('canvas'); lo.width = gw; lo.height = gh;
+  const lg = lo.getContext('2d'), img = lg.createImageData(gw, gh), bio = new Array(gw*gh);
+  for(let j = 0; j < gh; j++) for(let i = 0; i < gw; i++){
+    const x = ART_X0 + (i + .5)*CELL, y = ART_Y0 + (j + .5)*CELL, b = atlBiomeAt(x, y), A = BIOME_ART[b], n = artNoise(x, y)*.5 + .5;
+    bio[j*gw + i] = b;
+    const [r1, g1, b1] = hexRGB(A.g), [r2, g2, b2] = hexRGB(A.d), t = clamp(n*.9, 0, 1), o = (j*gw + i)*4;
+    img.data[o] = r2 + (r1 - r2)*t; img.data[o + 1] = g2 + (g1 - g2)*t; img.data[o + 2] = b2 + (b1 - b2)*t; img.data[o + 3] = 255;
+  }
+  lg.putImageData(img, 0, 0);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(lo, 0, 0, W, H);
+  g.setTransform(ART_K, 0, 0, ART_K, -ART_X0*ART_K, -ART_Y0*ART_K); g.lineCap = 'round'; g.lineJoin = 'round';
+  const bAt = (x, y) => { const i = clamp(((x - ART_X0)/CELL) | 0, 0, gw - 1), j = clamp(((y - ART_Y0)/CELL) | 0, 0, gh - 1); return bio[j*gw + i]; };
+  // 2) água: lagos nas regiões verdes e rios que saem do meio para a borda (nada é desenhado em cima depois)
+  const water = [];
+  for(let i = 0, tries = 0; i < 7 && tries < 200; tries++){
+    const x = ART_X0 + 150 + R()*(ART_W - 300), y = ART_Y0 + 150 + R()*(ART_H - 300), b = bAt(x, y);
+    if(b !== 'campos' && b !== 'floresta' && b !== 'pantano' && b !== 'picos') continue;
+    if(water.some(w => Math.hypot(w.x - x, w.y - y) < 320)) continue;
+    const r = 45 + R()*55, pts = []; for(let k = 0; k < 14; k++){ const a = k/14*TAU, rr = r*(.75 + R()*.4); pts.push([x + Math.cos(a)*rr*1.3, y + Math.sin(a)*rr]); }
+    water.push({x, y, r:r*1.35, pts, ice:b === 'picos'}); i++;
+  }
+  const rivers = [];
+  for(let i = 0; i < 3; i++){
+    let a = R()*TAU, x = Math.cos(a)*120*1.3, y = Math.sin(a)*120; const pts = [[x, y]];
+    for(let s = 0; s < 120 && Math.abs(x) < ART_W/2 && Math.abs(y) < ART_H/2; s++){ a += (R() - .5)*.55 + Math.sin(s*.3 + i)*.08; x += Math.cos(a)*22*1.2; y += Math.sin(a)*22; pts.push([x, y]); }
+    rivers.push(pts);
+  }
+  const nearWater = (x, y, m) => water.some(w => Math.hypot(w.x - x, w.y - y) < w.r + m) || rivers.some(p => p.some(([px, py]) => Math.abs(px - x) < 26 + m && Math.abs(py - y) < 26 + m));
+  const path = pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for(let k = 1; k < pts.length - 1; k++){ const mx = (pts[k][0] + pts[k + 1][0])/2, my = (pts[k][1] + pts[k + 1][1])/2; g.quadraticCurveTo(pts[k][0], pts[k][1], mx, my); } };
+  for(const p of rivers){
+    for(const [w, col] of [[26, 'rgba(40,50,30,.35)'], [18, '#2a5878'], [11, '#3f7fa8'], [3, 'rgba(200,235,255,.5)']]){ path(p); g.strokeStyle = col; g.lineWidth = w; g.stroke(); }
+  }
+  for(const w of water){
+    const blob = () => { g.beginPath(); w.pts.forEach(([x, y], k) => k ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+    g.save(); g.translate(w.x, w.y); g.scale(1.12, 1.12); g.translate(-w.x, -w.y); blob(); g.fillStyle = w.ice ? 'rgba(230,240,248,.7)' : 'rgba(60,80,40,.45)'; g.fill(); g.restore(); // margem
+    blob(); const gr = g.createRadialGradient(w.x - w.r*.2, w.y - w.r*.2, 4, w.x, w.y, w.r); gr.addColorStop(0, w.ice ? '#cfe6f4' : '#5aa0c8'); gr.addColorStop(1, w.ice ? '#8ab8d4' : '#1f4c6c'); g.fillStyle = gr; g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1.5; for(let k = 0; k < 3; k++){ const yy = w.y - w.r*.3 + k*w.r*.25; g.beginPath(); g.moveTo(w.x - w.r*.4, yy); g.quadraticCurveTo(w.x - w.r*.2, yy - 4, w.x, yy); g.stroke(); }
+  }
+  // 3) detalhes por bioma em pontos espalhados (de cima para baixo: o de baixo fica na frente)
+  const pts = []; const STEP = 30;
+  for(let y = ART_Y0 + 20; y < ART_Y0 + ART_H - 10; y += STEP) for(let x = ART_X0 + 20; x < ART_X0 + ART_W - 10; x += STEP) pts.push([x + (R() - .5)*STEP, y + (R() - .5)*STEP, R()]);
+  pts.sort((a, b) => a[1] - b[1]);
+  const tri = (x, y, w, h, c1, c2) => { g.fillStyle = c1; g.beginPath(); g.moveTo(x - w, y); g.lineTo(x, y - h); g.lineTo(x, y); g.fill(); g.fillStyle = c2; g.beginPath(); g.moveTo(x, y - h); g.lineTo(x + w, y); g.lineTo(x, y); g.fill(); };
+  const shadow = (x, y, rx, ry) => { g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(x + rx*.25, y, rx, ry, 0, 0, TAU); g.fill(); };
+  const tree = (x, y, s, c) => { shadow(x, y + 2, 9*s, 3.5*s); g.fillStyle = '#3a2614'; g.fillRect(x - 1.2*s, y - 6*s, 2.4*s, 7*s);
+    for(const [dx, dy, r, k] of [[-4, -9, 6, -.25], [4, -9, 6, -.15], [0, -14, 7, 0], [-1.5, -16, 3.5, .25]]){ g.fillStyle = shade(c, k); g.beginPath(); g.arc(x + dx*s, y + dy*s, r*s, 0, TAU); g.fill(); } };
+  const pine = (x, y, s, c, snow) => { shadow(x, y + 1, 7*s, 2.8*s); g.fillStyle = '#3a2a1a'; g.fillRect(x - 1*s, y - 4*s, 2*s, 5*s); for(let k = 0; k < 3; k++) tri(x, y - 3*s - k*5*s, (7 - k*1.8)*s, 9*s, shade(c, .1), shade(c, -.35)); if(snow){ g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(x - 2.5*s, y - 19*s); g.lineTo(x, y - 23*s); g.lineTo(x + 2.5*s, y - 19*s); g.fill(); } };
+  for(const [x, y, r] of pts){
+    const b = bAt(x, y); if(nearWater(x, y, 8)) { if(b === 'campos' || b === 'floresta' || b === 'pantano'){ if(r < .25){ g.strokeStyle = '#6a8a3a'; g.lineWidth = 1.2; for(let k = -2; k <= 2; k++){ g.beginPath(); g.moveTo(x + k*2, y); g.lineTo(x + k*2.6, y - 8 - (k & 1)*3); g.stroke(); } } } continue; }
+    if(b === 'floresta'){ // mata fechada: 2 árvores por ponto
+      if(r < .9) tree(x - 7, y - 6, .75 + r*.4, rp(['#2e6a2a', '#3a7a30', '#24521f']));
+      (r < .35 ? pine(x + 6, y + 4, .9 + r, '#2e5a2a') : tree(x + 6, y + 5, .8 + r*.5, rp(['#2e6a2a', '#3a7a30', '#24521f'])));
+    }
+    else if(b === 'campos'){
+      if(r < .45){ g.save(); g.translate(x, y); g.rotate((r - .2)*.8); const fc = rp(['#c8b048', '#b4a03c', '#9aa846', '#d0bc5a']); g.fillStyle = fc; g.fillRect(-16, -9, 32, 18); g.strokeStyle = shade(fc, -.25); g.lineWidth = 1; for(let k = -7; k <= 7; k += 3.5){ g.beginPath(); g.moveTo(-16, k); g.lineTo(16, k); g.stroke(); } g.strokeStyle = 'rgba(60,50,20,.5)'; g.strokeRect(-16, -9, 32, 18); g.restore(); }
+      else if(r < .55) tree(x, y, .8, '#4a7a30');
+      else if(r < .565){ shadow(x, y + 1, 8, 3); g.fillStyle = '#c8b090'; g.fillRect(x - 6, y - 7, 12, 8); g.fillStyle = '#8a3a22'; g.beginPath(); g.moveTo(x - 8, y - 7); g.lineTo(x, y - 13); g.lineTo(x + 8, y - 7); g.fill(); } // casinha
+    }
+    else if(b === 'pantano'){
+      if(r < .3){ g.fillStyle = 'rgba(40,60,50,.75)'; g.beginPath(); g.ellipse(x, y, 14 + r*20, 7 + r*8, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(120,160,90,.35)'; g.beginPath(); g.ellipse(x - 3, y - 2, 6, 2, 0, 0, TAU); g.fill(); }
+      else if(r < .55){ shadow(x, y, 6, 2.4); g.strokeStyle = '#3a2a1a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 14); g.lineTo(x - 5, y - 19); g.moveTo(x, y - 10); g.lineTo(x + 5, y - 15); g.stroke(); } // árvore morta
+      else if(r < .75){ g.strokeStyle = '#7a8a40'; g.lineWidth = 1.2; for(let k = -2; k <= 2; k++){ g.beginPath(); g.moveTo(x + k*2, y); g.lineTo(x + k*2.5, y - 9); g.stroke(); } }
+    }
+    else if(b === 'picos'){ if(r < .55){ const s = 22 + r*40; tri(x, y, s*.9, s*1.15, '#c8d2dc', '#6a7a8c'); g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(x - s*.32, y - s*.75); g.lineTo(x, y - s*1.15); g.lineTo(x + s*.3, y - s*.78); g.lineTo(x + s*.1, y - s*.7); g.lineTo(x - s*.08, y - s*.8); g.closePath(); g.fill(); } else if(r < .75) pine(x, y, .8, '#2a4a3a', true); }
+    else if(b === 'mina'){ if(r < .4){ const s = 16 + r*28; tri(x, y, s, s*.75, '#8a7258', '#4a3a2a'); } else if(r < .5){ shadow(x, y, 5, 2); g.fillStyle = '#6a6a6a'; g.beginPath(); g.arc(x, y - 3, 4, 0, TAU); g.fill(); } else if(r < .52){ g.fillStyle = '#1a120c'; g.beginPath(); g.arc(x, y, 7, Math.PI, 0); g.fill(); g.strokeStyle = '#6a4a2a'; g.lineWidth = 2; g.strokeRect(x - 8, y - 8, 16, 8); } }
+    else if(b === 'deserto'){ if(r < .5){ g.strokeStyle = 'rgba(255,230,180,.45)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y, 22, 8, 0, Math.PI*1.1, Math.PI*1.9); g.stroke(); g.strokeStyle = 'rgba(90,60,30,.35)'; g.beginPath(); g.ellipse(x + 2, y + 3, 22, 8, 0, Math.PI*.1, Math.PI*.9); g.stroke(); } else if(r < .56){ shadow(x, y, 6, 2); g.fillStyle = '#8a6a4a'; g.beginPath(); g.arc(x, y - 3, 5, 0, TAU); g.fill(); } else if(r < .6){ g.strokeStyle = '#4a6a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 14); g.moveTo(x, y - 8); g.lineTo(x - 5, y - 10); g.lineTo(x - 5, y - 14); g.stroke(); } }
+    else if(b === 'catacumbas'){ if(r < .3){ shadow(x, y, 5, 2); g.fillStyle = '#9a9aa0'; g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x - 4, y - 8); g.arc(x, y - 8, 4, Math.PI, 0); g.lineTo(x + 4, y); g.fill(); g.fillStyle = '#5a5a60'; g.fillRect(x + 1, y - 10, 3, 10); } else if(r < .4){ g.strokeStyle = '#2a2a2e'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 13); g.lineTo(x - 4, y - 17); g.moveTo(x, y - 9); g.lineTo(x + 4, y - 13); g.stroke(); } else if(r < .46){ g.fillStyle = '#6a6a70'; g.fillRect(x - 12, y - 6, 24, 6); g.fillStyle = '#4a4a50'; g.fillRect(x - 12, y - 9, 6, 3); g.fillRect(x + 4, y - 11, 6, 5); } }
+    else if(b === 'cidadela'){ if(r < .2){ shadow(x, y, 9, 3); g.fillStyle = '#2a2236'; g.fillRect(x - 5, y - 20, 10, 20); g.fillStyle = '#4a3e5e'; g.fillRect(x - 5, y - 20, 4, 20); g.fillStyle = '#1a1424'; g.beginPath(); g.moveTo(x - 7, y - 20); g.lineTo(x, y - 30); g.lineTo(x + 7, y - 20); g.fill(); g.fillStyle = 'rgba(200,150,255,.8)'; g.fillRect(x - 1, y - 14, 2, 3); } else if(r < .5){ const s = 12 + r*16; tri(x, y, s, s*.7, '#5a4c70', '#2c2438'); } }
+    else if(b === 'abismo'){ if(r < .35){ g.strokeStyle = '#2a0804'; g.lineWidth = 5; const k0 = R()*TAU; g.beginPath(); g.moveTo(x, y); for(let k = 0; k < 4; k++) g.lineTo(x + Math.cos(k0 + k*.7)*k*8, y + Math.sin(k0 + k*.4)*k*5); g.stroke(); g.strokeStyle = '#ff7a20'; g.lineWidth = 1.8; g.stroke(); } else if(r < .45){ const s = 16 + r*20; tri(x, y, s, s*.9, '#5a2a1c', '#2a0e08'); g.fillStyle = '#ff8a2b'; g.beginPath(); g.ellipse(x, y - s*.88, 3, 1.5, 0, 0, TAU); g.fill(); } }
+  }
+  // 4) luz geral: brilho no meio e sombra nas bordas (como um mapa antigo)
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const vg = g.createRadialGradient(W/2, H/2, Math.min(W, H)*.25, W/2, H/2, Math.max(W, H)*.62); vg.addColorStop(0, 'rgba(255,240,200,.06)'); vg.addColorStop(1, 'rgba(0,0,0,.55)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  return c;
+}
+// Imagem do terreno: pinta na 1ª vez (síncrono, ~0,1–0,3 s) e guarda como JPEG; enquanto o arquivo não fica pronto, o painel mostra sem fundo
+function atlArtUrl(){
+  if(atlArt && atlArt.seed === ATLAS.seed) return atlArt.url;
+  const c = atlasPaint(); atlArt = {seed:ATLAS.seed, url:''};
+  const done = u => { if(atlArt && atlArt.seed === ATLAS.seed){ atlArt.url = u; dirtyPanel(); } };
+  if(c.toBlob) c.toBlob(b => done(b ? URL.createObjectURL(b) : c.toDataURL('image/jpeg', .85)), 'image/jpeg', .86); else done(c.toDataURL('image/jpeg', .85));
+  return '';
+}
+// Névoa: escuro em tudo, menos em volta do que se vê (círculos com borda macia); refeita só quando o conjunto visível muda
+function atlFogUrl(seen){
+  const key = ATLAS.seed + ':' + [...seen].sort((a, b) => a - b).join(',');
+  if(atlFog && atlFog.key === key) return atlFog.url;
+  const K = .12, c = document.createElement('canvas'); c.width = Math.round(ART_W*K); c.height = Math.round(ART_H*K); const g = c.getContext('2d');
+  g.fillStyle = 'rgba(6,8,12,.94)'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'destination-out';
+  for(const id of seen){ const n = ATLAS.nodes[id], x = (n.x - ART_X0)*K, y = (n.y - ART_Y0)*K, r = 175*K, gr = g.createRadialGradient(x, y, r*.35, x, y, r); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r*2, r*2); }
+  if(atlFog && atlFog.url && atlFog.url.startsWith('blob:')) URL.revokeObjectURL(atlFog.url);
+  atlFog = {key, url:c.toDataURL('image/png')};
+  return atlFog.url;
+}
 /* ---------- PAINEL DO ATLAS (aba atlas; a aba Mapas abre ele no nível 40) ---------- */
 // Mapa em SVG (arrastar move, roda/botões aproximam) e, ao lado, a ficha do nó tocado com as Pedras para colocar
 let atlSel = 0, atlWaySel = 0, atlView = {x:0, y:0, s:1.7}, atlDrag = null, atlDragT = 0, bagWaySel = 0;
@@ -497,11 +614,18 @@ function panelAtlas(){
   atlSel = sel.id;
   const st = n => A.done[n.id] && !atlRepeat(n) ? 'done' : atlAvail(A, n) ? 'av' : A.done[n.id] ? 'done' : 'lock';
   let svg = '';
+  // terreno pintado (imagem) e névoa por cima do que ainda não se vê
+  const art = atlArtUrl(), box = `x="${ART_X0}" y="${ART_Y0}" width="${ART_W}" height="${ART_H}" preserveAspectRatio="none"`;
+  if(art) svg += `<image href="${art}" ${box}/>`;
+  svg += `<image href="${atlFogUrl(seen)}" ${box}/>`;
   // alcance das Torres concluídas com Tabuletas (e da Torre selecionada)
   for(const t of atlTowersDone(A)) if((A.tow[t.id] || []).length || t === sel) svg += `<circle class="atl-range" cx="${t.x}" cy="${t.y}" r="${ATL_TOWER_R}"/>`;
   // névoa: o que ainda não se vê, perto do que se vê, aparece só como um pontinho apagado
   for(const n of N) if(!seen.has(n.id) && N.some(o => seen.has(o.id) && D(o, n) < ATL_GAP*2.6)) svg += `<circle class="atl-fog" cx="${n.x}" cy="${n.y}" r="5"/>`;
-  for(const [i, j] of ATLAS.edges) if(seen.has(i) && seen.has(j)){ const a = N[i], b = N[j]; svg += `<line class="atl-e${A.done[i] && A.done[j] ? ' d' : ''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`; }
+  // ligações como estradas: borda escura + caminho de terra tracejado (dourado entre lugares concluídos)
+  let roads = '', tops = '';
+  for(const [i, j] of ATLAS.edges) if(seen.has(i) && seen.has(j)){ const a = N[i], b = N[j], xy = `x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"`; roads += `<line class="atl-e" ${xy}/>`; tops += `<line class="atl-r${A.done[i] && A.done[j] ? ' d' : ''}" ${xy}/>`; }
+  svg += roads + tops;
   for(const n of N){
     if(!seen.has(n.id)) continue;
     const s = st(n), B = MAPS.find(m => m.id === n.b) || MAPS[0], fail = A.fail[n.id] && !A.done[n.id];
