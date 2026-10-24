@@ -54,6 +54,7 @@ const hero = {x:900,y:900,hp:ST.life,face:0,walkT:0,moving:false,hit:0,scale:1,a
 let mons = [], projs = [], clouds = [], drops = [], coins = [], parts = [], texts = [], later = [], decor = [], rings = [];
 const cds = {dodge:0, atk:0}; for(const id in SKD) if(SKD[id].act) cds[id] = 0;
 let zones = []; // áreas marcadas no chão pelas criaturas (MON_AOE)
+let bloodFx = []; // Frenesi Sangrento: sombras de sangue do Guerreiro ({k:'ghost'}) e cortes ({k:'slash'}) — 06 e 07
 // townGoal = ponto para onde o herói anda na vila (toque/clique); townZone = porta em que ele está; townIdle = ainda não mexeu desde que chegou
 let townGoal = null, townZone = null, townIdle = true, townArmed = false;
 let portal = null, trans = null, fade = 0, townWait = 0, deadT = 0, T = 0, spawnT = 0, groundPat = null, townPat = null;
@@ -354,7 +355,7 @@ function spawnBoss(){
   log(`O Chefe apareceu: ${b.name}, com ${BOSS_MINIONS} ajudantes!`, '#ff8c80');
 }
 let minimapBig = false; // minimapa grande (aberto ao tocar nele)
-function clearWorld(){ zones = []; hero.dodge = null; hero.buff = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
+function clearWorld(){ zones = []; bloodFx = []; hero.dodge = null; hero.buff = null; hero.frenzy = null; hero.invul = 0; mons = []; projs = []; clouds = []; drops = []; coins = []; parts = []; texts = []; later = []; rings = []; portal = null; }
 function enterMap(id){
   // A Masmorra não muda S.map (o mapa de caça normal continua o mesmo para quando sair dela)
   // No nível 40 os mapas normais somem: só se entra no mapa aberto do Atlas (atlasEnter em 10); sem mapa aberto, fica na vila
@@ -392,7 +393,7 @@ function enterTown(){
 }
 function startPortal(dest, reason){
   if(mode === 'portal' || trans) return;
-  mode = 'portal'; hero.atk = null; hero.cast = null; hero.whirl = hero.dash = null; hero.moving = false;
+  mode = 'portal'; hero.atk = null; hero.cast = null; hero.whirl = hero.dash = hero.frenzy = null; hero.moving = false;
   const px = clamp(hero.x + 34, 30, WORLD.w - 30), py = clamp(hero.y - 14, 30, WORLD.h - 30);
   portal = {x:px, y:py, t:0, dest};
   if(reason) log(reason, '#9fc2ff');

@@ -150,7 +150,7 @@ const parFree = () => S.par - Object.values(S.pp).reduce((a, v) => a + v, 0);
 // ang (opcional) força a direção — o toque duplo no celular usa a direção para onde o herói está andando/olhando
 function doDodge(fromKey, ang){
   const D0 = DODGE[clsOf()];
-  if(scene !== 'map' || mode !== 'hunt' || cds.dodge > 0 || hero.dodge || hero.dash || hero.cast) return false;
+  if(scene !== 'map' || mode !== 'hunt' || cds.dodge > 0 || hero.dodge || hero.dash || hero.frenzy || hero.cast) return false;
   if(ang === undefined) ang = manualDir();
   if(ang === null && fromKey && mouse.on && mouse.x >= 0 && mouse.y >= 0 && mouse.x <= cw && mouse.y <= ch){ const w = toWorld(mouse.x, mouse.y); if(D(w, hero) > 10) ang = Math.atan2(w.y - hero.y, w.x - hero.x); }
   if(ang === null){ const n = nearestMon(hero); ang = n && D(n, hero) < 300 ? Math.atan2(hero.y - n.y, hero.x - n.x) : hero.face; }
@@ -165,7 +165,7 @@ function doDodge(fromKey, ang){
 }
 function hurtHero(dmg, src){
   if(scene !== 'map' || mode === 'dead' || hero.scale < .6) return;
-  if(hero.invul > 0){ txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
+  if(hero.invul > 0){ if(hero.frenzy) return; txt(hero.x, hero.y - 40, 'Esquivou', '#dfe8ff', 12); return; }
   // Todo dano é de um dos 4 tipos (Fogo, Raio, Gelo, Veneno): reduzido pela armadura e pela resistência do tipo.
   const el = (src && (src.el || src.d.el)) || 'poison', arm = ST.armor;
   const red = arm / (arm + 40 + 8*(src ? src.ml : 1)), res = ((ST.res[el] || 0) - atlResPen())/100; // Atlas: Pedra com −% de resistência
@@ -177,7 +177,7 @@ function hurtHero(dmg, src){
   if(hero.hp <= 0) die();
 }
 function die(){
-  hero.hp = 0; mode = 'dead'; deadT = 0; hero.atk = hero.cast = hero.whirl = hero.dash = null; portal = null;
+  hero.hp = 0; mode = 'dead'; deadT = 0; hero.atk = hero.cast = hero.whirl = hero.dash = hero.frenzy = null; portal = null;
   atlasDie(); // mapa do Atlas: morrer fecha o mapa (10)
   const lost = Math.floor(S.gold * .1); S.gold -= lost;
   for(let i = 0; i < 24; i++) part({x:hero.x, y:hero.y, vx:rnd(-120,120), vy:rnd(-140,40), grav:260, life:rnd(.5,1.1), size:rnd(2,4), c:'#b32d22'});
@@ -209,7 +209,7 @@ const basicMult = () => BASIC_CD * ST.aps * heroBuff('aps');
 const basicReach = m => isWar() ? MELEE + m.r + 14 : RANGE + 60;
 // Alvo: o fixado (se ao alcance), senão o mais perto ao alcance; sem ninguém, golpeia/atira para onde está virado (ou para angHint)
 function basicAttack(angHint){
-  if(scene !== 'map' || mode !== 'hunt' || cds.atk > 0 || hero.atk || hero.cast || hero.dash || hero.dodge || hero.whirl) return false;
+  if(scene !== 'map' || mode !== 'hunt' || cds.atk > 0 || hero.atk || hero.cast || hero.dash || hero.frenzy || hero.dodge || hero.whirl) return false;
   const foc = getFocus();
   let t = foc && !foc.dead && D(foc, hero) <= basicReach(foc) ? foc : nearestMon(hero);
   if(t && D(t, hero) > basicReach(t)) t = null;
@@ -252,7 +252,7 @@ function manualCast(id, aimAt){
   if(!ST.rk(id)){ openTab('hero'); return; }
   if(scene !== 'map' || mode !== 'hunt'){ log('As habilidades só funcionam durante a caçada'); return; }
   if(cds[id] > 0) return;
-  if(hero.cast || hero.dash){ hero.queued = id; hero.queuedAim = aimAt || null; return; }
+  if(hero.cast || hero.dash || hero.frenzy){ hero.queued = id; hero.queuedAim = aimAt || null; return; }
   if(aimAt && AIMABLE[id] && aimAt.x !== undefined) return cast(id, {x:aimAt.x, y:aimAt.y});
   const live = mons.filter(m => !m.dead), byDist = (a, b) => D(a, hero) - D(b, hero);
   // Alvo único (Flecha Venenosa / Golpe Dilacerante): alvo clicado, alvo sob o mouse ou o melhor perto
@@ -285,7 +285,7 @@ function manualCast(id, aimAt){
   if(id === 'rain' || id === 'charge' || id === 'meteor'){ const c = bestCluster(near); return cast(id, {x:c.m.x, y:c.m.y}); }
   if(id === 'fan' || id === 'flamewave') return cast(id, {x:near[0].x, y:near[0].y});
 }
-const CAST_DUR = {rain:.45, burst:.5, rupture:.5, charge:.12, whirl:.15, cleave:.28, meteor:.45, inferno:.55, flamewave:.3, storm:.5, titan:.5, cataclysm:.6};
+const CAST_DUR = {rain:.45, burst:.5, rupture:.5, charge:.12, whirl:.15, cleave:.28, meteor:.45, inferno:.55, flamewave:.3, storm:.5, titan:.2, cataclysm:.6};
 // Supremas (nível 40): alcance para achar inimigos
 const ULT_R = 420;
 function cast(id, data){
@@ -389,7 +389,10 @@ function doSkill(c){
 }
 /* ---------- SUPREMAS (nível 40) ---------- */
 // Arqueiro · Tempestade de Flechas: por 4s, a cada 0,2s caem flechas em até 3 inimigos em volta (220% do dano da arma + muito veneno).
-// Guerreiro · Fúria do Titã: esmaga o chão (raio 220, 600% + sangramento enorme) e por 8s: +60% de dano, +50% de velocidade de ataque, 25% de roubo de vida e 1,5s sem levar dano.
+// Guerreiro · Frenesi Sangrento: FRENZY_N (20) saltos, um a cada FRENZY_GAP (0,12 s), sempre na criatura mais perto que levou menos
+// saltos (com várias perto, passa por todas; com uma só, salta nela até morrer ou acabarem os saltos). Cada salto corta com a espada
+// (FRENZY_MULT do dano da arma + sangramento), cura FRENZY_HEAL da vida e deixa uma sombra de sangue do Guerreiro (bloodFx, 07). Sem levar dano enquanto salta.
+const FRENZY_N = 20, FRENZY_GAP = .12, FRENZY_MULT = 1.6, FRENZY_HEAL = .03;
 // Mago · Cataclismo: 10 meteoros em 2,5s nos inimigos em volta (raio 110 cada, 500% + queimadura e chão em chamas).
 function doUlt(id){
   const a = ST.avg, P = ST.pois, live = () => mons.filter(m => !m.dead && D(m, hero) < ULT_R);
@@ -404,11 +407,12 @@ function doUlt(id){
       }
     }});
   } else if(id === 'titan'){
-    ring(hero.x, hero.y, 220, '#e0574a', .8, 9); ring(hero.x, hero.y, 120, '#ffb09a', .5, 4);
-    for(let i = 0; i < 60; i++){ const an = Math.random()*TAU, sp = rnd(160, 420); part({x:hero.x, y:hero.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 80, grav:320, life:.7, size:rnd(2.5,5), c:pick(['#e0574a','#7a5a40','#ffb09a'])}); }
-    for(const m of mons) if(!m.dead && D(m, hero) < 220 + m.r){ meleeHit(m, 6, a*6*P); }
-    hero.buff = {t:8, dmg:1.6, aps:1.5, ls:25, c:'#e0574a'}; hero.invul = Math.max(hero.invul, 1.5); hero.swing = .4;
-    txt(hero.x, hero.y - 70, 'Fúria do Titã!', '#ff8a7a', 18, -20);
+    // Frenesi Sangrento: os saltos acontecem em heroTimers (06, frenzyStep); sem levar dano enquanto salta
+    ring(hero.x, hero.y, 70, '#e0574a', .5, 5);
+    for(let i = 0; i < 24; i++){ const an = Math.random()*TAU, sp = rnd(80, 220); part({x:hero.x, y:hero.y - 16, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 60, grav:260, life:.5, size:rnd(2,4), c:pick(['#e0574a','#8a0f14','#ff9a8a'])}); }
+    hero.frenzy = {n:FRENZY_N, t:0, jump:null, hits:new Map(), heal:0};
+    hero.invul = Math.max(hero.invul, FRENZY_N*FRENZY_GAP + .4);
+    txt(hero.x, hero.y - 70, 'Frenesi Sangrento!', '#ff8a7a', 18, -20);
   } else if(id === 'cataclysm'){
     txt(hero.x, hero.y - 70, 'Cataclismo!', '#ffb040', 18, -20);
     for(let i = 0; i < 10; i++) later.push({t:i*.25, fn:() => {

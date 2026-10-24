@@ -24,7 +24,7 @@ function heroAI(dt){
   if(pct <= S.cfg.ret){ startPortal('town', `Vida em ${Math.round(pct)}%. Voltando para a cidade.`); return; }
   if(S.cfg.retFull && invFull()){ startPortal('town', 'Mochila cheia. Voltando para a cidade.'); return; }
   if(hero.dodge) return;
-  if(hero.dash){ hero.moving = false; return; }
+  if(hero.dash || hero.frenzy){ hero.moving = false; return; }
   // lançando uma habilidade: continua andando (mais devagar) se o jogador estiver mexendo o joystick — não trava o movimento
   if(hero.cast){ const md = manualDir(); if(md !== null) moveDir(md, dt, .7); else hero.moving = false; return; }
   manualAI(dt);
@@ -47,6 +47,44 @@ function dashBoom(d){
   ring(hero.x, hero.y, DASH_BOOM_R, '#ebaa78', .4, 5); ring(hero.x, hero.y, DASH_BOOM_R*.5, '#ffd0a0', .3, 2);
   for(let i = 0; i < 18; i++){ const an = Math.random()*TAU, sp = rnd(90, 220); part({x:hero.x, y:hero.y, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 40, grav:260, life:.45, size:rnd(2,4), c:i % 3 ? '#8a6a4a' : '#ebaa78'}); }
   for(const m of mons) if(!m.dead && D(m, hero) < DASH_BOOM_R + m.r*.5) meleeHit(m, d.endMult, d.dot*.5);
+}
+// Frenesi Sangrento (suprema do Guerreiro, FRENZY_* em 04): a cada FRENZY_GAP salta na criatura mais perto que levou menos saltos,
+// passando por ela (cai do outro lado), corta com a espada, cura e deixa uma sombra de sangue onde estava (bloodFx, desenho em 07)
+function frenzyStep(dt){
+  const f = hero.frenzy;
+  if(scene !== 'map' || mode !== 'hunt'){ hero.frenzy = null; return; }
+  f.t -= dt; // o relógio do próximo salto corre durante o salto também (20 × 0,12 s = 2,4 s)
+  if(f.jump){
+    const j = f.jump; j.k = Math.min(1, j.k + dt/.07);
+    hero.x = j.x0 + (j.x1 - j.x0)*j.k; hero.y = j.y0 + (j.y1 - j.y0)*j.k;
+    part({x:hero.x + rnd(-5,5), y:hero.y - rnd(4,30), vx:rnd(-20,20), vy:rnd(-20,20), life:.35, size:rnd(2,3.5), c:pick(['#8a0f14','#e0574a'])});
+    if(j.k >= 1){
+      const m = j.m; f.jump = null; hero.swing = .2;
+      if(!m.dead){
+        const hp0 = m.hp; meleeHit(m, FRENZY_MULT, ST.avg*.8*ST.pois);
+        const heal = ST.life*FRENZY_HEAL; hero.hp = Math.min(ST.life, hero.hp + heal); f.heal += heal;
+        bloodFx.push({k:'slash', x:m.x, y:m.y, ang:j.ang, t:0, life:.32, r:m.r});
+        for(let i = 0; i < 10; i++){ const an = j.ang + rnd(-1.2, 1.2), sp = rnd(70, 200); part({x:m.x, y:m.y - m.r, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp - 50, grav:300, life:rnd(.35,.6), size:rnd(1.8,3.6), c:pick(['#8a0f14','#c0281e','#ff5a4a'])}); }
+        if(hp0 > 0) txt(hero.x + rnd(-8,8), hero.y - 34, '+' + fmt(heal), '#7fe08a', 11, -30);
+      }
+    }
+    return;
+  }
+  if(f.t > 0) return;
+  const live = mons.filter(m => !m.dead && D(m, hero) < ULT_R && losClear(hero, m)); // não salta através da parede
+  if(f.n <= 0 || !live.length){
+    hero.frenzy = null; hero.swing = .3;
+    if(f.heal > 0) log(`Frenesi Sangrento: ${FRENZY_N - f.n} saltos, +${fmt(f.heal)} de vida`, '#ff8a7a');
+    if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); }
+    return;
+  }
+  // alvo: quem levou menos saltos; empate, o mais perto
+  const n = m => f.hits.get(m) || 0, t = live.sort((a, b) => n(a) - n(b) || D(a, hero) - D(b, hero))[0];
+  f.hits.set(t, n(t) + 1); f.n--; f.t = FRENZY_GAP;
+  const ang = Math.atan2(t.y - hero.y, t.x - hero.x), side = f.n % 2 ? .5 : -.5, over = t.r + 16;
+  const e = rayEnd(t.x, t.y, t.x + Math.cos(ang + side)*over, t.y + Math.sin(ang + side)*over);
+  bloodFx.push({k:'ghost', x:hero.x, y:hero.y, fx:Math.cos(hero.face) >= 0 ? 1 : -1, t:0, life:.9});
+  hero.face = ang; f.jump = {x0:hero.x, y0:hero.y, x1:e.x, y1:e.y, k:0, m:t, ang};
 }
 function heroTimers(dt){
   hero.hit = Math.max(0, hero.hit - dt);
@@ -71,6 +109,9 @@ function heroTimers(dt){
     for(const m of mons) if(!m.dead && !d.hit.has(m) && D(m, hero) < m.r + 26){ d.hit.add(m); meleeHit(m, d.mult, d.dot); m.x += Math.cos(hero.face + Math.PI/2*(Math.random() < .5 ? 1 : -1))*14; }
     if(k >= 1){ hero.dash = null; dashBoom(d); if(hero.queued){ const q = hero.queued, qa = hero.queuedAim; hero.queued = hero.queuedAim = null; manualCast(q, qa); } }
   }
+  if(hero.frenzy) frenzyStep(dt);
+  for(const g of bloodFx) g.t += dt;
+  if(bloodFx.length) bloodFx = bloodFx.filter(g => g.t < g.life);
   if(hero.whirl){
     // Giro de Lâmina: 8 golpes em 2s em todos em volta
     const w = hero.whirl; w.t += dt; w.tick -= dt; w.ang += dt*16;

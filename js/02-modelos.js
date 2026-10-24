@@ -284,7 +284,8 @@ function skDesc(id, st){
     case 'agility': return `+${5*r}% de velocidade de ataque.`;
     case 'hide': return `+${7*r}% de vida e +${3*r} de armadura.`;
     case 'storm': return `Suprema (nível 40). Por 4s chovem flechas em até 3 inimigos em volta a cada 0,2s: cada uma causa ${pc(2.2)} do dano da arma e envenena ${fmt(a*2.5*p)} em ${n1(4*d)}s.`;
-    case 'titan': return `Suprema (nível 40). Esmaga o chão (raio 220): ${pc(6)} do dano da arma e ${fmt(a*6*p)} de sangramento em todos. Depois, por 8s: +60% de dano, +50% de velocidade de ataque e 25% do dano vira vida. 1,5s sem levar dano.`;
+    // números escritos aqui (iguais a FRENZY_* do 04) porque a wiki só carrega 01 e 02
+    case 'titan': return `Suprema (nível 40). 20 saltos de corte em 2,4s: cada salto vai na criatura mais perto que levou menos cortes — com várias perto passa por todas; com uma só, salta nela até morrer. Cada corte causa ${pc(1.6)} do dano da arma, sangramento de ${fmt(a*.8*p)} e cura 3% da vida máxima (até 60%), deixando uma sombra de sangue. Sem levar dano enquanto salta.`;
     case 'cataclysm': return `Suprema (nível 40). 10 meteoros caem em 2,5s nos inimigos em volta (raio 110 cada): ${pc(5)} do dano da arma, queimadura de ${fmt(a*3*p)} e chão em chamas.`;
     case 'contagion': return `Quando um inimigo envenenado morre, ${pc(.3+.1*r)} do veneno dele salta para quem estiver perto.`;
   }

@@ -46,7 +46,7 @@ const ICON_SK = {
   combust: SVG('<circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2" stroke-width="2.2"/>'),
   // Supremas (nível 40)
   storm: SVG('<path d="M6 10a4 4 0 0 1 1-7.8A5 5 0 0 1 16.5 4 3.5 3.5 0 0 1 17 11z" fill="currentColor" fill-opacity=".3"/><path d="M7 13l-2 8M11 13l-2 8M15 13l-2 8M19 13l-2 8"/><path d="M5 21l-1-2M9 21l-1-2M13 21l-1-2M17 21l-1-2"/>'),
-  titan: SVG('<path d="M12 2l3 6 6 1-4.5 4 1 6.5L12 16l-5.5 3.5 1-6.5L3 9l6-1z" fill="currentColor" fill-opacity=".3"/><path d="M12 7v6M9.5 10.5h5"/>'),
+  titan: SVG('<path d="M4 20L16 8"/><path d="M13.5 5.5l5 5M15 9l3-3"/><path d="M3 11c4-6 11-8 18-5" stroke-dasharray="2.2 2"/><path d="M7.5 15.5c-1.6 2.2-1.6 3.5 0 3.5s1.6-1.3 0-3.5z" fill="currentColor"/><path d="M19 14c-1 1.4-1 2.3 0 2.3s1-.9 0-2.3z" fill="currentColor"/>'),
   cataclysm: SVG('<circle cx="8" cy="8" r="3.5" fill="currentColor" fill-opacity=".35"/><circle cx="17" cy="6" r="2.5" fill="currentColor" fill-opacity=".35"/><circle cx="15" cy="15" r="4" fill="currentColor" fill-opacity=".35"/><path d="M3 3l3 3M13 2l2 2M9 9l3 3M3 21h18"/>'),
   bloodlust: SVG('<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z" fill="currentColor" fill-opacity=".3"/><path d="M12 9v6M9 12h6"/>'),
 };

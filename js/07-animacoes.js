@@ -196,6 +196,40 @@ function drawHero(){
   if(war) drawWarrior(h); else if(isMage()) drawMage(h); else drawArcher(h);
   ctx.restore();
 }
+// Frenesi Sangrento (suprema do Guerreiro): sombra de sangue que fica onde ele saltou (o próprio Guerreiro no meio do corte, todo
+// tingido de sangue: desenhado normal e pintado por cima com 'source-atop' meio transparente; 1 desenho por lado, guardado) e o corte em meia-lua no alvo
+const BG_BOX = [-44, -70, 96, 84], bgSpr = {};
+function bloodGhostSprite(fx){
+  if(bgSpr[fx]) return bgSpr[fx];
+  const px = 2.5, c = document.createElement('canvas'); c.width = BG_BOX[2]*px; c.height = BG_BOX[3]*px;
+  const g = c.getContext('2d'), keep = ctx; ctx = g;
+  try{
+    g.setTransform(px, 0, 0, px, -BG_BOX[0]*px, -BG_BOX[1]*px); g.lineCap = 'round'; g.lineJoin = 'round';
+    drawWarrior({...hero, face:fx > 0 ? 0 : Math.PI, hit:0, swing:.25, moving:true, walkT:.15, atk:null, cast:null, dodge:null, whirl:null, dash:null, buff:null});
+  } finally { ctx = keep; }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop';
+  const gr = g.createLinearGradient(0, 0, 0, c.height); gr.addColorStop(0, '#ff5040'); gr.addColorStop(.55, '#b0101a'); gr.addColorStop(1, '#3a0306');
+  g.globalAlpha = .78; g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+  return bgSpr[fx] = {c};
+}
+function drawBloodFx(g){
+  const k = g.t/g.life;
+  if(g.k === 'ghost'){
+    const e = bloodGhostSprite(g.fx);
+    ctx.save(); ctx.globalAlpha = (1 - k)*.7; ctx.fillStyle = '#5a0408'; ell(g.x, g.y + 2, 14*(1 - k*.4), 4.5); // poça de sangue
+    ctx.translate(g.x, g.y - k*6); ctx.drawImage(e.c, BG_BOX[0], BG_BOX[1], BG_BOX[2], BG_BOX[3]);
+    ctx.fillStyle = '#9a0c14'; for(let i = 0; i < 4; i++){ const x = -8 + i*5.5, y = -30 + i*7 + k*30; ell(x, y, 1.3, 2.4); } // gotas escorrendo
+    ctx.restore();
+    return;
+  }
+  // corte: meia-lua grossa escura + fio claro, abrindo na direção do salto
+  const R = g.r + 16 + k*10, cy = g.y - g.r*.9, a0 = g.ang - 1.3 + k*.5, a1 = g.ang + 1.1 + k*.5;
+  ctx.save(); ctx.globalAlpha = 1 - k;
+  ctx.strokeStyle = '#8a0f14'; ctx.lineWidth = 7*(1 - k*.5); ctx.beginPath(); ctx.ellipse(g.x, cy, R, R*.75, 0, a0, a1); ctx.stroke();
+  ctx.strokeStyle = '#ff6a5a'; ctx.lineWidth = 3*(1 - k*.5); ctx.beginPath(); ctx.ellipse(g.x, cy, R*.94, R*.7, 0, a0 + .2, a1 - .1); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,240,230,.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(g.x, cy, R*.9, R*.67, 0, a0 + .4, a1 - .3); ctx.stroke();
+  ctx.restore();
+}
 // Mago (fogo): manto em camadas com bainha dourada e runas acesas, faixa com gema, barba longa,
 // chapéu de aba larga com ponta torta, e cajado retorcido com um cristal em chamas.
 function drawMage(h){
@@ -1358,6 +1392,7 @@ function render(){
   else if(LV){
     levelProps(vis, ents); // paredes e obstáculos do mapa
     atlasProps(vis, ents); // Brecha e altar do Ritual (10)
+    for(const g of bloodFx) ents.push({y:g.y + (g.k === 'slash' ? 2 : -1), draw:() => drawBloodFx(g)}); // Frenesi Sangrento
     for(const o of decor) if(vis(o) && !FLAT_DECOR[o.t]) ents.push({y:o.y, draw:() => drawDecor(o)}); // enfeites em pé
   }
   ents.sort((a, b) => a.y - b.y);

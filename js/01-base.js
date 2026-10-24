@@ -223,7 +223,7 @@ const SKD = {
   combust:{n:'Combustão',act:0,req:12,max:5},
   // Habilidades supremas: liberam sozinhas no nível 40 (sem pontos), uma por classe, tecla 5
   storm:{n:'Tempestade de Flechas',act:1,req:40,max:1,cd:30,ult:1},
-  titan:{n:'Fúria do Titã',act:1,req:40,max:1,cd:30,ult:1},
+  titan:{n:'Frenesi Sangrento',act:1,req:40,max:1,cd:30,ult:1}, // id antigo (era a Fúria do Titã): saltos de corte, ver FRENZY_* em 04
   cataclysm:{n:'Cataclismo',act:1,req:40,max:1,cd:30,ult:1},
 };
 const ULT = {arqueiro:'storm', guerreiro:'titan', mago:'cataclysm'};
