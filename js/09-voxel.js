@@ -160,9 +160,9 @@ function pedra(){
 
 const MODELOS = {
   caracol: () => caracolVox({c:'#b89b7a', c3:'#7d4f2a'}),
-  camundongo: () => quad({L:4, W:2, H:2, leg:1, hl:2, hw:2, hh:2, c:'#d8c3a0', c2:'#f3ece0', ch:'#d8c3a0', orelha:'redonda', oc:'#e8b4b4', fl:1, fc:'#efe4d2', nariz:'#e38b95', caudaL:4, cauda:'#e8b4b4', caudaBaixa:1}),
-  twister: () => quad({L:6, W:3, H:3, leg:1, hl:2, hw:2, hh:2, c:'#f2efe8', pat:'mancha', c3:'#55555b', ch:'#55555b', orelha:'redonda', oc:'#d9a5a5', fl:1, fc:'#efece6', nariz:'#e38b95', caudaL:5, cauda:'#e0a9a9', caudaBaixa:1}),
-  lagartixa: () => quad({L:6, W:3, H:2, leg:1, hl:3, hw:3, hh:2, hup:0, c:'#e8c45a', pat:'pinta', c3:'#3a2c1c', c2:'#f4e7c4', ch:'#e8c45a', fl:0, caudaL:5, cauda:'#d9b24e', caudaBaixa:1}),
+  camundongo: () => quad({L:4, W:2, H:2, leg:1, hl:2, hw:2, hh:2, c:'#d8c3a0', c2:'#f3ece0', ch:'#d8c3a0', orelha:'redonda', oc:'#e8b4b4', fl:1, fc:'#efe4d2', nariz:'#e38b95', caudaL:2.2, cauda:'#e8b4b4', caudaBaixa:1}),
+  twister: () => quad({L:6, W:3, H:3, leg:1, hl:2, hw:2, hh:2, c:'#f2efe8', pat:'mancha', c3:'#55555b', ch:'#55555b', orelha:'redonda', oc:'#d9a5a5', fl:1, fc:'#efece6', nariz:'#e38b95', caudaL:3, cauda:'#e0a9a9', caudaBaixa:1}),
+  lagartixa: () => quad({L:6, W:3, H:2, leg:1, hl:3, hw:3, hh:2, hup:0, c:'#e8c45a', pat:'pinta', c3:'#3a2c1c', c2:'#f4e7c4', ch:'#e8c45a', fl:0, caudaL:3, cauda:'#d9b24e', caudaBaixa:1}),
   jabuti: () => quad({L:6, W:5, H:1, leg:1, lw:1, hl:2, hw:2, hh:2, hup:0, c:'#a58a5a', ch:'#a58a5a', casco2:'#6b5530', fl:0, caudaL:1, caudaBaixa:1}),
   ourico: () => quad({L:5, W:4, H:3, leg:1, hl:2, hw:2, hh:2, hup:0, c:'#c8ad8b', c3:'#f2ece2', c2:'#f0e5d3', ch:'#f0e5d3', espinhos:'#6e5a46', orelha:'redonda', oc:'#c49a8a', fl:1, fc:'#f0e5d3'}),
   hamster: () => quad({L:4, W:3, H:3, leg:1, hl:1.4, hw:3, hh:3, hup:0, c:'#d99a58', c2:'#f6e6cf', ch:'#d99a58', fc:'#f6e6cf', orelha:'redonda', oc:'#b87a41', fl:.3}),
