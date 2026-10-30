@@ -260,6 +260,18 @@ function npcDelivery() {
         && request.resource.data.updated == request.time;
       allow delete: if request.auth != null && rid.matches(request.auth.uid + '_c[0-9]+');
     }
+    // Loner (criadouro de animais): save da conta. Só o dono (conta Google) lê e escreve.
+    match /criadouroSaves/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.keys().hasOnly(['data', 'updated'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 900000
+        && request.resource.data.updated == request.time;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;
