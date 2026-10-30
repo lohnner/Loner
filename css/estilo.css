@@ -36,7 +36,6 @@ small{font-size:12.5px}
 .btn.alerta{background:var(--verm);border-color:var(--verm);color:#fff}
 .btn:disabled{opacity:.5}
 .btn.cheio{width:100%;margin-top:8px}
-.btn.par{width:100%;margin-top:8px;background:var(--mata2);border-color:var(--mata2);color:#fff}
 .link{color:var(--ambar2);font-weight:800;text-decoration:underline}
 .dois{display:grid;grid-template-columns:1.5fr 1fr;gap:8px}
 
@@ -55,9 +54,16 @@ small{font-size:12.5px}
 .c-basica{background:#6f7a68}.c-comum{background:#3f8351}.c-incomum{background:#2d79b0}.c-rara{background:#7a55c0}.c-lendaria{background:#c8810c}
 .tend{font-weight:800;white-space:nowrap}.tend.sobe{color:#2f7d43}.tend.desce{color:var(--verm)}
 
-.oferta,.ani{display:flex;align-items:center;gap:7px;width:100%;min-height:46px;padding:7px 4px;border-top:1px solid var(--linha)}
-.oferta:disabled{opacity:.5}
-.of-id{flex:1;font-size:14px}
+.ani{display:flex;align-items:center;gap:7px;width:100%;min-height:46px;padding:7px 4px;border-top:1px solid var(--linha)}
+#buscaMercado{margin-bottom:8px}
+.falta{display:block;width:100%;min-height:42px;padding:9px 12px;margin-bottom:8px;border-radius:11px;background:#f6e3d0;color:#7a3f09;font-weight:800;font-size:14px}
+.ofe{display:flex;align-items:center;gap:10px;width:100%;padding:8px;margin-bottom:8px;background:var(--cartao);border-radius:13px;box-shadow:var(--sombra)}
+.ofe:disabled{opacity:.5}
+.ofe .foto{width:56px;height:56px;border-radius:10px}
+.ofe-tx{flex:1;min-width:0}.ofe-tx b{display:block;font:800 15px/1.2 var(--tit)}
+.ofe-tx small{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--dim);white-space:nowrap}
+.ofe-tx .sx{width:21px;height:21px;font-size:13px}.ofe-tx .rank{width:21px;height:21px;font-size:13px;border-radius:6px}
+.ofe-pr{text-align:right;flex:none}.ofe-pr .tend{display:block;font-size:11.5px;margin-top:3px}
 .preco{font:800 15px/1.2 var(--tit);font-variant-numeric:tabular-nums;white-space:nowrap}
 .sx{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:15px;font-weight:800;color:#fff;flex:none;line-height:1}
 .sxM{background:#3a78b5}.sxF{background:#c9558a}

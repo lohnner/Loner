@@ -9,12 +9,13 @@ const cent = v => Math.round(v * 100) / 100;
 const EUR = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'EUR'});
 const eur = v => EUR.format(v);
 const anos = n => n + (n === 1 ? ' ano' : ' anos');
+const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); // para a pesquisa achar "leao" em "Leão"
 
 /* ---------- BALANCEAMENTO ---------- */
 const DINHEIRO_INICIAL = 5000;
 const ESPACOS_INICIAIS = 3, ESPACOS_MAX = 50;
 const espacoPreco = k => 2500 * k * k; // k-ésimo espaço comprado: 2.500, 10.000, 22.500, 40.000...
-const CICLO_MERCADO = 5 * 60e3, ESPECIES_NO_MERCADO = 10;
+const CICLO_MERCADO = 5 * 60e3;
 const MARGEM_COMPRA = 1.25, MARGEM_VENDA = .8; // sobre o valor do animal; com o índice de ±20% não dá lucro só comprando e vendendo
 const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
 const IDADE_FERTIL = 1;

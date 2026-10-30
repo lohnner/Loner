@@ -49,7 +49,7 @@ function renderLogin(){
   else if(loginState === 'loading') body = `<p class="note">Carregando seu criadouro…</p>`;
   else body = `<button class="btn pri cheio entrar" data-act="login">Entrar com Google</button>`;
   $('#loginBody').innerHTML = `<h1>Loner</h1>
-    <p class="lead">Compre casais, crie filhotes, venda e faça dinheiro. São 50 espécies, do hamster ao elefante.</p>
+    <p class="lead">Compre machos e fêmeas, crie filhotes, venda e faça dinheiro. São 50 espécies, do hamster ao elefante.</p>
     ${body}${loginErr ? `<p class="note erro">${esc(loginErr)}</p>` : ''}
     <p class="note">Seu criadouro fica salvo na sua conta Google e continua em qualquer aparelho.</p>`;
 }

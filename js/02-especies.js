@@ -62,11 +62,11 @@ const ESPECIES = [
 const ESP = Object.fromEntries(ESPECIES.map((e, i) => [e.id, Object.assign(e, {i})]));
 
 const CATEGORIAS = [
-  {id:'basica', n:'Básica', ate:100, peso:30},
-  {id:'comum', n:'Comum', ate:1000, peso:28},
-  {id:'incomum', n:'Incomum', ate:5000, peso:22},
-  {id:'rara', n:'Rara', ate:25000, peso:13},
-  {id:'lendaria', n:'Lendária', ate:Infinity, peso:7},
+  {id:'basica', n:'Básica', ate:100},
+  {id:'comum', n:'Comum', ate:1000},
+  {id:'incomum', n:'Incomum', ate:5000},
+  {id:'rara', n:'Rara', ate:25000},
+  {id:'lendaria', n:'Lendária', ate:Infinity},
 ];
 const categoria = e => CATEGORIAS.find(c => e.p < c.ate);
 const fotoEsp = id => `img/animais/${id}.jpg`;

@@ -14,20 +14,6 @@ function indice(esp, t = agora()){
   return 1 + .12 * Math.sin(h / 2.7 + i * 1.7) + .08 * Math.sin(h / 7.3 + i * 4.1);
 }
 
-function sorteiaEspecies(r){
-  const por = c => ESPECIES.filter(e => categoria(e).id === c);
-  const pega = l => l[Math.floor(r() * l.length)];
-  // sempre aparece algo barato, para quem está começando
-  const lista = [pega(por('basica')), pega(por('comum'))];
-  let tent = 0;
-  while(lista.length < ESPECIES_NO_MERCADO && tent++ < 200){
-    let x = r() * CATEGORIAS.reduce((t, c) => t + c.peso, 0), cat = CATEGORIAS[0];
-    for(const c of CATEGORIAS){ if(x < c.peso){ cat = c; break; } x -= c.peso; }
-    const e = pega(por(cat.id));
-    if(!lista.includes(e)) lista.push(e);
-  }
-  return lista.sort((a, b) => a.p - b.p);
-}
 function animalDoMercado(key, esp, sx, dia, r){
   let x = r() * 100, faixa = RANKS[RANKS.length - 1];
   for(const k of RANKS){ if(x < k.p){ faixa = k; break; } x -= k.p; }
@@ -35,24 +21,21 @@ function animalDoMercado(key, esp, sx, dia, r){
   const vida = esp.vida, idade = Math.min(vida - 1, 1 + Math.floor(r() * r() * (vida - 1)));
   return {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), dia0: dia, idade0: idade};
 }
+// Cada ciclo tem 1 macho e 1 fêmea de cada uma das espécies, vendidos separados: quem comprou um sempre acha o outro sexo.
 let mercadoCache = null;
 function mercado(t = agora()){
   const c = cicloDe(t);
   if(mercadoCache && mercadoCache.c === c) return mercadoCache.lista;
   const r = rng(Math.imul(c, 2654435761));
   const dia = diaBR(c * CICLO_MERCADO);
-  const lista = sorteiaEspecies(r).map((e, i) => ({
-    esp: e.id,
-    M: animalDoMercado(`${c}-${i}M`, e, 'M', dia, r),
-    F: animalDoMercado(`${c}-${i}F`, e, 'F', dia, r),
-  }));
+  const lista = [];
+  for(const e of ESPECIES.slice().sort((a, b) => a.p - b.p)){
+    for(const sx of ['M', 'F']) lista.push(animalDoMercado(`${c}-${e.id}-${sx}`, e, sx, dia, r));
+  }
   mercadoCache = {c, lista};
   return lista;
 }
-function oferta(key){
-  for(const l of mercado()) for(const sx of ['M', 'F']) if(l[sx].id === key) return l[sx];
-  return null;
-}
+const oferta = key => mercado().find(o => o.id === key) || null;
 function jaComprado(key){
   return S.comprados.ciclo === cicloDe(agora()) && S.comprados.lista.includes(key);
 }
@@ -74,22 +57,19 @@ function comprarEspaco(){
 
 /* ---------- COMPRA E VENDA ---------- */
 // Devolve '' se deu certo, ou o motivo.
-function comprar(keys){
+function comprar(key){
   const c = cicloDe(agora());
   if(S.comprados.ciclo !== c) S.comprados = {ciclo: c, lista: []};
-  const of = keys.map(oferta);
-  if(of.some(o => !o)) return 'Esta oferta já saiu do mercado.';
-  if(keys.some(jaComprado)) return 'Este animal já foi comprado.';
-  const esp = of[0].esp;
-  if(!temEspaco(esp)) return `O terreno está cheio (${espacosTotal()} espécies). Compre mais espaço ou venda uma espécie.`;
-  const total = cent(of.reduce((t, o) => t + precoCompra(o), 0));
-  if(S.dinheiro < total) return `Faltam ${eur(total - S.dinheiro)}.`;
-  S.dinheiro = cent(S.dinheiro - total);
-  for(const o of of){
-    S.animais.push(Object.assign({}, o, {id: 'a' + S.seq++, st: Object.assign({}, o.st)}));
-    S.comprados.lista.push(o.id);
-  }
-  diario(`Comprou ${of.length === 2 ? 'um casal' : sexoN(of[0].sx).toLowerCase()} de ${ESP[esp].n} por ${eur(total)}.`);
+  const o = oferta(key);
+  if(!o) return 'Esta oferta já saiu do mercado.';
+  if(jaComprado(key)) return 'Este animal já foi comprado.';
+  if(!temEspaco(o.esp)) return `O terreno está cheio (${espacosTotal()} espécies). Compre mais espaço ou venda uma espécie.`;
+  const p = precoCompra(o);
+  if(S.dinheiro < p) return `Faltam ${eur(p - S.dinheiro)}.`;
+  S.dinheiro = cent(S.dinheiro - p);
+  S.animais.push(Object.assign({}, o, {id: 'a' + S.seq++, st: Object.assign({}, o.st)}));
+  S.comprados.lista.push(key);
+  diario(`Comprou ${o.sx === 'M' ? 'um macho' : 'uma fêmea'} de ${ESP[o.esp].n} por ${eur(p)}.`);
   return '';
 }
 function vender(id){
