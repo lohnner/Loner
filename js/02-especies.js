@@ -1,5 +1,5 @@
 // As espécies e a Wikipédia do jogo. Por enquanto só as terrestres estão no jogo (FORA_DO_JOGO).
-// p = preço de referência em euros (estimativa, jovem e nota mediana); vida = expectativa em anos (1 ano = 1 dia real).
+// p = preço de referência em euros (estimativa, jovem e nota mediana); vida = expectativa em anos (1 ano = DIAS_POR_ANO dias reais, em 01).
 'use strict';
 
 const TODAS_ESPECIES = [

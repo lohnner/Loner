@@ -81,7 +81,7 @@ function chipsAnimal(a){
   let h = '';
   if(c) h += `<span class="tag ${c.fase === 'gravida' && a.id === c.f ? 'gra' : 'aca'}">${c.fase === 'gravida' ? (a.id === c.f ? 'Grávida' : 'Pai') : c.fase === 'tentando' ? 'Acasalando' : 'Em casal'}</span>`;
   if(id < IDADE_FERTIL) h += `<span class="tag fil">Filhote</span>`;
-  if(vida - id <= 1) h += `<span class="tag mor">Morre à meia-noite</span>`;
+  if(morreEm(a) - agora() <= DIA) h += `<span class="tag mor">Morre à meia-noite</span>`;
   return h;
 }
 function linhaAnimal(a, acao = 'verAnimal'){
@@ -167,7 +167,7 @@ function sheetEspecie(id){
       ${li('Categoria', categoria(e).n)}
       ${li('Terreno', `${terrenoDe(id).ic} ${esc(terrenoDe(id).n)}`)}
       ${li('Nota', `${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}`)}
-      ${li('Quanto vive', `${anos(e.vida)} (${e.vida} dias reais)`)}
+      ${li('Quanto vive', `${anos(e.vida)} (${e.vida * DIAS_POR_ANO} dias reais)`)}
       ${li('Preço de referência', `${eur(e.p)} ${setaIndice(id)}`)}
       ${li('Porte', PORTES[e.po])}
       ${li('Caça', e.caca ? `Sim, até porte ${PORTES[e.caca].toLowerCase()}` : 'Não')}
@@ -208,7 +208,7 @@ function telaConta(){
       <li>Coloque os dois em Acasalar. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</li>
       <li>Cada animal tem uma nota, que define quanto ele vale. Cada espécie tem sua faixa: bicho simples fica perto de 1 a 10, o um pouco melhor perto de 15 a 27, e os raros passam de 2.000.</li>
       <li>A nota sai dos 5 status, que vão de 0 a 100. O filhote é uma fusão sorteada dos pais.</li>
-      <li>Cada meia-noite de Brasília vale 1 ano. Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
+      <li>Cada ${DIAS_POR_ANO} dias reais valem 1 ano (a virada é à meia-noite de Brasília). Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
       <li>Venda em Animais. Filhotes de pais fortes dão mais lucro.</li>
       <li>Você começa com 1 Gaiola: cabem 5 animais, de uma espécie só. Só dá para comprar animal se tiver vaga em um terreno certo para ele. Compre mais terrenos para criar mais.</li>
       <li>No mesmo terreno, predador adulto caça e mata os mais fracos. Em terrenos diferentes, um não alcança o outro.</li>
@@ -273,7 +273,7 @@ function sheetOferta(key){
   return `<img class="sh-foto" src="${fotoEsp(o.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(o.sx)} ${selo(o)}</h2>
     <p class="cient">Nota ${fmtNota(notaDe(o))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
-    <p class="cient">${anos(idadeDe(o))} de ${e.vida} · morre em ${e.vida - idadeDe(o)} ${e.vida - idadeDe(o) === 1 ? 'dia real' : 'dias reais'}</p>
+    <p class="cient">${anos(idadeDe(o))} de ${e.vida} · ${restaVida(o)}</p>
     ${barrasStatus(o.st)}
     ${semTerreno ? `<p class="aviso">🔒 ${esc(motivoSemVaga(o.esp))}</p><button class="btn cheio" data-act="verTerrenos">Ver terrenos</button>` : `<p class="cient">Vai para: ${TERRENO[lugar.tipo].ic} ${esc(nomeInst(lugar))} (${animaisDoTerreno(lugar.id).length}/${TERRENO[lugar.tipo].cap})</p>`}
     ${avisoCaca(o.esp)}
@@ -288,11 +288,11 @@ function sheetAnimal(id, novo){
   return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>${a.pen ? `<p class="aviso">Os pais estavam tristes: ele nasceu cerca de ${a.pen} pontos mais fraco.</p>` : ''}` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a)}</h2>
     <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
-    <p class="cient">${anos(idade)} de ${e.vida} · ${resta === 1 ? 'morre à meia-noite' : `vive mais ${resta} dias reais`}</p>
+    <p class="cient">${anos(idade)} de ${e.vida} · ${restaVida(a)}</p>
     ${barrasStatus(a.st)}
     <button class="btn cheio ${arm ? 'alerta' : 'pri'}" data-act="vender" data-v="${id}" ${presa ? 'disabled' : ''}>${presa ? 'Gestação em andamento' : arm ? `Toque de novo para vender por ${eur(precoVenda(a))}` : `Vender por ${eur(precoVenda(a))}`}</button>
     ${!c && fertil(a) ? `<button class="btn cheio" data-act="levarAcasalar" data-v="${id}">Colocar para acasalar</button>` : ''}
-    ${!fertil(a) ? `<p class="dim centro">Filhote: acasala a partir de ${anos(IDADE_FERTIL)}, na próxima meia-noite de Brasília.</p>` : ''}
+    ${!fertil(a) ? `<p class="dim centro">Filhote: acasala a partir de ${anos(IDADE_FERTIL)}, à meia-noite de Brasília que abre o dia ${dataBR(inicioDiaBR(a.dia0 + IDADE_FERTIL - a.idade0))}.</p>` : ''}
     ${novo ? `<button class="btn cheio" data-act="fechar">Ficar com ele</button>` : ''}`;
 }
 function sheetEscolher(sx){

@@ -1,5 +1,5 @@
 // Animais: idade, morte, nota, valor em euros e a fusão genética dos pais.
-// Um animal = {id, esp, sx:'M'|'F', st:{for,agi,int,sau,bel}, dia0, idade0}: tinha idade0 anos no dia dia0 (dia de Brasília).
+// Um animal = {id, esp, sx:'M'|'F', st:{for,agi,int,sau,bel}, dia0, idade0}: tinha idade0 anos no dia dia0 (número do ano do jogo, ver diaBR em 01).
 'use strict';
 
 const mediaSt = st => STATUS.reduce((t, [k]) => t + st[k], 0) / STATUS.length;
@@ -17,6 +17,11 @@ const idadeDe = (a, t = agora()) => a.idade0 + diaBR(t) - a.dia0;
 // Morre na meia-noite de Brasília em que completa a expectativa de vida da espécie.
 const morreEm = a => inicioDiaBR(a.dia0 + ESP[a.esp].vida - a.idade0);
 const fertil = a => idadeDe(a) >= IDADE_FERTIL;
+// Tempo de vida que falta, em texto: "morre à meia-noite" nas últimas 24 h, senão "vive mais N dias reais".
+function restaVida(a, t = agora()){
+  const dias = Math.ceil((morreEm(a) - t) / DIA);
+  return dias <= 1 ? 'morre à meia-noite' : `vive mais ${dias} dias reais`;
+}
 const sexoN = sx => sx === 'M' ? 'Macho' : 'Fêmea';
 const sexoS = sx => sx === 'M' ? '♂' : '♀';
 

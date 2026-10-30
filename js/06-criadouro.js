@@ -16,7 +16,7 @@ function motivoCasal(m, f){
   if(m.sx !== 'M' || f.sx !== 'F') return 'Precisa ser um macho e uma fêmea.';
   if(m.esp !== f.esp) return 'Os dois precisam ser da mesma espécie.';
   if(casalDe(m.id) || casalDe(f.id)) return 'Um deles já está acasalando.';
-  if(!fertil(m) || !fertil(f)) return `Filhote só acasala a partir de ${anos(IDADE_FERTIL)} (1 dia real).`;
+  if(!fertil(m) || !fertil(f)) return `Filhote só acasala a partir de ${anos(IDADE_FERTIL)} (${IDADE_FERTIL * DIAS_POR_ANO} dias reais).`;
   if(m.ter !== f.ter) return 'Os dois precisam estar no mesmo terreno.';
   if(livres(instancia(f.ter)) <= 0) return `${nomeInst(instancia(f.ter))} sem vaga: venda um animal para o filhote ter lugar.`;
   return '';

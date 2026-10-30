@@ -17,6 +17,7 @@ const CICLO_MERCADO = 3600e3, ANIMAIS_NO_MERCADO = 20;
 const MARGEM_COMPRA = 1.25, MARGEM_VENDA = .8; // sobre o valor do animal; com o índice de ±20% não dá lucro só comprando e vendendo
 const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
 const IDADE_FERTIL = 1;
+const DIAS_POR_ANO = 3; // quantos dias reais dura 1 ano do jogo (a virada é sempre à meia-noite de Brasília)
 const AJUDA_LIMITE = 15, AJUDA_VALOR = 50; // sem animais e sem dinheiro: ajuda para o jogo não travar
 const IDADE_PISO = .12; // o animal mais velho ainda vale 12% do preço de um recém-nascido
 // Caça: a cada CACA_PASSO cada predador adulto, sem fome saciada, pode pegar uma presa do terreno; depois fica FOME sem caçar.
@@ -43,10 +44,12 @@ const CURVA_PRECO = [[0, .4], [40, .7], [55, 1], [68, 1.4], [80, 2.2], [90, 4], 
 // Tudo usa agora(): a hora do servidor (cabeçalho Date do versao.json, em 09), para adiantar o relógio do celular não apressar o jogo.
 let relogioDif = 0;
 const agora = () => Date.now() + relogioDif;
-// Brasília é sempre UTC−3. Um "dia" do jogo vai da meia-noite à meia-noite de Brasília; cada virada = 1 ano para todos os animais.
-const FUSO_BR = 3 * 3600e3, DIA = 864e5;
-const diaBR = t => Math.floor((t - FUSO_BR) / DIA);
-const inicioDiaBR = d => d * DIA + FUSO_BR;
+// Brasília é sempre UTC−3. Um "ano" do jogo dura DIAS_POR_ANO dias reais e vira à meia-noite de Brasília: cada virada = 1 ano para todos os animais.
+// diaBR(t) devolve o número desse ano do jogo (o nome ficou de quando 1 ano era 1 dia); inicioDiaBR(d) é a meia-noite em que ele começa.
+const FUSO_BR = 3 * 3600e3, DIA = 864e5, ANO = DIAS_POR_ANO * DIA;
+const diaBR = t => Math.floor((t - FUSO_BR) / ANO);
+const inicioDiaBR = d => d * ANO + FUSO_BR;
+const dataBR = t => { const d = new Date(t - FUSO_BR); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
 const horaBR = t => { const d = new Date(t - FUSO_BR); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
 const tempo = ms => {
   const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
@@ -57,7 +60,7 @@ const tempo = ms => {
 const KEY = 'loner-criadouro-v1';
 function defaults(){
   return {
-    ver: 1, nome: '', dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, terrenos: [{id: 't1', tipo: 'gaiola'}], terrenoAtual: 't1', seq: 2,
+    ver: 2, nome: '', dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, terrenos: [{id: 't1', tipo: 'gaiola'}], terrenoAtual: 't1', seq: 2,
     animais: [], casais: [], comprados: {ciclo: 0, lista: []}, diario: [],
     nascidos: 0, mortos: 0, devorados: 0, vendidos: 0, receita: 0, tCaca: 0, savedAt: 0,
   };
@@ -84,6 +87,12 @@ function normalize(o){
   if(!s.terrenos.some(t => t.id === s.terrenoAtual)) s.terrenoAtual = s.terrenos[0].id;
   for(let k = 1; k <= (s.espacosExtras || 0); k++) s.dinheiro = cent(s.dinheiro + 2500 * k * k);
   s.espacosExtras = 0;
+  // Saves de antes da versão 2 (1 ano = 1 dia real): dia0 contava dias. Cada animal fica com a idade que tinha e passa a contar anos de DIAS_POR_ANO dias.
+  if(!(o.ver >= 2)){
+    const t = agora(), diaVelho = Math.floor((t - FUSO_BR) / DIA), anoNovo = diaBR(t);
+    for(const a of s.animais){ a.idade0 = Math.max(0, (a.idade0 || 0) + diaVelho - (a.dia0 || diaVelho)); a.dia0 = anoNovo; }
+  }
+  s.ver = 2;
   return s;
 }
 let S = defaults();
