@@ -160,7 +160,7 @@ function desenhaTerreno(tempoMs){
 }
 function quadroTerreno(tempoMs){
   requestAnimationFrame(quadroTerreno);
-  if(tempoMs - ultimoQuadro < 80 || !accountReady || aba !== 'animais' || !$('#terrenoCv')) return;
+  if(tempoMs - ultimoQuadro < 33 || !accountReady || aba !== 'animais' || !$('#terrenoCv')) return;
   const dt = Math.min(.25, (tempoMs - ultimoQuadro) / 1000);
   ultimoQuadro = tempoMs;
   preparaTerreno();
@@ -180,8 +180,8 @@ function quadroTerreno(tempoMs){
     if(!parado) move(a, m, dt, alvo);
   }
   for(const e of efeitos) e.t -= dt;
+  if(!desenhaRealista(tempoMs, dt)) desenhaTerreno(tempoMs);
   efeitos = efeitos.filter(e => e.t > 0);
-  desenhaTerreno(tempoMs);
 }
 document.addEventListener('click', e => {
   if(e.target.id !== 'terrenoCv' || !e.target._clicaveis) return;
