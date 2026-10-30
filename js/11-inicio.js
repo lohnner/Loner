@@ -38,4 +38,5 @@ if('serviceWorker' in navigator && location.protocol === 'https:') navigator.ser
 checkUpdate();
 startAccount();
 setInterval(() => { tick(); accountTick(1); }, 1000);
+requestAnimationFrame(quadroTerreno);
 window.__game = {get S(){ return S; }, ACT, tick, processar, renderAba, mercado, precoCompra, precoVenda, get dif(){ return relogioDif; }, set dif(v){ relogioDif = v; }};

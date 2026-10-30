@@ -60,12 +60,12 @@ function faltaPar(){
 
 /* ---------- ANIMAIS: TERRENO E INVENTÁRIO ---------- */
 function terrenoHTML(){
-  const nele = especiesNoTerreno(), tot = espacosTotal(), max = tot >= ESPACOS_MAX;
-  const mostra = Math.max(tot, nele.length);
-  let vagas = '';
-  for(let i = 0; i < mostra; i++) vagas += nele[i] ? `<span class="vaga cheia">${foto(nele[i])}</span>` : `<span class="vaga"></span>`;
+  const nele = especiesNoTerreno(), tot = espacosTotal(), max = tot >= ESPACOS_MAX, perigos = [];
+  for(const a of nele) for(const b of nele) if(come(a, b)) perigos.push(`${ESP[a].n} come ${ESP[b].n}`);
   return `<section class="terreno"><div class="ter-top"><h3>Seu terreno</h3><b>${nele.length}/${tot} espécies</b></div>
-    <div class="vagas">${vagas}</div>
+    <canvas id="terrenoCv" width="${tamanhoCanvas(ladoTerreno()).w}" height="${tamanhoCanvas(ladoTerreno()).h}" aria-label="Terreno em 3D com seus animais. Toque em um animal para ver a ficha."></canvas>
+    ${S.animais.length > ANIMAIS_NA_TELA ? `<p class="ter-nota">Mostrando ${ANIMAIS_NA_TELA} de ${S.animais.length} animais.</p>` : ''}
+    ${perigos.length ? `<p class="perigo">Perigo: ${esc(perigos.slice(0, 3).join(' · '))}${perigos.length > 3 ? ` e mais ${perigos.length - 3}` : ''}</p>` : ''}
     ${max ? '' : `<button class="btn ${S.dinheiro >= precoProximoEspaco() ? 'pri' : ''}" data-act="comprarEspaco">Comprar mais 1 espaço · ${eur(precoProximoEspaco())}</button>`}
   </section>`;
 }
@@ -82,6 +82,13 @@ function linhaAnimal(a, acao = 'verAnimal'){
     <span class="ani-tx"><b>${anos(idadeDe(a))}<em> de ${ESP[a.esp].vida}</em></b><small>${chipsAnimal(a) || `Média ${Math.round(mediaSt(a.st))}`}</small></span>
     <span class="preco">${eur(precoVenda(a))}</span></button>`;
 }
+function humorHTML(esp){
+  const h = humor(esp), pen = penalidade(h.total), motivos = [];
+  if(h.mistura) motivos.push('outras espécies juntas');
+  if(h.deseq >= 5) motivos.push('uma espécie em maior número');
+  if(h.medo) motivos.push(`medo de ${h.predadores.map(k => ESP[k].n).join(', ')}`);
+  return `<p class="humor ${h.total >= 40 ? 'hum-t' : 'hum-f'}"><b>${nomeHumor(h.total)}</b>${pen ? ` · filhote sai ${pen} pontos mais fraco` : ' · filhote sem prejuízo'}${motivos.length ? `<small>${esc(motivos.join(', '))}</small>` : ''}</p>`;
+}
 function telaAnimais(){
   let h = terrenoHTML();
   const nele = especiesNoTerreno();
@@ -89,7 +96,7 @@ function telaAnimais(){
   for(const id of nele.sort((a, b) => ESP[b].p - ESP[a].p)){
     const lista = S.animais.filter(a => a.esp === id).sort((a, b) => precoVenda(b) - precoVenda(a));
     h += `<article class="card"><div class="card-top" data-act="verEspecie" data-v="${id}">${foto(id)}<div class="card-tit"><h3>${esc(ESP[id].n)}</h3>
-      <small>${lista.length} ${lista.length === 1 ? 'animal' : 'animais'} · vive ${anos(ESP[id].vida)} ${setaIndice(id)}</small></div></div>${lista.map(a => linhaAnimal(a)).join('')}</article>`;
+      <small>${lista.length} ${lista.length === 1 ? 'animal' : 'animais'} · vive ${anos(ESP[id].vida)} ${setaIndice(id)}</small></div></div>${humorHTML(id)}${lista.map(a => linhaAnimal(a)).join('')}</article>`;
   }
   return h;
 }
@@ -123,7 +130,7 @@ function cartaoCasal(c){
       <div class="dois"><button class="btn pri" data-act="repetir" data-v="${c.id}">Acasalar de novo</button><button class="btn" data-act="separar" data-v="${c.id}">Separar</button></div>`;
   }
   return `<article class="card casal"><div class="card-top" data-act="verEspecie" data-v="${e.id}">${foto(e.id)}<div class="card-tit"><h3>${esc(e.n)}</h3>
-    <small>${m ? `${sexo('M')}${selo(m.st)} ${anos(idadeDe(m, t))}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f.st)} ${anos(idadeDe(f, t))}</small></div></div>${corpo}</article>`;
+    <small>${m ? `${sexo('M')}${selo(m.st)} ${anos(idadeDe(m, t))}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f.st)} ${anos(idadeDe(f, t))}</small></div></div>${c.fase === 'tentando' ? humorHTML(e.id) : ''}${corpo}</article>`;
 }
 
 /* ---------- WIKIPÉDIA ---------- */
@@ -152,6 +159,8 @@ function sheetEspecie(id){
       ${li('Categoria', categoria(e).n)}
       ${li('Quanto vive', `${anos(e.vida)} (${e.vida} dias reais)`)}
       ${li('Preço de referência', `${eur(e.p)} ${setaIndice(id)}`)}
+      ${li('Porte', PORTES[e.po])}
+      ${li('Caça', e.caca ? `Sim, até porte ${PORTES[e.caca].toLowerCase()}` : 'Não')}
       ${li('Habitat', esc(e.hab))}
       ${li('Alimentação', esc(e.die))}
       ${li('Gestação real', esc(e.ges))}
@@ -165,7 +174,7 @@ function telaConta(){
   const li = (k, v) => `<div class="wk-li"><span>${k}</span><b>${v}</b></div>`;
   return `<section class="pat"><small>Patrimônio (dinheiro + animais)</small><strong>${eur(patrimonio())}</strong></section>
     <div class="wk-tab">
-      ${li('Filhotes nascidos', S.nascidos)}${li('Animais vendidos', S.vendidos)}${li('Total em vendas', eur(S.receita))}${li('Mortes por velhice', S.mortos)}
+      ${li('Filhotes nascidos', S.nascidos)}${li('Animais vendidos', S.vendidos)}${li('Total em vendas', eur(S.receita))}${li('Mortes por velhice', S.mortos)}${li('Devorados', S.devorados)}
     </div>
     <details class="regras"><summary>Como jogar</summary><ul>
       <li>Compre um macho e uma fêmea da mesma espécie no Mercado. Ele muda a cada 5 minutos.</li>
@@ -174,11 +183,14 @@ function telaConta(){
       <li>Cada meia-noite de Brasília vale 1 ano. Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
       <li>Venda em Animais. Filhotes de pais fortes dão mais lucro.</li>
       <li>O terreno começa com 3 espécies. Compre mais espaço para criar outras.</li>
+      <li>Todos ficam juntos no terreno: predador adulto caça e mata os mais fracos.</li>
+      <li>Espécies misturadas, ou uma com muito mais animais que outra, ficam tristes e o filhote nasce mais fraco. Terreno maior diminui a tristeza da mistura.</li>
     </ul></details>
     <h3 class="sec-t">Diário</h3>
     <ol class="diario">${S.diario.length ? S.diario.map(d => `<li><time>${new Date(d.t - FUSO_BR).toISOString().slice(8, 10)}/${new Date(d.t - FUSO_BR).toISOString().slice(5, 7)} ${horaBR(d.t)}</time>${esc(d.txt)}</li>`).join('') : '<li class="dim">Nada ainda.</li>'}</ol>
     <p class="dim conta-mail">${esc(contaEmail())}</p>
-    <button class="btn cheio" data-act="logout">Sair da conta</button>`;
+    <button class="btn cheio" data-act="logout">Sair da conta</button>
+    <button class="btn cheio perigoso" data-act="pedirReset">Resetar conta</button>`;
 }
 
 /* ---------- JANELAS ---------- */
@@ -199,7 +211,21 @@ function renderSheet(){
   else if(tipo === 'oferta') h = sheetOferta(v);
   else if(tipo === 'animal' || tipo === 'nasceu') h = sheetAnimal(v, tipo === 'nasceu');
   else if(tipo === 'escolher') h = sheetEscolher(v);
+  else if(tipo === 'resetar') h = `<h2>Resetar a conta?</h2>
+    <p class="aviso">Tem certeza? Isso vai zerar tudo e não dá para desfazer.</p>
+    <ul class="perdas"><li>Você vai perder todo o dinheiro (${eur(S.dinheiro)}).</li><li>Vai perder todos os animais (${S.animais.length}) e os casais.</li><li>Vai perder os espaços comprados no terreno.</li><li>Vai perder o diário e as estatísticas.</li></ul>
+    <p class="cient">Você recomeça do zero, com ${eur(DINHEIRO_INICIAL)}.</p>
+    <button class="btn cheio alerta" data-act="resetarConta">Sim, zerar tudo</button>
+    <button class="btn cheio" data-act="fechar">Não, manter minha conta</button>`;
   $('#sheetBody').innerHTML = h;
+}
+// Antes de comprar: quem esta espécie vai comer no terreno, e quem pode comê-la
+function avisoCaca(esp){
+  const nele = especiesNoTerreno().filter(k => k !== esp), presas = nele.filter(k => come(esp, k)), preds = nele.filter(k => come(k, esp));
+  let h = '';
+  if(presas.length) h += `<p class="aviso">Cuidado: vai comer ${esc(presas.map(k => ESP[k].n).join(', '))} do seu terreno.</p>`;
+  if(preds.length) h += `<p class="aviso">Cuidado: pode ser comido por ${esc(preds.map(k => ESP[k].n).join(', '))} do seu terreno.</p>`;
+  return h;
 }
 function sheetOferta(key){
   const o = oferta(key);
@@ -210,6 +236,7 @@ function sheetOferta(key){
     <p class="cient">${anos(idadeDe(o))} de ${e.vida} · morre em ${e.vida - idadeDe(o)} ${e.vida - idadeDe(o) === 1 ? 'dia real' : 'dias reais'}</p>
     ${barrasStatus(o.st)}
     ${semEspaco ? `<p class="aviso">Seu terreno está cheio. Compre mais espaço em Animais ou venda uma espécie.</p>` : ''}
+    ${avisoCaca(o.esp)}
     <button class="btn pri cheio" data-act="comprar" data-v="${o.id}" ${semEspaco || S.dinheiro < p ? 'disabled' : ''}>${S.dinheiro < p ? `Faltam ${eur(p - S.dinheiro)}` : `Comprar por ${eur(p)}`}</button>
     <button class="btn cheio" data-act="verEspecie" data-v="${e.id}">Ver na Wikipédia</button>`;
 }
@@ -218,7 +245,7 @@ function sheetAnimal(id, novo){
   if(!a) return `<p class="vazio">Este animal não está mais no seu terreno.</p>`;
   const e = ESP[a.esp], c = casalDe(id), idade = idadeDe(a), arm = armado.id === id && armado.ate > performance.now(), resta = e.vida - idade;
   const presa = c && c.fase === 'gravida';
-  return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
+  return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>${a.pen ? `<p class="aviso">Os pais estavam tristes: ele nasceu cerca de ${a.pen} pontos mais fraco.</p>` : ''}` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a.st)}</h2>
     <p class="cient">${anos(idade)} de ${e.vida} · ${resta === 1 ? 'morre à meia-noite' : `vive mais ${resta} dias reais`}</p>
     ${barrasStatus(a.st)}
@@ -278,6 +305,7 @@ function tick(){
   const virou = c !== ultimoCiclo || d !== ultimoDia;
   ultimoCiclo = c; ultimoDia = d;
   if(mudou) save();
+  if(avisosCaca.length){ toast(avisosCaca.join(' '), true); avisosCaca = []; }
   if(mudou || virou){
     renderAba();
     if(sheetAberta && sheetAberta.tipo !== 'especie') renderSheet();
@@ -350,6 +378,15 @@ const ACT = {
     const c = S.casais.find(x => x.id === v);
     if(!c || c.fase === 'gravida') return;
     desfazCasal(c); save(); renderAba(); toast('Casal separado.');
+  },
+  pedirReset(){ abreSheet('resetar'); },
+  resetarConta(){
+    S = defaults(); nascimentosNovos = []; avisosCaca = []; parEscolhido = {M: '', F: ''};
+    mundo.clear(); efeitos = []; buscaMercado = ''; sexoMercado = 'todos'; filtroMercado = 'todas';
+    diario(`Conta resetada. Recomeçou com ${eur(DINHEIRO_INICIAL)}.`);
+    save(); cloudFlush();
+    sheetAberta = null; $('#sheet').hidden = true;
+    ACT.aba('mercado'); toast('Conta resetada. Boa sorte!');
   },
   login(){ accountLogin(); },
   logout(){ accountLogout(); },

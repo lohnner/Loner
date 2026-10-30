@@ -1,6 +1,6 @@
 # Loner
 
-Jogo de celular de criar animais: o jogador compra um macho e uma fêmea no mercado, coloca para acasalar, vende os filhotes (ou qualquer animal) e faz dinheiro em euros. Página estática, **sem build e sem módulos**: `index.html` + `css/estilo.css` + `js/01..09`. Textos em português do Brasil. Feito primeiro para celular em pé; no PC fica numa coluna central.
+Jogo de celular de criar animais: o jogador compra um macho e uma fêmea no mercado, coloca para acasalar, vende os filhotes (ou qualquer animal) e faz dinheiro em euros. Página estática, **sem build e sem módulos**: `index.html` + `css/estilo.css` + `js/01..11`. Textos em português do Brasil. Feito primeiro para celular em pé; no PC fica numa coluna central.
 
 - Site: GitHub Pages do repositório `lohnner/Loner` → https://lohnner.github.io/Loner/
 - Backend: Firebase, projeto **`loner-hq`** (login Google + Firestore). O projeto é **dividido com outros jogos** — ver regras abaixo.
@@ -18,10 +18,12 @@ Jogo de celular de criar animais: o jogador compra um macho e uma fêmea no merc
 | `js/03-creditos.js` | Autor e licença de cada foto (gerado ao baixar) | `CREDITOS` |
 | `js/04-animais.js` | Idade, morte, classificação, valor, fusão genética | `rankDe() idadeDe() morreEm() fertil() fatorIdade() multRank() valorDe() precoCompra() precoVenda() fundeStatus() statusDaFaixa()` |
 | `js/05-mercado.js` | Mercado sorteado por ciclo, índice de preço, terreno, compra e venda | `rng() cicloDe() indice() mercado() oferta() jaComprado() espacosTotal() especiesNoTerreno() temEspaco() comprarEspaco() comprar() vender() patrimonio()` |
-| `js/06-criadouro.js` | Casais e o passar do tempo | `casalDe() animal() formaCasal() motivoCasal() repetir() pareados() processar() nascimentosNovos` |
+| `js/06-criadouro.js` | Casais e o passar do tempo | `casalDe() animal() formaCasal() motivoCasal() repetir() pareados() humor() penalidade() filhoteDoCasal() cacar() devora() processar() nascimentosNovos` |
 | `js/07-telas.js` | As 5 telas, as janelas de detalhe e todas as ações de botão | `telaMercado telaAnimais telaAcasalar telaWiki telaConta TELAS abreSheet() renderSheet() renderAba() atualizaTimers() tick() ACT` |
 | `js/08-conta.js` | Firebase: login Google e save na nuvem. **Só este arquivo fala com o Firebase** | `FIREBASE_CONFIG SAVES fbInit() onAuth() loadAccount() accountStore() cloudFlush() accountTick()` |
-| `js/09-inicio.js` | Hora do servidor, aviso de atualização, liga tudo; expõe `window.__game` | `GAME_V checkUpdate() relogioPronto ACT.update` |
+| `js/09-voxel.js` | Modelos 3D em pixel art das 50 espécies e enfeites; transforma voxels em imagens por direção e passo | `quad() ave() bipede() cobra() peixe() MODELOS pintaVoxel() spriteDe()` |
+| `js/10-terreno3d.js` | Terreno 3D da tela Animais: chão, lago, cerca, animais andando, ícones, toque no animal. Só desenha com a tela Animais aberta | `preparaTerreno() sincronizaMundo() move() desenhaTerreno() quadroTerreno() efeitoDevorado() ANIMAIS_NA_TELA` |
+| `js/11-inicio.js` | Hora do servidor, aviso de atualização, liga tudo; expõe `window.__game` | `GAME_V checkUpdate() relogioPronto ACT.update` |
 | `img/animais/{id}.jpg` | Foto de cada espécie (360×360), da Wikimedia Commons | — |
 | `versao.json` | Versão publicada (`{"v": N}`, o mesmo do `?v=N`) | — |
 | `manifest.json`, `sw.js`, `icones/` | App instalável / APK (PWA). O `sw.js` não guarda cache de propósito | — |
@@ -30,15 +32,17 @@ Jogo de celular de criar animais: o jogador compra um macho e uma fêmea no merc
 
 ## Regras do jogo
 
-- **Dinheiro**: começa com `DINHEIRO_INICIAL` (€ 5.000). Sem animais e com menos de `AJUDA_LIMITE`, ganha `AJUDA_VALOR` para o jogo não travar (`processar`).
+- **Dinheiro**: começa com `DINHEIRO_INICIAL` (€ 500). O botão "Resetar conta" (tela Conta, com confirmação) volta tudo a `defaults()` e grava na nuvem. Sem animais e com menos de `AJUDA_LIMITE`, ganha `AJUDA_VALOR` para o jogo não travar (`processar`).
 - **Status e classificação**: 5 status de 0 a 100 (`STATUS`). A média dá a classificação de E a S (`RANKS`) e o multiplicador de preço (`CURVA_RANK`).
 - **Idade**: cada meia-noite de Brasília (UTC−3, sem horário de verão) soma 1 ano para todos (`diaBR`). `a.idade0` = idade no dia `a.dia0`. Ao chegar à `vida` da espécie o animal morre naquela meia-noite (`morreEm`). Quanto mais velho, mais barato, na compra e na venda (`fatorIdade`).
 - **Preço**: `valorDe` = preço da espécie × classificação × idade. Compra = valor × índice × `MARGEM_COMPRA`; venda = valor × índice × `MARGEM_VENDA`. O índice de cada espécie varia entre 0,8 e 1,2 e fica parado durante o ciclo. Com essas margens não existe lucro só comprando e revendendo.
 - **Mercado**: troca a cada `CICLO_MERCADO` (5 min) e é sorteado pelo número do ciclo: é igual para todos e não dá para forçar novo sorteio. Tem 1 macho e 1 fêmea de cada uma das 50 espécies, **vendidos separados** (não existe compra de casal). A tela tem pesquisa por nome e filtros de sexo, "Posso pagar" e "Minhas espécies"; ao comprar só um dos sexos, a pesquisa já fica pronta para o outro, e `faltaPar()` mostra um atalho para cada espécie sem par. O que foi comprado fica em `S.comprados` (só do ciclo atual).
 - **Terreno**: cabem `ESPACOS_INICIAIS` (3) **espécies**, sem limite de animais por espécie; cada espaço a mais custa `espacoPreco(k)`. A vaga é liberada quando o último animal da espécie é vendido ou morre.
 - **Acasalar**: macho e fêmea da mesma espécie, com pelo menos `IDADE_FERTIL` (1 ano). Sorteio de 1 a 3 h para engravidar, depois 1 h até nascer. Os status do filhote são calculados ao engravidar (`fundeStatus`), e o pai pode morrer sem perder a gestação. Grávida e pai não podem ser vendidos. Depois do parto o casal fica em `pronto` e o jogador manda acasalar de novo.
+- **Caça**: todos ficam juntos no terreno. `come(a, b)` usa `po` (porte) e `caca` de cada espécie (02). A cada `CACA_PASSO` (1 h) cada predador adulto sem `a.comeu` recente (`FOME`, 6 h) tenta pegar uma presa; a chance sobe com a Força dele e cai com a Agilidade da presa. Corre com o jogo fechado (`cacar`, até `CACA_MAX_PASSOS`). Antes de comprar, `avisoCaca()` avisa.
+- **Tristeza**: `humor(esp)` soma mistura de espécies (até `TRISTE_MISTURA`, menor com terreno maior), desequilíbrio entre a maior e a menor espécie (até `TRISTE_DESEQ`) e medo de predador (`TRISTE_MEDO`). A cada `TRISTE_POR_PONTO` de tristeza, o filhote nasce com 1 ponto a menos em cada status (calculado ao engravidar).
 - **Tempo com o jogo fechado**: tudo são horários; `processar(t)` coloca o jogo em dia. A hora vem do cabeçalho `Date` do `versao.json` (`relogioDif`), então mudar o relógio do celular não apressa nada.
-- **Balanceamento medido** (jogador simples, olha 5× por dia, vende todo filhote, compra o casal mais caro que caiba em 40% do dinheiro; 3 simulações de 20 dias, uma delas interrompida no dia 12,5 pelo limite de tempo da simulação): € 10 mil em 1–1,5 dia, € 100 mil em ~4 dias, € 1 milhão em ~7 dias. Um casal se paga com 1,5 a 3 filhotes. Ao mexer em números, rode de novo uma simulação parecida. Em simulações, ponha um limite de tempo no laço: a população pode explodir e travar a aba.
+- **Balanceamento medido** (começando com € 500; jogador simples, olha 5× por dia, vende todo filhote, compra o casal mais caro que caiba em 40% do dinheiro, sem juntar caçador e presa; 3 simulações de até 20 dias para cada caso, duas interrompidas no dia 12 pelo limite de tempo): € 1 mil em 1–2 dias, € 10 mil em 4–5 dias, € 100 mil em 8–15 dias. Com 1 espécie só rende um pouco mais que com 3, por causa da tristeza. Um casal se paga com 1,5 a 3 filhotes. Ao mexer em números, rode de novo uma simulação parecida. Em simulações, ponha um limite de tempo no laço: a população pode explodir e travar a aba.
 - **Preços das espécies** são estimativas: há pouca fonte confiável para animais exóticos, e alguns valores foram ajustados para a progressão.
 
 ## Como os arquivos se enxergam

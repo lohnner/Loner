@@ -69,4 +69,17 @@ const CATEGORIAS = [
   {id:'lendaria', n:'Lendária', ate:Infinity},
 ];
 const categoria = e => CATEGORIAS.find(c => e.p < c.ate);
+
+// Cadeia alimentar: po = porte (1 a 6); caca = maior porte que o predador consegue pegar. Só caça quem é maior que a presa.
+const PORTES = ['', 'Mini', 'Pequeno', 'Médio', 'Grande', 'Muito grande', 'Gigante'];
+[
+  'hamster rato peixe periquito canario calopsita',
+  'galinha pato porquinho coelho chinchila furao suricata tartaruga iguana papagaio arara tucano lemure naja piton gato',
+  'pavao cao ovelha cabra porco capivara jiboia macaco alpaca lhama canguru',
+  'burro vaca cavalo zebra avestruz jacare leopardo guepardo camelo',
+  'leao tigre urso',
+  'girafa hipopotamo rinoceronte elefante gorila',
+].forEach((l, i) => l.split(' ').forEach(id => { ESP[id].po = i + 1; ESP[id].caca = 0; }));
+Object.entries({gato:1, furao:1, naja:1, piton:1, suricata:1, jiboia:2, cao:2, jacare:3, leopardo:3, guepardo:3, leao:4, tigre:4, urso:4}).forEach(([id, c]) => { ESP[id].caca = c; });
+const come = (a, b) => a !== b && ESP[a].caca >= ESP[b].po && ESP[a].po > ESP[b].po;
 const fotoEsp = id => `img/animais/${id}.jpg`;

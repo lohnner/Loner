@@ -12,7 +12,7 @@ const anos = n => n + (n === 1 ? ' ano' : ' anos');
 const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); // para a pesquisa achar "leao" em "Leão"
 
 /* ---------- BALANCEAMENTO ---------- */
-const DINHEIRO_INICIAL = 5000;
+const DINHEIRO_INICIAL = 500;
 const ESPACOS_INICIAIS = 3, ESPACOS_MAX = 50;
 const espacoPreco = k => 2500 * k * k; // k-ésimo espaço comprado: 2.500, 10.000, 22.500, 40.000...
 const CICLO_MERCADO = 5 * 60e3;
@@ -21,6 +21,11 @@ const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
 const IDADE_FERTIL = 1;
 const AJUDA_LIMITE = 50, AJUDA_VALOR = 500; // sem animais e sem dinheiro: ajuda para o jogo não travar
 const IDADE_PISO = .12; // o animal mais velho ainda vale 12% do preço de um recém-nascido
+// Caça: a cada CACA_PASSO cada predador adulto, sem fome saciada, pode pegar uma presa do terreno; depois fica FOME sem caçar.
+const CACA_PASSO = 1 * 3600e3, FOME = 6 * 3600e3, CACA_MAX_PASSOS = 168;
+// Tristeza (0 a 100): espécies juntas (menos pesado com terreno maior), desequilíbrio entre elas e medo de predador.
+const TRISTE_MISTURA = 40, TRISTE_DESEQ = 40, TRISTE_DESEQ_POR = 10, TRISTE_MEDO = 20;
+const TRISTE_POR_PONTO = 4; // a cada 4 de tristeza, o filhote nasce com 1 ponto a menos em cada status
 
 /* ---------- OS 5 STATUS E A CLASSIFICAÇÃO ---------- */
 const STATUS = [['for', 'Força'], ['agi', 'Agilidade'], ['int', 'Inteligência'], ['sau', 'Saúde'], ['bel', 'Beleza']];
@@ -56,7 +61,7 @@ function defaults(){
   return {
     ver: 1, dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, seq: 1,
     animais: [], casais: [], comprados: {ciclo: 0, lista: []}, diario: [],
-    nascidos: 0, mortos: 0, vendidos: 0, receita: 0, savedAt: 0,
+    nascidos: 0, mortos: 0, devorados: 0, vendidos: 0, receita: 0, tCaca: 0, savedAt: 0,
   };
 }
 // Mistura um save com os padrões: campo novo em defaults() já vale para saves antigos.
