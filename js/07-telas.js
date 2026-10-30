@@ -179,6 +179,44 @@ function sheetEspecie(id){
     <p class="cred">Foto: ${esc(cr.autor || 'Wikimedia Commons')} · ${esc(cr.licenca || '')} · <a href="${esc(cr.url || '#')}" target="_blank" rel="noopener">ver original</a></p>`;
 }
 
+/* ---------- CONQUISTAS ---------- */
+// Todas as espécies do jogo, com o melhor macho e a melhor fêmea que o jogador já teve (S.conq, ver registraConquista em 04).
+const conqDe = (id, sx) => { const c = S.conq[id] && S.conq[id][sx]; return c ? {esp: id, sx, st: c.st, t: c.t} : null; };
+function especiesConquista(){
+  const l = ESPECIES.slice();
+  for(const id of Object.keys(S.conq)) if(ESP[id] && !l.includes(ESP[id])) l.push(ESP[id]); // espécie que saiu do jogo, mas o jogador teve
+  return l;
+}
+function telaConquistas(){
+  const todas = especiesConquista(), temAlgum = e => conqDe(e.id, 'M') || conqDe(e.id, 'F');
+  const completas = todas.filter(e => conqDe(e.id, 'M') && conqDe(e.id, 'F')).length, achadas = todas.filter(temAlgum).length;
+  const maximas = todas.reduce((n, e) => n + ['M', 'F'].filter(sx => { const a = conqDe(e.id, sx); return a && notaDe(a) >= e.nmax; }).length, 0);
+  const lado = (e, sx) => { const a = conqDe(e.id, sx); return `<span class="cq-sx">${sexo(sx)}${a ? `${selo(a)}${notaDe(a) >= e.nmax ? '<i class="cq-max" aria-label="Nota máxima">👑</i>' : ''}` : '<span class="cq-nada">—</span>'}</span>`; };
+  const cats = CATEGORIAS.map(c => {
+    const l = todas.filter(e => categoria(e).id === c.id);
+    if(!l.length) return '';
+    return `<h3 class="wk-cat"><span class="cat c-${c.id}">${c.n}</span> <small>${l.filter(temAlgum).length} de ${l.length}</small></h3>
+      <div class="wk-grade">${l.map(e => `<button class="wk cq ${temAlgum(e) ? '' : 'off'}" data-act="verConquista" data-v="${e.id}">${foto(e.id)}<b>${esc(e.n)}</b><span class="cq-par">${lado(e, 'M')}${lado(e, 'F')}</span></button>`).join('')}</div>`;
+  }).join('');
+  return `<section class="acasalar rk-top"><h3>Conquistas</h3>
+    <p class="dim">O animal mais raro (nota mais alta) de cada espécie que você já teve, macho e fêmea. Vale comprado ou nascido, e fica guardado mesmo depois de vender. 👑 = nota máxima da espécie, que só nasce no criadouro.</p>
+    <div class="cq-tot"><div><b>${achadas}/${todas.length}</b><small>espécies</small></div><div><b>${completas}</b><small>com casal</small></div><div><b>${maximas}</b><small>👑 nota máxima</small></div></div></section>
+    ${cats}`;
+}
+function sheetConquista(id){
+  const e = ESP[id];
+  const bloco = sx => {
+    const a = conqDe(id, sx);
+    if(!a) return `<h3 class="sec-t">${sexo(sx)} ${sexoN(sx)}</h3><p class="dim">Você ainda não teve ${sx === 'M' ? 'um macho' : 'uma fêmea'} desta espécie.</p>`;
+    return `<h3 class="sec-t">${sexo(sx)} ${sexoN(sx)} ${selo(a)}${notaDe(a) >= e.nmax ? ' 👑' : ''}</h3>
+      <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)} · desde ${dataBR(a.t)}</p>${barrasStatus(a.st)}`;
+  };
+  return `<img class="sh-foto" src="${fotoEsp(id)}" alt="${esc(e.n)}" width="360" height="360">
+    <h2>${esc(e.n)}</h2><p class="cient">${esc(e.c)}</p>
+    ${bloco('M')}${bloco('F')}
+    <button class="btn cheio" data-act="verEspecie" data-v="${id}">Ver na Wikipédia</button>`;
+}
+
 /* ---------- RANKING ---------- */
 let rankNomeTxt = null;
 function telaRank(){
@@ -237,12 +275,13 @@ function renderSheet(){
   let h = '';
   if(tipo === 'especie') h = sheetEspecie(v);
   else if(tipo === 'oferta') h = sheetOferta(v);
+  else if(tipo === 'conquista') h = sheetConquista(v);
   else if(tipo === 'animal' || tipo === 'nasceu') h = sheetAnimal(v, tipo === 'nasceu');
   else if(tipo === 'escolher') h = sheetEscolher(v);
   else if(tipo === 'terrenos') h = sheetTerrenos();
   else if(tipo === 'resetar') h = `<h2>Resetar a conta?</h2>
     <p class="aviso">Tem certeza? Isso vai zerar tudo e não dá para desfazer.</p>
-    <ul class="perdas"><li>Você vai perder todo o dinheiro (${eur(S.dinheiro)}).</li><li>Vai perder todos os animais (${S.animais.length}) e os casais.</li><li>Vai perder os terrenos comprados e voltar para a Gaiola.</li><li>Vai perder o diário e as estatísticas.</li></ul>
+    <ul class="perdas"><li>Você vai perder todo o dinheiro (${eur(S.dinheiro)}).</li><li>Vai perder todos os animais (${S.animais.length}) e os casais.</li><li>Vai perder os terrenos comprados e voltar para a Gaiola.</li><li>Vai perder o diário, as estatísticas e as conquistas.</li></ul>
     <p class="cient">Você recomeça do zero, com ${eur(DINHEIRO_INICIAL)}.</p>
     <button class="btn cheio alerta" data-act="resetarConta">Sim, zerar tudo</button>
     <button class="btn cheio" data-act="fechar">Não, manter minha conta</button>`;
@@ -312,7 +351,7 @@ function mostraNascimento(){
 }
 
 /* ---------- DESENHO ---------- */
-const TELAS = {mercado: telaMercado, animais: telaAnimais, acasalar: telaAcasalar, wiki: telaWiki, rank: telaRank, conta: telaConta};
+const TELAS = {mercado: telaMercado, animais: telaAnimais, acasalar: telaAcasalar, wiki: telaWiki, rank: telaRank, conq: telaConquistas, conta: telaConta};
 function renderAba(){
   $('#tela').innerHTML = TELAS[aba]();
   if(aba === 'wiki') filtraWiki();
@@ -382,6 +421,7 @@ const ACT = {
   irMercado(){ mercadoTipo = instAtual().tipo === 'gaiola' ? 'gaiola' : 'outros'; ACT.aba('mercado'); },
   verOferta(v){ abreSheet('oferta', v); },
   verEspecie(v){ abreSheet('especie', v); },
+  verConquista(v){ abreSheet('conquista', v); },
   verAnimal(v){ armado = {id: '', ate: 0}; abreSheet('animal', v); },
   comprar(v){
     const o = oferta(v), erro = comprar(v);

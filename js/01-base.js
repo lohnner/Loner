@@ -61,7 +61,7 @@ const KEY = 'loner-criadouro-v1';
 function defaults(){
   return {
     ver: 2, nome: '', dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, terrenos: [{id: 't1', tipo: 'gaiola'}], terrenoAtual: 't1', seq: 2,
-    animais: [], casais: [], comprados: {ciclo: 0, lista: []}, diario: [],
+    animais: [], casais: [], conq: {}, comprados: {ciclo: 0, lista: []}, diario: [],
     nascidos: 0, mortos: 0, devorados: 0, vendidos: 0, receita: 0, tCaca: 0, savedAt: 0,
   };
 }
@@ -93,6 +93,9 @@ function normalize(o){
     for(const a of s.animais){ a.idade0 = Math.max(0, (a.idade0 || 0) + diaVelho - (a.dia0 || diaVelho)); a.dia0 = anoNovo; }
   }
   s.ver = 2;
+  // Conquistas: o melhor macho e a melhor fêmea de cada espécie que o jogador já teve. Quem já joga ganha os animais que tem agora.
+  if(!s.conq || typeof s.conq !== 'object') s.conq = {};
+  for(const a of s.animais) registraConquista(a, s);
   return s;
 }
 let S = defaults();

@@ -19,7 +19,14 @@ function animalDoMercado(key, esp, sx, dia, r){
   for(const k of FAIXAS){ if(x < k.p){ faixa = k; break; } x -= k.p; }
   const alvo = faixa.de + r() * (faixa.ate - faixa.de - .5);
   const vida = esp.vida, idade = Math.min(vida - 1, 1 + Math.floor(r() * r() * (vida - 1)));
-  return {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), dia0: dia, idade0: idade};
+  const a = {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), dia0: dia, idade0: idade};
+  // A nota máxima da espécie (a mais rara) não aparece no mercado: só nasce no criadouro. Baixa o maior status até sair dela.
+  while(notaDe(a) >= esp.nmax){
+    const k = STATUS.map(([k]) => k).reduce((x, y) => a.st[y] > a.st[x] ? y : x);
+    if(a.st[k] <= 0) break;
+    a.st[k]--;
+  }
+  return a;
 }
 function sorteiaEspecie(r, usadas, pool){
   for(let tent = 0; tent < 16; tent++){
@@ -126,6 +133,7 @@ function comprar(key){
   S.dinheiro = cent(S.dinheiro - p);
   S.animais.push(Object.assign({}, o, {id: 'a' + S.seq++, ter: lugar.id, st: Object.assign({}, o.st)}));
   S.comprados.lista.push(key);
+  registraConquista(S.animais[S.animais.length - 1]);
   diario(`Comprou ${o.sx === 'M' ? 'um macho' : 'uma fêmea'} de ${ESP[o.esp].n} por ${eur(p)}.`);
   return '';
 }

@@ -119,7 +119,7 @@ function processar(t = agora()){
       if(!f || morreEm(f) <= c.tParto) continue;
       const d = diaBR(c.tParto);
       const filho = {id: 'a' + S.seq++, ter: f.ter, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, dia0: d, idade0: 0, pen: c.pen || 0};
-      S.animais.push(filho); S.nascidos++;
+      S.animais.push(filho); S.nascidos++; registraConquista(filho);
       nascimentosNovos.push(filho.id);
       diario(`${nome}: nasceu ${filho.sx === 'M' ? 'um macho' : 'uma fêmea'}, nota ${fmtNota(notaDe(filho))}.`);
       c.fase = 'pronto'; c.filho = null;

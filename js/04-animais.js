@@ -22,6 +22,15 @@ function restaVida(a, t = agora()){
   const dias = Math.ceil((morreEm(a) - t) / DIA);
   return dias <= 1 ? 'morre à meia-noite' : `vive mais ${dias} dias reais`;
 }
+// Conquista: guarda em S.conq[esp][sx] o animal de nota mais alta daquela espécie e sexo que o jogador já teve (comprado ou nascido).
+// Fica guardado mesmo depois de vender ou morrer. Empate na nota: vale a maior média de status.
+function registraConquista(a, s = S){
+  if(!a || !ESP[a.esp] || (a.sx !== 'M' && a.sx !== 'F')) return false;
+  const porEsp = s.conq[a.esp] || (s.conq[a.esp] = {}), velho = porEsp[a.sx];
+  if(velho && ESP[a.esp] && (notaDe({esp: a.esp, st: velho.st}) > notaDe(a) || (notaDe({esp: a.esp, st: velho.st}) === notaDe(a) && mediaSt(velho.st) >= mediaSt(a.st)))) return false;
+  porEsp[a.sx] = {st: Object.assign({}, a.st), t: agora()};
+  return true;
+}
 const sexoN = sx => sx === 'M' ? 'Macho' : 'Fêmea';
 const sexoS = sx => sx === 'M' ? '♂' : '♀';
 
