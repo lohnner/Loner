@@ -49,7 +49,7 @@ function renderLogin(){
   else if(loginState === 'loading') body = `<p class="note">Carregando seu criadouro…</p>`;
   else body = `<button class="btn pri cheio entrar" data-act="login">Entrar com Google</button>`;
   $('#loginBody').innerHTML = `<h1>Loner</h1>
-    <p class="lead">Compre machos e fêmeas, crie filhotes, venda e faça dinheiro. São 39 espécies terrestres, do hamster ao elefante.</p>
+    <p class="lead">Compre machos e fêmeas, crie filhotes, venda e faça dinheiro. Comece com uma gaiola e chegue até a savana.</p>
     ${body}${loginErr ? `<p class="note erro">${esc(loginErr)}</p>` : ''}
     <p class="note">Seu criadouro fica salvo na sua conta Google e continua em qualquer aparelho.</p>`;
 }
@@ -75,6 +75,7 @@ async function accountLogout(){
 }
 function onAuth(u){
   fbUser = u; accountReady = false; S = defaults(); nascimentosNovos = []; parEscolhido = {M: '', F: ''};
+  rankLista = null; rankErro = ''; rankEnviado = -1; rankT = 0;
   if(sheetAberta){ sheetAberta = null; $('#sheet').hidden = true; }
   if(!u){ loginState = 'out'; renderLogin(); return; }
   loginState = 'loading'; loginErr = ''; renderLogin();
@@ -126,4 +127,36 @@ function accountTick(dt){
   if(!fbUser || !accountReady) return;
   cloudT -= dt;
   if(cloudDirty && cloudT <= 0) cloudFlush();
+  rankT -= dt;
+  if(rankT <= 0 && S.dinheiro !== rankEnviado) pushRank();
+}
+
+/* ---------- RANKING ---------- */
+// Uma linha por conta em criadouroRank/{uid}: só o apelido e o dinheiro em caixa. Nome e e-mail do Google nunca vão para lá.
+const RANK = 'criadouroRank', RANK_N = 50, RANK_EVERY = 60, NOME_MAX = 16;
+let rankLista = null, rankErro = '', rankCarregando = false, rankT = 0, rankEnviado = -1;
+const nomePublico = () => S.nome || 'Criador ' + fbUser.uid.slice(-4);
+function pushRank(){
+  if(!fb || !fbUser || !accountReady) return;
+  rankT = RANK_EVERY; rankEnviado = S.dinheiro;
+  fb.db.collection(RANK).doc(fbUser.uid).set({nome: nomePublico(), dinheiro: S.dinheiro, updated: firebase.firestore.FieldValue.serverTimestamp()}).catch(() => {});
+}
+function loadRank(){
+  if(!fb || rankCarregando) return;
+  rankCarregando = true;
+  fb.db.collection(RANK).orderBy('dinheiro', 'desc').limit(RANK_N).get()
+    .then(q => { rankLista = q.docs.map(d => Object.assign({id: d.id}, d.data())); rankErro = ''; })
+    .catch(e => {
+      rankErro = e.code === 'permission-denied'
+        ? 'O ranking ainda não foi liberado: as regras do Firebase precisam ser publicadas.'
+        : 'Não foi possível carregar o ranking (' + (e.code || 'erro') + ').';
+    })
+    .finally(() => { rankCarregando = false; if(aba === 'rank') renderAba(); });
+}
+// Sua linha sempre mostra o dinheiro de agora, mesmo antes do próximo envio.
+function rankParaTela(){
+  if(!rankLista || !fbUser) return null;
+  const eu = {id: fbUser.uid, nome: nomePublico(), dinheiro: S.dinheiro};
+  const l = rankLista.filter(r => r.id !== fbUser.uid).concat(eu).sort((a, b) => (b.dinheiro || 0) - (a.dinheiro || 0));
+  return l.slice(0, RANK_N);
 }

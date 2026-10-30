@@ -250,5 +250,15 @@ const CREDITOS = {
 "autor": "Brocken Inaglory",
 "licenca": "CC BY-SA 3.0",
 "url": "https://commons.wikimedia.org/wiki/File:Male_gorilla_in_SF_zoo.jpg"
-}
+},
+"twister": {
+"autor": "Editor012456",
+"licenca": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Lyonblackandwhitehoodedrat_(cropped).jpg"
+},
+"camundongo": {"autor": "", "licenca": "CC BY 2.5", "url": "https://commons.wikimedia.org/wiki/File:Fancy_Mouse.jpg"},
+"ourico": {"autor": "Jkasvi ( talk · contribs )", "licenca": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Atelerix_albiventris.jpg"},
+"lagartixa": {"autor": "George Chernilevsky", "licenca": "Public domain", "url": "https://commons.wikimedia.org/wiki/File:Eublepharis_macularius_2009_G6.jpg"},
+"jabuti": {"autor": "Yuriy75", "licenca": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Testudo_horsfieldii;_Baikonur_001.jpg"},
+"caracol": {"autor": "", "licenca": "Public domain", "url": "https://commons.wikimedia.org/wiki/File:Snail1web.jpg"}
 };

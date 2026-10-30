@@ -272,6 +272,21 @@ function npcDelivery() {
         && request.resource.data.updated == request.time;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+    // Loner (criadouro de animais): ranking de dinheiro. Só aparece o apelido; cada conta escreve só a própria linha.
+    match /criadouroRank/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.keys().hasOnly(['nome', 'dinheiro', 'updated'])
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() > 0
+        && request.resource.data.nome.size() <= 16
+        && request.resource.data.dinheiro is number
+        && request.resource.data.dinheiro >= 0
+        && request.resource.data.updated == request.time;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     // Tudo que não estiver explicitamente autorizado acima permanece bloqueado.
     match /{document=**} {
       allow read, write: if false;

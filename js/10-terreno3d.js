@@ -5,12 +5,15 @@
 const ANIMAIS_NA_TELA = 60;
 const mundo = new Map(); // id do animal → {x, y, tx, ty, dir, passo, espera, tp, px, py}
 let efeitos = [], terrenoN = 0, chaoCv = null, cercaCv = null, enfeites = [], humores = {}, humorT = 0, ultimoQuadro = 0;
-const ladoTerreno = () => 56 + Math.min(24, S.espacosExtras * 2);
+const ladoTerreno = () => TERRENO[instAtual().tipo].lado;
+let terrenoT = null, terrenoVisto = '';
+const animaisAtuais = () => animaisDoTerreno(instAtual().id).slice(0, ANIMAIS_NA_TELA);
 const margemTopo = () => 40;
 const tamanhoCanvas = n => ({w: 4 * n + 12, h: 2 * n + margemTopo() + 16});
 const projX = (x, y) => (x - y) * 2 + 2 * terrenoN + 6;
 const projY = (x, y) => (x + y) + margemTopo();
 const noLago = (x, y, f = 1) => {
+  if(!terrenoT || !terrenoT.lago) return false;
   const a = (x - terrenoN * .76) / (terrenoN * .17 * f), b = (y - terrenoN * .24) / (terrenoN * .15 * f);
   return a * a + b * b < 1;
 };
@@ -18,8 +21,9 @@ const AQUATICOS = {pato: 1, tartaruga: 1, jacare: 1, hipopotamo: 1, capivara: 1}
 
 function preparaTerreno(){
   const n = ladoTerreno();
-  if(n === terrenoN && chaoCv) return;
-  terrenoN = n;
+  if(instAtual().id === terrenoVisto && chaoCv) return;
+  terrenoVisto = instAtual().id; terrenoT = TERRENO[instAtual().tipo]; terrenoN = n;
+  mundo.clear(); efeitos = [];
   const {w, h} = tamanhoCanvas(n);
   chaoCv = document.createElement('canvas'); chaoCv.width = w; chaoCv.height = h;
   cercaCv = document.createElement('canvas'); cercaCv.width = w; cercaCv.height = h;
@@ -61,22 +65,23 @@ function preparaTerreno(){
   enfeites = lista;
 }
 const andaEm = (esp, x, y) => {
+  if(terrenoT) for(const [fx, fy, fr] of terrenoT.obst) if(Math.hypot(x - fx * terrenoN, y - fy * terrenoN) < fr * terrenoN) return false;
   if(esp === 'peixe') return noLago(x, y, .8);
   if(AQUATICOS[esp]) return true;
   return !noLago(x, y, 1.1);
 };
 function pontoLivre(esp){
-  const n = terrenoN;
+  const n = terrenoN, mg = Math.max(2.5, n * .07);
   for(let i = 0; i < 30; i++){
-    const x = 4 + Math.random() * (n - 9), y = 4 + Math.random() * (n - 9);
+    const x = mg + Math.random() * (n - mg * 2), y = mg + Math.random() * (n - mg * 2);
     if(andaEm(esp, x, y)) return {x, y};
   }
-  return {x: n * .76, y: n * .24};
+  return {x: n * .5, y: n * .5};
 }
 function sincronizaMundo(){
-  const vivos = new Set(S.animais.map(a => a.id));
+  const atuais = animaisAtuais(), vivos = new Set(atuais.map(a => a.id));
   for(const id of mundo.keys()) if(!vivos.has(id)) mundo.delete(id);
-  for(const a of S.animais){
+  for(const a of atuais){
     if(mundo.has(a.id)) continue;
     const p = pontoLivre(a.esp);
     mundo.set(a.id, {x: p.x, y: p.y, tx: p.x, ty: p.y, dir: Math.floor(Math.random() * 4), passo: 0, espera: Math.random() * 2, tp: 0});
@@ -90,7 +95,7 @@ function efeitoDevorado(id){
 function atualizaHumores(agoraMs){
   if(agoraMs - humorT < 1000) return;
   humorT = agoraMs; humores = {};
-  for(const e of especiesNoTerreno()) humores[e] = humor(e).total;
+  for(const e of especiesDoTerreno(instAtual().id)) humores[e] = humor(e, instAtual().id).total;
 }
 function move(a, m, dt, presaDe){
   const e = ESP[a.esp], triste = humores[a.esp] >= 40;
@@ -134,7 +139,7 @@ function desenhaTerreno(tempoMs){
   ctx.clearRect(0, 0, w, h);
   ctx.drawImage(chaoCv, 0, 0);
   const itens = enfeites.map(e => ({e, x: e.x, y: e.y}));
-  const lista = S.animais.slice(0, ANIMAIS_NA_TELA);
+  const lista = animaisAtuais();
   for(const a of lista){ const m = mundo.get(a.id); if(m) itens.push({a, m, x: m.x, y: m.y}); }
   itens.sort((p, q) => (p.x + p.y) - (q.x + q.y));
   cv._clicaveis = [];
@@ -167,8 +172,8 @@ function quadroTerreno(tempoMs){
   sincronizaMundo();
   atualizaHumores(tempoMs);
   const parado = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const presasNoTerreno = S.animais.filter(a => ESP[a.esp].po <= 4 && mundo.has(a.id));
-  for(const a of S.animais.slice(0, ANIMAIS_NA_TELA)){
+  const atuais = animaisAtuais(), presasNoTerreno = atuais.filter(a => ESP[a.esp].po <= 4 && mundo.has(a.id));
+  for(const a of atuais){
     const m = mundo.get(a.id);
     if(!m) continue;
     let alvo = null;

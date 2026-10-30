@@ -13,8 +13,6 @@ const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /* ---------- BALANCEAMENTO ---------- */
 const DINHEIRO_INICIAL = 50;
-const ESPACOS_INICIAIS = 3, ESPACOS_MAX = 50;
-const espacoPreco = k => 2500 * k * k; // k-ésimo espaço comprado: 2.500, 10.000, 22.500, 40.000...
 const CICLO_MERCADO = 3600e3, ANIMAIS_NO_MERCADO = 20;
 const MARGEM_COMPRA = 1.25, MARGEM_VENDA = .8; // sobre o valor do animal; com o índice de ±20% não dá lucro só comprando e vendendo
 const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
@@ -59,7 +57,7 @@ const tempo = ms => {
 const KEY = 'loner-criadouro-v1';
 function defaults(){
   return {
-    ver: 1, dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, seq: 1,
+    ver: 1, nome: '', dinheiro: DINHEIRO_INICIAL, espacosExtras: 0, terrenos: [{id: 't1', tipo: 'gaiola'}], terrenoAtual: 't1', seq: 2,
     animais: [], casais: [], comprados: {ciclo: 0, lista: []}, diario: [],
     nascidos: 0, mortos: 0, devorados: 0, vendidos: 0, receita: 0, tCaca: 0, savedAt: 0,
   };
@@ -72,6 +70,20 @@ function normalize(o){
   s.animais = Array.isArray(s.animais) ? s.animais.filter(a => a && ESP[a.esp]) : [];
   s.casais = Array.isArray(s.casais) ? s.casais : [];
   s.diario = Array.isArray(s.diario) ? s.diario.slice(0, 80) : [];
+  // Saves de antes dos terrenos: cada animal recebe um lugar (ganhando o terreno se preciso), e os "espaços" comprados voltam em dinheiro.
+  s.terrenos = Array.isArray(s.terrenos) ? s.terrenos.filter(t => t && TERRENO[t.tipo]) : [];
+  const novo = tipo => { const t = {id: 't' + s.seq++, tipo}; s.terrenos.push(t); return t; };
+  if(!s.terrenos.length) novo('gaiola');
+  for(const a of s.animais){
+    if(s.terrenos.some(t => t.id === a.ter)) continue;
+    const cabe = t => { const ali = s.animais.filter(b => b.ter === t.id), T = TERRENO[t.tipo]; return moraEm(a.esp, t.tipo) && ali.length < T.cap && (!T.unica || ali.every(b => b.esp === a.esp)); };
+    a.ter = (s.terrenos.find(cabe) || novo(ESP[a.esp].terreno)).id;
+  }
+  // casal de save antigo com os dois em lugares diferentes é desfeito
+  s.casais = s.casais.filter(c => { const f = s.animais.find(a => a.id === c.f), m = s.animais.find(a => a.id === c.m); return f && (!m || m.ter === f.ter); });
+  if(!s.terrenos.some(t => t.id === s.terrenoAtual)) s.terrenoAtual = s.terrenos[0].id;
+  for(let k = 1; k <= (s.espacosExtras || 0); k++) s.dinheiro = cent(s.dinheiro + 2500 * k * k);
+  s.espacosExtras = 0;
   return s;
 }
 let S = defaults();

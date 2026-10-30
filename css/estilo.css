@@ -23,7 +23,7 @@ small{font-size:12.5px}
 .relogio{text-align:right}.relogio b{font:600 18px/1.2 var(--tit);font-variant-numeric:tabular-nums}
 #tela{flex:1;overflow-y:auto;padding:12px 12px 20px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 
-#nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--cartao);border-top:1px solid var(--linha);padding-bottom:env(safe-area-inset-bottom)}
+#nav{display:grid;grid-template-columns:repeat(6,1fr);background:var(--cartao);border-top:1px solid var(--linha);padding-bottom:env(safe-area-inset-bottom)}
 #nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;font-size:11px;font-weight:600;color:var(--dim);min-height:56px}
 #nav svg{width:24px;height:24px}
 #nav button.on{color:var(--mata2);font-weight:800}
@@ -41,6 +41,8 @@ small{font-size:12.5px}
 .link{color:var(--ambar2);font-weight:800;text-decoration:underline}
 .dois{display:grid;grid-template-columns:1.5fr 1fr;gap:8px}
 
+.merc-abas{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;background:#e6dfcf;border-radius:12px}.merc-abas button{min-height:42px;border-radius:9px;font-weight:800;font-size:13.5px;text-align:center;color:var(--dim)}.merc-abas button.on{background:var(--cartao);color:var(--tinta);box-shadow:var(--sombra)}
+.ter-qtd{font:600 12px var(--txt);color:var(--mata2)}.chip small{font-size:11.5px;opacity:.75}
 .faixa{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
 .faixa b{font-variant-numeric:tabular-nums}
 .chips{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
@@ -82,6 +84,12 @@ small{font-size:12.5px}
 .ter-top.sec{margin:16px 2px 8px}
 #terrenoCv{display:block;width:100%;height:auto;margin:8px 0 10px;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;background:linear-gradient(#9fd5ee,#dff1f5);border-radius:10px;cursor:pointer;touch-action:pan-y}
 #terrenoGL{display:block;width:100%;aspect-ratio:16/10;margin:8px 0 10px;background:linear-gradient(#8fc7ea,#e6f1ea);border-radius:10px;cursor:pointer;touch-action:pan-y}
+.ter-abas{margin-bottom:8px}.chip-mais{border-style:dashed;color:var(--ambar2)}
+.ter-vivem{margin:0;font-size:12.5px;opacity:.9}
+.ofe.trancado .foto{filter:grayscale(.7);opacity:.75}.tranca{color:#8f2a1d;font-weight:800;display:block!important;margin-top:3px}
+.ter-card{background:var(--cartao);border-radius:13px;padding:10px;margin-bottom:9px;box-shadow:var(--sombra)}.ter-card.tem{outline:2px solid var(--mata2)}
+.ter-card-top{display:flex;gap:10px;align-items:center}.ter-card-top h3{font-size:17px}.ter-card-top small{color:var(--dim);display:block}.ter-ic{font-size:30px;line-height:1}
+.ter-especies{display:flex;gap:7px;overflow-x:auto;padding:9px 0 2px;scrollbar-width:none}.ter-esp{flex:none;width:62px;text-align:center}.ter-esp .foto{width:62px;height:62px;border-radius:9px}.ter-esp small{display:block;font-size:10.5px;line-height:1.15;margin-top:3px}
 .ter-nota{margin:0 0 8px;font-size:12.5px;opacity:.85}
 .perigo{margin:0 0 9px;padding:7px 10px;border-radius:9px;background:#f3d7d1;color:#7f1f13;font-size:13.5px;font-weight:800}
 .humor{margin:2px 0 7px;padding:7px 10px;border-radius:9px;font-size:13.5px}
@@ -127,6 +135,15 @@ small{font-size:12.5px}
 .diario time{display:block;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .conta-mail{text-align:center;margin:14px 0 0;font-size:13px;overflow-wrap:anywhere}
 
+.rk-top{margin-bottom:2px}.rk-lab{display:block;font-size:13.5px;font-weight:800;margin-bottom:4px}
+.rk-form{display:flex;gap:8px}.rk-form .busca{flex:1;min-width:0;margin:0}.rk-form .btn{flex:none}
+.rk-priv{font-size:12.5px;margin:6px 0 0}
+.rk{list-style:none;margin:10px 0 0;padding:0;background:var(--cartao);border-radius:12px;box-shadow:var(--sombra);overflow:hidden}
+.rk li{display:flex;align-items:center;gap:10px;min-height:48px;padding:7px 11px;border-top:1px solid var(--linha)}.rk li:first-child{border-top:0}
+.rk li.eu{background:#f6e9d3}
+.rk-pos{flex:none;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--linha);font:800 14px var(--tit)}
+.rk-pos.p1{background:linear-gradient(135deg,#ffe48a,#e0a910);color:#3b2a00}.rk-pos.p2{background:linear-gradient(135deg,#eceff1,#a9b0b5)}.rk-pos.p3{background:linear-gradient(135deg,#e9b98c,#b0703a);color:#fff}
+.rk-nome{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rk-nome small{font-weight:400;color:var(--dim)}
 #sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet-fundo{position:absolute;inset:0;background:rgba(18,28,22,.55)}
 .sheet-card{position:relative;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;background:var(--papel);border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));animation:sobe .18s ease-out}

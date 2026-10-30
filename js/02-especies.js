@@ -3,6 +3,13 @@
 'use strict';
 
 const TODAS_ESPECIES = [
+  // De gaiola, novas
+  {id:'caracol', n:'Caracol terrestre', c:'Cornu aspersum', p:5, vida:5, hab:'Jardins e matas úmidas', die:'Folhas e verduras', ges:'Ovos: 2 a 4 semanas', nota:'Lento e interessante de observar; carrega a casa nas costas.'},
+  {id:'camundongo', n:'Camundongo doméstico', c:'Mus musculus domesticus', p:8, vida:3, hab:'Casas, no mundo todo', die:'Onívoro: sementes e grãos', ges:'19 a 21 dias', nota:'Pequeno, ágil e explorador.'},
+  {id:'twister', n:'Rato twister', c:'Rattus norvegicus domestica', p:15, vida:3, hab:'Casas, criado como pet', die:'Onívoro', ges:'21 a 23 dias', nota:'Inteligente e sociável; aprende truques.'},
+  {id:'lagartixa', n:'Lagartixa-leopardo', c:'Eublepharis macularius', p:60, vida:15, hab:'Regiões secas do sul da Ásia', die:'Insetos', ges:'Ovos: 35 a 89 dias', nota:'Réptil terrestre que guarda gordura na cauda.'},
+  {id:'jabuti', n:'Jabuti-tartaruga russa', c:'Testudo horsfieldii', p:120, vida:40, hab:'Estepes secas da Ásia Central', die:'Herbívoro', ges:'Ovos: 60 a 75 dias', nota:'Réptil terrestre que cava tocas para fugir do frio.'},
+  {id:'ourico', n:'Ouriço-pigmeu', c:'Atelerix albiventris', p:200, vida:5, hab:'Savanas da África', die:'Insetos', ges:'Cerca de 35 dias', nota:'Noturno e independente; enrola-se em bola quando assustado.'},
   // Básicas
   {id:'hamster', n:'Hamster-sírio', c:'Mesocricetus auratus', p:12, vida:3, hab:'Estepes da Síria e da Turquia', die:'Onívoro: sementes, grãos e insetos', ges:'16 dias', nota:'Guarda comida nas bochechas, que esticam até perto dos ombros.'},
   {id:'rato', n:'Rato-doméstico', c:'Rattus norvegicus domestica', p:10, vida:3, hab:'Casas, no mundo todo', die:'Onívoro', ges:'21 a 23 dias', nota:'Reconhece o dono e aprende truques com facilidade.'},
@@ -61,11 +68,12 @@ const TODAS_ESPECIES = [
 ];
 // ESP tem todas, para quem já comprou uma espécie que saiu continuar com ela; mercado e Wikipédia usam só ESPECIES.
 const ESP = Object.fromEntries(TODAS_ESPECIES.map((e, i) => [e.id, Object.assign(e, {i})]));
-const FORA_DO_JOGO = new Set(['peixe', 'tartaruga', 'pato', 'jacare', 'hipopotamo', 'periquito', 'canario', 'calopsita', 'papagaio', 'arara', 'tucano']);
+const FORA_DO_JOGO = new Set(['rato', 'peixe', 'tartaruga', 'pato', 'jacare', 'hipopotamo', 'periquito', 'canario', 'calopsita', 'papagaio', 'arara', 'tucano']);
 const ESPECIES = TODAS_ESPECIES.filter(e => !FORA_DO_JOGO.has(e.id));
 
 // Faixa de nota de cada espécie [mínima, máxima]: a nota sai da média dos 5 status. Espécie melhor tem faixa um pouco maior.
 Object.entries({
+  caracol:[1,6], camundongo:[1,8], twister:[2,11], lagartixa:[6,16], jabuti:[10,22], ourico:[22,36],
   rato:[1,8], peixe:[1,9], hamster:[1,10], galinha:[2,11], pato:[2,12], periquito:[3,12], tartaruga:[3,13], porquinho:[3,13], coelho:[4,15], canario:[4,15], iguana:[6,18], calopsita:[7,20],
   piton:[12,24], gato:[15,27], furao:[15,28], ovelha:[16,30], cabra:[17,31], chinchila:[20,34], porco:[22,36], pavao:[24,40], jiboia:[28,45], naja:[32,50], cao:[38,60], burro:[50,80], suricata:[65,100],
   papagaio:[110,190], lhama:[110,190], avestruz:[120,210], capivara:[120,200], vaca:[150,260], arara:[170,290], alpaca:[190,330], jacare:[190,330], lemure:[270,450], canguru:[280,470], tucano:[320,520], cavalo:[380,620],
@@ -86,8 +94,8 @@ const categoria = e => CATEGORIAS.find(c => e.p < c.ate);
 // Cadeia alimentar: po = porte (1 a 6); caca = maior porte que o predador consegue pegar. Só caça quem é maior que a presa.
 const PORTES = ['', 'Mini', 'Pequeno', 'Médio', 'Grande', 'Muito grande', 'Gigante'];
 [
-  'hamster rato peixe periquito canario calopsita',
-  'galinha pato porquinho coelho chinchila furao suricata tartaruga iguana papagaio arara tucano lemure naja piton gato',
+  'hamster rato peixe periquito canario calopsita caracol camundongo twister ourico lagartixa',
+  'jabuti galinha pato porquinho coelho chinchila furao suricata tartaruga iguana papagaio arara tucano lemure naja piton gato',
   'pavao cao ovelha cabra porco capivara jiboia macaco alpaca lhama canguru',
   'burro vaca cavalo zebra avestruz jacare leopardo guepardo camelo',
   'leao tigre urso',
@@ -96,3 +104,35 @@ const PORTES = ['', 'Mini', 'Pequeno', 'Médio', 'Grande', 'Muito grande', 'Giga
 Object.entries({gato:1, furao:1, naja:1, piton:1, suricata:1, jiboia:2, cao:2, jacare:3, leopardo:3, guepardo:3, leao:4, tigre:4, urso:4}).forEach(([id, c]) => { ESP[id].caca = c; });
 const come = (a, b) => a !== b && ESP[a].caca >= ESP[b].po && ESP[a].po > ESP[b].po;
 const fotoEsp = id => `img/animais/${id}.jpg`;
+
+/* ---------- TERRENOS ---------- */
+// O jogo começa com 1 gaiola. Terrenos são comprados e podem se repetir. cap = quantos animais cabem; unica = só 1 espécie por vez.
+// lado = tamanho em 3D; esc = tamanho dos animais; solo = [base, variação, manchas] do chão; grao = textura fina do chão;
+// grama = [densidade, altura]; relevo e lago valem para o chão; obst = obstáculos [x, y, raio], em fração do lado.
+const TERRENOS = [
+  {id:'gaiola', n:'Gaiola', ic:'🐹', preco:60, cap:5, unica:true, lado:22, esc:1, desc:'Cabem até 5 animais, de uma espécie só.', especies:['hamster', 'camundongo', 'twister', 'porquinho', 'chinchila', 'coelho', 'ourico', 'lagartixa', 'jabuti', 'caracol'],
+    solo:[[196,160,104],[40,34,26],[226,198,150]], grao:3.5, obst:[[.24,.24,.13],[.76,.24,.15],[.8,.8,.08]]},
+  {id:'galinheiro', n:'Galinheiro', ic:'🐔', preco:100, cap:10, lado:30, esc:.9, desc:'Chão de terra e palha, com poleiro e ninho.', especies:['galinha', 'pavao'],
+    solo:[[120,92,58],[36,30,20],[196,170,92]], grao:5, obst:[[.24,.24,.17],[.8,.26,.1],[.2,.8,.09]]},
+  {id:'coelheira', n:'Cercadinho', ic:'🐰', preco:200, cap:10, lado:28, esc:.9, desc:'Um terreninho menor, com toca, para coelhos e furões.', especies:['furao', 'coelho'],
+    solo:[[70,112,44],[36,44,16],[120,100,60]], grao:7, grama:[3,.45], obst:[[.24,.24,.15],[.78,.76,.09]]},
+  {id:'aquario', n:'Aquário de répteis', ic:'🐍', preco:400, cap:8, lado:26, esc:.8, desc:'Um aquário grande, de vidro, com areia e pedras, para cobras e iguanas.', especies:['iguana', 'piton', 'jiboia', 'naja'],
+    solo:[[206,176,122],[22,20,14],[176,146,100]], grao:9, obst:[[.26,.26,.14],[.76,.72,.12],[.78,.22,.09]]},
+  {id:'quintal', n:'Quintal', ic:'🏡', preco:800, cap:12, lado:40, esc:.75, desc:'Gramado com cerca branca e casinha, para cães e gatos.', especies:['gato', 'cao'],
+    solo:[[72,118,46],[36,44,16],[110,100,62]], grao:7, grama:[3,.45], relevo:.25, obst:[[.22,.22,.12],[.8,.26,.09],[.24,.8,.09]]},
+  {id:'fazenda', n:'Fazenda', ic:'🐄', preco:3000, cap:20, lado:60, esc:.75, desc:'Pasto grande com celeiro, para animais de criação.', especies:['ovelha', 'cabra', 'porco', 'burro', 'vaca', 'lhama', 'alpaca', 'cavalo'],
+    solo:[[70,104,40],[42,54,20],[128,104,62]], grao:7, grama:[4,.55], relevo:.5, lago:true, obst:[[.2,.2,.12],[.2,.72,.05],[.45,.82,.05]]},
+  {id:'mata', n:'Mata fechada', ic:'🌳', preco:25000, cap:20, lado:66, esc:.8, desc:'Floresta densa, para macacos, ursos, tigres e gorilas.', especies:['capivara', 'lemure', 'macaco', 'tigre', 'urso', 'gorila'],
+    solo:[[48,74,34],[26,38,16],[72,60,36]], grao:7, grama:[4,.6], relevo:.7, lago:true, obst:[]},
+  {id:'savana', n:'Savana', ic:'🦁', preco:40000, cap:30, lado:84, esc:.9, desc:'Campo aberto e seco, para os grandes animais da África e seus predadores.', especies:['suricata', 'avestruz', 'canguru', 'zebra', 'camelo', 'leopardo', 'leao', 'guepardo', 'girafa', 'rinoceronte', 'elefante'],
+    solo:[[168,142,76],[40,34,16],[140,106,60]], grao:6, grama:[2.5,.9], relevo:.6, lago:true, obst:[]},
+];
+const TERRENO = Object.fromEntries(TERRENOS.map(t => [t.id, t]));
+// ESP[id].terreno = primeiro terreno da espécie (o coelho vive na gaiola e no cercadinho); moraEm diz se ela pode ficar em um tipo.
+[...TERRENOS].reverse().forEach(t => t.especies.forEach(id => { ESP[id].terreno = t.id; }));
+const moraEm = (esp, tipo) => TERRENO[tipo].especies.includes(esp) || ESP[esp].terreno === tipo;
+const mercadoDe = esp => ESP[esp].terreno === 'gaiola' ? 'gaiola' : 'outros';
+// Espécies fora do jogo só aparecem em saves antigos
+ESP.rato.terreno = 'gaiola';
+['peixe', 'pato', 'tartaruga', 'periquito', 'canario', 'calopsita', 'papagaio', 'arara', 'tucano'].forEach(id => { ESP[id].terreno = 'quintal'; });
+['jacare', 'hipopotamo'].forEach(id => { ESP[id].terreno = 'savana'; });

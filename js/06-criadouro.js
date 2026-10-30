@@ -17,6 +17,8 @@ function motivoCasal(m, f){
   if(m.esp !== f.esp) return 'Os dois precisam ser da mesma espécie.';
   if(casalDe(m.id) || casalDe(f.id)) return 'Um deles já está acasalando.';
   if(!fertil(m) || !fertil(f)) return `Filhote só acasala a partir de ${anos(IDADE_FERTIL)} (1 dia real).`;
+  if(m.ter !== f.ter) return 'Os dois precisam estar no mesmo terreno.';
+  if(livres(instancia(f.ter)) <= 0) return `${nomeInst(instancia(f.ter))} sem vaga: venda um animal para o filhote ter lugar.`;
   return '';
 }
 function formaCasal(mid, fid){
@@ -29,23 +31,26 @@ function formaCasal(mid, fid){
   return '';
 }
 function desfazCasal(c){ S.casais = S.casais.filter(x => x !== c); }
+// Devolve false se não tem lugar para o próximo filhote
 function repetir(c){
-  if(c.fase !== 'pronto') return;
+  if(c.fase !== 'pronto') return false;
   const m = animal(c.m), f = animal(c.f);
-  if(m && f) iniciaTentativa(c);
+  if(!m || !f || livres(instancia(f.ter)) <= 0) return false;
+  iniciaTentativa(c);
+  return true;
 }
 const pareados = () => S.casais.filter(c => c.fase === 'pronto' && animal(c.m) && animal(c.f));
 
 /* ---------- TRISTEZA ---------- */
-// O que deixa uma espécie triste no terreno agora. Terreno maior pesa menos na mistura de espécies.
-function humor(esp){
-  const cont = {};
-  for(const a of S.animais) cont[a.esp] = (cont[a.esp] || 0) + 1;
+// O que deixa uma espécie triste agora: conta só os animais do mesmo terreno. Terreno com mais lugar para espécies pesa menos na mistura.
+function humor(esp, ter = S.terrenoAtual){
+  const cont = {}, inst = instancia(ter), tipo = inst ? inst.tipo : ESP[esp].terreno;
+  for(const a of animaisDoTerreno(ter)) cont[a.esp] = (cont[a.esp] || 0) + 1;
   const ids = Object.keys(cont);
   const r = {total: 0, mistura: 0, deseq: 0, medo: 0, predadores: []};
   if(ids.length > 1){
     const v = ids.map(k => cont[k]), maior = Math.max(...v), menor = Math.min(...v);
-    r.mistura = TRISTE_MISTURA * (ids.length - 1) / Math.max(1, espacosTotal() - 1);
+    r.mistura = TRISTE_MISTURA * (ids.length - 1) / Math.max(3, TERRENO[tipo].especies.length - 1);
     r.deseq = Math.min(TRISTE_DESEQ, (maior / menor - 1) * TRISTE_DESEQ_POR);
     r.predadores = ids.filter(k => come(k, esp));
     if(r.predadores.length) r.medo = TRISTE_MEDO;
@@ -56,7 +61,7 @@ function humor(esp){
 const penalidade = t => Math.floor(t / TRISTE_POR_PONTO);
 const nomeHumor = t => t < 15 ? 'Feliz' : t < 40 ? 'Tranquilo' : t < 70 ? 'Triste' : 'Muito triste';
 function filhoteDoCasal(m, f){
-  const st = fundeStatus(m.st, f.st), pen = penalidade(humor(f.esp).total);
+  const st = fundeStatus(m.st, f.st), pen = penalidade(humor(f.esp, f.ter).total);
   for(const [k] of STATUS) st[k] = Math.round(clamp(st[k] - pen * (.7 + Math.random() * .6), 0, 100));
   return {st, pen};
 }
@@ -87,7 +92,7 @@ function cacar(t){
     for(const a of S.animais.slice()){
       if(!ESP[a.esp].caca || !animal(a.id) || morreEm(a) <= h || idadeDe(a, h) < IDADE_FERTIL) continue;
       if(a.comeu && h - a.comeu < FOME) continue;
-      const presas = S.animais.filter(b => come(a.esp, b.esp) && morreEm(b) > h);
+      const presas = S.animais.filter(b => b.ter === a.ter && come(a.esp, b.esp) && morreEm(b) > h);
       if(!presas.length) continue;
       const b = presas[Math.floor(Math.random() * presas.length)];
       if(Math.random() < clamp(.35 + (a.st.for - b.st.agi) / 200, .1, .9)){
@@ -113,7 +118,7 @@ function processar(t = agora()){
     if(c.fase === 'gravida' && t >= c.tParto){
       if(!f || morreEm(f) <= c.tParto) continue;
       const d = diaBR(c.tParto);
-      const filho = {id: 'a' + S.seq++, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, dia0: d, idade0: 0, pen: c.pen || 0};
+      const filho = {id: 'a' + S.seq++, ter: f.ter, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, dia0: d, idade0: 0, pen: c.pen || 0};
       S.animais.push(filho); S.nascidos++;
       nascimentosNovos.push(filho.id);
       diario(`${nome}: nasceu ${filho.sx === 'M' ? 'um macho' : 'uma fêmea'}, nota ${fmtNota(notaDe(filho))}.`);
