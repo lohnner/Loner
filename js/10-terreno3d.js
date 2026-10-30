@@ -65,13 +65,15 @@ function preparaTerreno(){
   enfeites = lista;
 }
 const andaEm = (esp, x, y) => {
-  if(terrenoT) for(const [fx, fy, fr] of terrenoT.obst) if(Math.hypot(x - fx * terrenoN, y - fy * terrenoN) < fr * terrenoN) return false;
+  const alc = raioAnimal(esp), bd = alc + .7; // nenhuma parte do corpo passa da grade ou da cerca
+  if(x < bd || y < bd || x > terrenoN - bd || y > terrenoN - bd) return false;
+  if(terrenoT) for(const [fx, fy, fr] of terrenoT.obst) if(Math.hypot(x - fx * terrenoN, y - fy * terrenoN) < fr * terrenoN + alc * .6) return false;
   if(esp === 'peixe') return noLago(x, y, .8);
   if(AQUATICOS[esp]) return true;
   return !noLago(x, y, 1.1);
 };
 function pontoLivre(esp){
-  const n = terrenoN, mg = Math.max(2.5, n * .07);
+  const n = terrenoN, mg = Math.max(2.5, n * .07, raioAnimal(esp) + .8);
   for(let i = 0; i < 30; i++){
     const x = mg + Math.random() * (n - mg * 2), y = mg + Math.random() * (n - mg * 2);
     if(andaEm(esp, x, y)) return {x, y};
@@ -97,7 +99,59 @@ function atualizaHumores(agoraMs){
   humorT = agoraMs; humores = {};
   for(const e of especiesDoTerreno(instAtual().id)) humores[e] = humor(e, instAtual().id).total;
 }
+// Camundongo: corridinhas curtas, de preferência rente à parede, com paradas para cheirar e sustos no meio do caminho.
+const CORRE_E_PARA = {camundongo: 1};
+function alvoRoedor(a, m){
+  const n = terrenoN, bd = raioAnimal(a.esp) + .9, c = casalDe(a.id), f = c && a.id === c.m && c.fase !== 'pronto' ? mundo.get(c.f) : null;
+  if(f && Math.random() < .4) return {x: f.x - 1.6, y: f.y + 1};
+  for(let i = 0; i < 14; i++){
+    let p = pontoLivre(a.esp);
+    if(Math.random() < .65){ // segue a parede mais próxima
+      const dist = [m.x, m.y, n - m.x, n - m.y], lado = dist.indexOf(Math.min(...dist));
+      if(lado === 0) p = {x: bd, y: p.y};
+      if(lado === 1) p = {x: p.x, y: bd};
+      if(lado === 2) p = {x: n - bd, y: p.y};
+      if(lado === 3) p = {x: p.x, y: n - bd};
+    }
+    const d = Math.hypot(p.x - m.x, p.y - m.y);
+    if(d > 2 && d < 9 && andaEm(a.esp, p.x, p.y)) return p;
+  }
+  return pontoLivre(a.esp);
+}
+function moveRoedor(a, m, dt){
+  if(m.ang == null){ m.ang = Math.random() * 6.283; m.v = 0; }
+  if(m.espera > 0){
+    m.espera -= dt; m.v = 0; m.passo = 0; m.fareja = true;
+    return;
+  }
+  m.fareja = false;
+  const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
+  if(d < .5){
+    const p = alvoRoedor(a, m);
+    m.tx = p.x; m.ty = p.y; m.passo = 0; m.v = 0;
+    m.espera = Math.random() < .18 ? 1.8 + Math.random() * 2 : .2 + Math.random() * .9;
+    return;
+  }
+  let dif = Math.atan2(dy, dx) - m.ang;
+  while(dif > Math.PI) dif -= Math.PI * 2;
+  while(dif < -Math.PI) dif += Math.PI * 2;
+  const giro = 11 * dt;
+  m.ang += clamp(dif, -giro, giro);
+  const alvoV = Math.abs(dif) < .55 ? Math.min(8.5, 2 + d * 2.4) : .8;
+  m.v += (alvoV - m.v) * Math.min(1, dt * 12);
+  const nx = m.x + Math.cos(m.ang) * m.v * dt, ny = m.y + Math.sin(m.ang) * m.v * dt;
+  if(!andaEm(a.esp, nx, ny)){
+    const p = alvoRoedor(a, m);
+    m.tx = p.x; m.ty = p.y; m.v = 0; m.espera = .15 + Math.random() * .4; m.passo = 0;
+    return;
+  }
+  m.x = nx; m.y = ny;
+  m.dir = Math.abs(Math.cos(m.ang)) > Math.abs(Math.sin(m.ang)) ? (Math.cos(m.ang) > 0 ? 0 : 2) : (Math.sin(m.ang) > 0 ? 1 : 3);
+  m.tp += dt * 12; m.passo = m.v > .4 ? Math.floor(m.tp) % 2 + 1 : 0;
+  if(Math.random() < dt * .35) m.espera = .2 + Math.random() * .5; // susto: para de repente
+}
 function move(a, m, dt, presaDe){
+  if(CORRE_E_PARA[a.esp]) return moveRoedor(a, m, dt);
   const e = ESP[a.esp], triste = humores[a.esp] >= 40;
   const vel = (e.po <= 2 ? 7 : e.po <= 4 ? 5.5 : 4.5) * (triste ? .6 : 1);
   const c = casalDe(a.id);

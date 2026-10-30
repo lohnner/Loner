@@ -297,6 +297,13 @@ function geometriaDe(id){
   g.setAttribute('color', new THREE.Float32BufferAttribute(cor, 3));
   g.setIndex(tri);
   g.computeVertexNormals();
+  // centraliza no meio do corpo, para o animal girar em torno de si; raio = até onde qualquer parte alcança, em qualquer direção
+  g.computeBoundingBox();
+  g.translate(-(g.boundingBox.min.x + g.boundingBox.max.x) / 2, 0, 0);
+  const pf = g.attributes.position;
+  let raio = 0;
+  for(let i = 0; i < pf.count; i++) raio = Math.max(raio, Math.hypot(pf.getX(i), pf.getZ(i)));
+  g.userData.raio = raio;
   if(topoPerna){ g.morphAttributes.position = [new THREE.Float32BufferAttribute(mor, 3)]; g.morphTargetsRelative = true; }
   g.userData.altura = y1 - .6;
   return geoCache[id] = g;
@@ -643,6 +650,11 @@ function iniciaRealista(){
   }catch(e){ R3 = false; }
   return R3;
 }
+// Alcance do animal no terreno atual, para a cabeça e a cauda não passarem de grades, cercas e obstáculos
+function raioAnimal(esp){
+  if(!iniciaRealista()) return 3;
+  return geometriaDe(esp).userData.raio * escalaAnimal();
+}
 function posDoAnimal(a, m){
   const n = terrenoN;
   if(a.esp === 'peixe') return [m.x - n / 2, -1.3, m.y - n / 2];
@@ -690,16 +702,21 @@ function desenhaRealista(tempoMs, dt){
     const [X, Y, Z] = posDoAnimal(a, m), ddx = m.x - o.ax, ddy = m.y - o.ay, anda = Math.hypot(ddx, ddy) > 1e-3;
     o.ax = m.x; o.ay = m.y;
     if(anda){
-      const alvo = -Math.atan2(ddy, ddx);
+      const alvo = m.ang != null ? -m.ang : -Math.atan2(ddy, ddx);
       let dif = alvo - o.yaw;
       while(dif > Math.PI) dif -= Math.PI * 2;
       while(dif < -Math.PI) dif += Math.PI * 2;
-      o.yaw += dif * Math.min(1, dt * 8);
-      o.fase += dt * 10;
+      o.yaw += dif * Math.min(1, dt * (m.ang != null ? 18 : 8));
+      o.fase += Math.hypot(ddx, ddy) * clamp(12 / o.alt, .9, 5); // o passo acompanha a distância, para a pata não deslizar no chão
     }
     const tam = escalaAnimal() * (idadeDe(a) < IDADE_FERTIL ? .68 : 1), resp = 1 + Math.sin(tempoMs / 700 + o.fase) * .012;
-    o.mesh.position.set(X, Y + (anda ? Math.abs(Math.sin(o.fase)) * .07 : 0), Z);
+    o.mesh.position.set(X, Y + (anda ? Math.abs(Math.sin(o.fase)) * (m.ang != null ? .03 : .07) : 0), Z);
     o.mesh.rotation.y = o.yaw;
+    o.mesh.rotation.z = 0;
+    if(m.fareja){ // parado, cheirando: olha para os lados e abaixa o focinho, tremendo de leve
+      o.mesh.rotation.y = o.yaw + Math.sin(tempoMs / 420 + o.fase) * .3;
+      o.mesh.rotation.z = -.05 + Math.sin(tempoMs / 55) * .014;
+    }
     o.mesh.scale.set(tam, tam * resp, tam);
     if(o.mesh.morphTargetInfluences) o.mesh.morphTargetInfluences[0] = anda ? Math.sin(o.fase) : 0;
     const c = casalDe(a.id);
