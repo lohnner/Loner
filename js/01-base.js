@@ -12,14 +12,14 @@ const anos = n => n + (n === 1 ? ' ano' : ' anos');
 const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); // para a pesquisa achar "leao" em "Leão"
 
 /* ---------- BALANCEAMENTO ---------- */
-const DINHEIRO_INICIAL = 500;
+const DINHEIRO_INICIAL = 50;
 const ESPACOS_INICIAIS = 3, ESPACOS_MAX = 50;
 const espacoPreco = k => 2500 * k * k; // k-ésimo espaço comprado: 2.500, 10.000, 22.500, 40.000...
 const CICLO_MERCADO = 3600e3, ANIMAIS_NO_MERCADO = 20;
 const MARGEM_COMPRA = 1.25, MARGEM_VENDA = .8; // sobre o valor do animal; com o índice de ±20% não dá lucro só comprando e vendendo
 const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
 const IDADE_FERTIL = 1;
-const AJUDA_LIMITE = 50, AJUDA_VALOR = 500; // sem animais e sem dinheiro: ajuda para o jogo não travar
+const AJUDA_LIMITE = 15, AJUDA_VALOR = 50; // sem animais e sem dinheiro: ajuda para o jogo não travar
 const IDADE_PISO = .12; // o animal mais velho ainda vale 12% do preço de um recém-nascido
 // Caça: a cada CACA_PASSO cada predador adulto, sem fome saciada, pode pegar uma presa do terreno; depois fica FOME sem caçar.
 const CACA_PASSO = 1 * 3600e3, FOME = 6 * 3600e3, CACA_MAX_PASSOS = 168;
