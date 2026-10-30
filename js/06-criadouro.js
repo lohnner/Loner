@@ -116,7 +116,7 @@ function processar(t = agora()){
       const filho = {id: 'a' + S.seq++, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, dia0: d, idade0: 0, pen: c.pen || 0};
       S.animais.push(filho); S.nascidos++;
       nascimentosNovos.push(filho.id);
-      diario(`${nome}: nasceu ${filho.sx === 'M' ? 'um macho' : 'uma fêmea'}, classificação ${rankDe(filho.st)}.`);
+      diario(`${nome}: nasceu ${filho.sx === 'M' ? 'um macho' : 'uma fêmea'}, nota ${fmtNota(notaDe(filho))}.`);
       c.fase = 'pronto'; c.filho = null;
       if(!m) desfazCasal(c);
       mudou = true;

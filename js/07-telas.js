@@ -6,10 +6,11 @@ let aba = 'mercado', filtroMercado = 'todas', sexoMercado = 'todos', buscaMercad
 let parEscolhido = {M: '', F: ''}, armado = {id: '', ate: 0}, sheetAberta = null, toastT = 0;
 
 const foto = (id, cls = '') => `<img class="foto ${cls}" src="${fotoEsp(id)}" alt="${esc(ESP[id].n)}" width="360" height="360" loading="lazy">`;
-const selo = st => { const r = rankDe(st); return `<span class="rank r${r}">${r}</span>`; };
+const indFaixa = v => Math.max(0, FAIXAS.findIndex(x => v >= x.de));
+const selo = a => `<span class="selo n${indFaixa(posNota(a))}" aria-label="Nota ${fmtNota(notaDe(a))}">${fmtNota(notaDe(a))}</span>`;
 const sexo = sx => `<span class="sx ${sx === 'M' ? 'sxM' : 'sxF'}" aria-label="${sexoN(sx)}">${sexoS(sx)}</span>`;
 const barrasStatus = st => `<div class="stats">${STATUS.map(([k, n]) => `<div class="st"><span>${n}</span><i><b style="width:${st[k]}%" class="${corStatus(st[k])}"></b></i><em>${st[k]}</em></div>`).join('')}</div>`;
-const corStatus = v => 'b' + (RANKS.find(x => v >= x.de) || RANKS[5]).r;
+const corStatus = v => 'b' + indFaixa(v);
 function setaIndice(esp){
   const pc = Math.round((indice(esp) - 1) * 100);
   return `<span class="tend ${pc >= 0 ? 'sobe' : 'desce'}">${pc >= 0 ? '▲' : '▼'} ${pc > 0 ? '+' : ''}${pc}%</span>`;
@@ -38,11 +39,11 @@ function listaMercadoHTML(){
     && (!q || semAcento(ESP[o.esp].n).includes(q))
     && (filtroMercado !== 'minhas' || nele.includes(o.esp))
     && (filtroMercado !== 'posso' || (!jaComprado(o.id) && precoCompra(o, t) <= S.dinheiro)));
-  if(!lista.length) return `<p class="vazio">Nenhum animal encontrado.</p><button class="btn cheio" data-act="limparBusca">Limpar a pesquisa</button>`;
+  if(!lista.length) return `<p class="vazio">Nenhum animal assim no mercado agora. Novas ofertas chegam a cada hora.</p><button class="btn cheio" data-act="limparBusca">Limpar a pesquisa</button>`;
   return lista.map(o => {
     const foi = jaComprado(o.id), e = ESP[o.esp];
     return `<button class="ofe" data-act="verOferta" data-v="${o.id}" ${foi ? 'disabled' : ''}>${foto(o.esp)}
-      <span class="ofe-tx"><b>${esc(e.n)}</b><small>${sexo(o.sx)}${selo(o.st)} ${anos(idadeDe(o, t))} de ${e.vida}</small></span>
+      <span class="ofe-tx"><b>${esc(e.n)}</b><small>${sexo(o.sx)}${selo(o)} ${anos(idadeDe(o, t))} de ${e.vida}</small></span>
       <span class="ofe-pr"><span class="preco">${foi ? 'Comprado' : eur(precoCompra(o, t))}</span>${foi ? '' : setaIndice(o.esp)}</span></button>`;
   }).join('');
 }
@@ -53,7 +54,8 @@ function faltaPar(){
     const tem = sx => S.animais.some(a => a.esp === esp && a.sx === sx);
     if(tem('M') === tem('F')) continue;
     const sx = tem('M') ? 'F' : 'M';
-    if(sexoMercado !== sx || q !== semAcento(ESP[esp].n)) r.push({esp, sx});
+    const noMercado = mercado().some(o => o.esp === esp && o.sx === sx && !jaComprado(o.id));
+    if(noMercado && (sexoMercado !== sx || q !== semAcento(ESP[esp].n))) r.push({esp, sx});
   }
   return r.slice(0, 3);
 }
@@ -78,8 +80,8 @@ function chipsAnimal(a){
   return h;
 }
 function linhaAnimal(a, acao = 'verAnimal'){
-  return `<button class="ani" data-act="${acao}" data-v="${a.id}">${sexo(a.sx)}${selo(a.st)}
-    <span class="ani-tx"><b>${anos(idadeDe(a))}<em> de ${ESP[a.esp].vida}</em></b><small>${chipsAnimal(a) || `Média ${Math.round(mediaSt(a.st))}`}</small></span>
+  return `<button class="ani" data-act="${acao}" data-v="${a.id}">${sexo(a.sx)}${selo(a)}
+    <span class="ani-tx"><b>${anos(idadeDe(a))}<em> de ${ESP[a.esp].vida}</em></b>${chipsAnimal(a) ? `<small>${chipsAnimal(a)}</small>` : ''}</span>
     <span class="preco">${eur(precoVenda(a))}</span></button>`;
 }
 function humorHTML(esp){
@@ -105,7 +107,7 @@ function telaAnimais(){
 function telaAcasalar(){
   const m = animal(parEscolhido.M), f = animal(parEscolhido.F), espera = S.casais.filter(c => animal(c.f));
   const lado = (sx, a) => `<button class="lado ${a ? 'tem' : ''}" data-act="escolherLado" data-v="${sx}">
-    ${a ? `${foto(a.esp)}<span>${sexo(sx)}${selo(a.st)}</span><small>${anos(idadeDe(a))}</small>` : `<span class="vazio-sx">${sexoS(sx)}</span><b>Escolher ${sexoN(sx).toLowerCase()}</b>`}</button>`;
+    ${a ? `${foto(a.esp)}<span>${sexo(sx)}${selo(a)}</span><small>${anos(idadeDe(a))}</small>` : `<span class="vazio-sx">${sexoS(sx)}</span><b>Escolher ${sexoN(sx).toLowerCase()}</b>`}</button>`;
   const erro = (m && f) ? motivoCasal(m, f) : '';
   const prontos = pareados().length;
   return `<section class="acasalar"><h3>Novo casal</h3><p class="dim">Coloque um macho e uma fêmea da mesma espécie. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</p>
@@ -130,7 +132,7 @@ function cartaoCasal(c){
       <div class="dois"><button class="btn pri" data-act="repetir" data-v="${c.id}">Acasalar de novo</button><button class="btn" data-act="separar" data-v="${c.id}">Separar</button></div>`;
   }
   return `<article class="card casal"><div class="card-top" data-act="verEspecie" data-v="${e.id}">${foto(e.id)}<div class="card-tit"><h3>${esc(e.n)}</h3>
-    <small>${m ? `${sexo('M')}${selo(m.st)} ${anos(idadeDe(m, t))}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f.st)} ${anos(idadeDe(f, t))}</small></div></div>${c.fase === 'tentando' ? humorHTML(e.id) : ''}${corpo}</article>`;
+    <small>${m ? `${sexo('M')}${selo(m)} ${anos(idadeDe(m, t))}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f)} ${anos(idadeDe(f, t))}</small></div></div>${c.fase === 'tentando' ? humorHTML(e.id) : ''}${corpo}</article>`;
 }
 
 /* ---------- WIKIPÉDIA ---------- */
@@ -157,6 +159,7 @@ function sheetEspecie(id){
     <h2>${esc(e.n)}</h2><p class="cient">${esc(e.c)}</p>
     <div class="wk-tab">
       ${li('Categoria', categoria(e).n)}
+      ${li('Nota', `${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}`)}
       ${li('Quanto vive', `${anos(e.vida)} (${e.vida} dias reais)`)}
       ${li('Preço de referência', `${eur(e.p)} ${setaIndice(id)}`)}
       ${li('Porte', PORTES[e.po])}
@@ -177,9 +180,10 @@ function telaConta(){
       ${li('Filhotes nascidos', S.nascidos)}${li('Animais vendidos', S.vendidos)}${li('Total em vendas', eur(S.receita))}${li('Mortes por velhice', S.mortos)}${li('Devorados', S.devorados)}
     </div>
     <details class="regras"><summary>Como jogar</summary><ul>
-      <li>Compre um macho e uma fêmea da mesma espécie no Mercado. Ele muda a cada 5 minutos.</li>
+      <li>Compre um macho e uma fêmea da mesma espécie no Mercado. Ele muda a cada hora, com 20 animais, e os raros aparecem menos.</li>
       <li>Coloque os dois em Acasalar. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</li>
-      <li>Os 5 status vão de 0 a 100, e a média dá a classificação, de E a S. O filhote é uma fusão sorteada dos pais.</li>
+      <li>Cada animal tem uma nota, que define quanto ele vale. Bicho simples vai de 1 a 10, o um pouco melhor de 15 a 27, e os raros passam de 2.000.</li>
+      <li>A nota sai dos 5 status, que vão de 0 a 100. O filhote é uma fusão sorteada dos pais.</li>
       <li>Cada meia-noite de Brasília vale 1 ano. Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
       <li>Venda em Animais. Filhotes de pais fortes dão mais lucro.</li>
       <li>O terreno começa com 3 espécies. Compre mais espaço para criar outras.</li>
@@ -232,7 +236,8 @@ function sheetOferta(key){
   if(!o) return `<p class="vazio">Esta oferta já saiu do mercado.</p>`;
   const e = ESP[o.esp], p = precoCompra(o), semEspaco = !temEspaco(o.esp);
   return `<img class="sh-foto" src="${fotoEsp(o.esp)}" alt="${esc(e.n)}" width="360" height="360">
-    <h2>${esc(e.n)} ${sexo(o.sx)} ${selo(o.st)}</h2>
+    <h2>${esc(e.n)} ${sexo(o.sx)} ${selo(o)}</h2>
+    <p class="cient">Nota ${fmtNota(notaDe(o))} · nesta categoria vai de ${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}</p>
     <p class="cient">${anos(idadeDe(o))} de ${e.vida} · morre em ${e.vida - idadeDe(o)} ${e.vida - idadeDe(o) === 1 ? 'dia real' : 'dias reais'}</p>
     ${barrasStatus(o.st)}
     ${semEspaco ? `<p class="aviso">Seu terreno está cheio. Compre mais espaço em Animais ou venda uma espécie.</p>` : ''}
@@ -246,7 +251,8 @@ function sheetAnimal(id, novo){
   const e = ESP[a.esp], c = casalDe(id), idade = idadeDe(a), arm = armado.id === id && armado.ate > performance.now(), resta = e.vida - idade;
   const presa = c && c.fase === 'gravida';
   return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>${a.pen ? `<p class="aviso">Os pais estavam tristes: ele nasceu cerca de ${a.pen} pontos mais fraco.</p>` : ''}` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
-    <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a.st)}</h2>
+    <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a)}</h2>
+    <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta categoria vai de ${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}</p>
     <p class="cient">${anos(idade)} de ${e.vida} · ${resta === 1 ? 'morre à meia-noite' : `vive mais ${resta} dias reais`}</p>
     ${barrasStatus(a.st)}
     <button class="btn cheio ${arm ? 'alerta' : 'pri'}" data-act="vender" data-v="${id}" ${presa ? 'disabled' : ''}>${presa ? 'Gestação em andamento' : arm ? `Toque de novo para vender por ${eur(precoVenda(a))}` : `Vender por ${eur(precoVenda(a))}`}</button>
@@ -335,9 +341,11 @@ const ACT = {
     const outro = o.sx === 'M' ? 'F' : 'M', nome = ESP[o.esp].n;
     if(S.animais.some(a => a.esp === o.esp && a.sx === outro)){
       renderAba(); toast(`Você tem macho e fêmea de ${nome}. Agora é só ir em Acasalar.`);
-    } else {
-      // comprou só um dos sexos: já deixa a pesquisa pronta para achar o outro
+    } else if(mercado().some(x => x.esp === o.esp && x.sx === outro && !jaComprado(x.id))){
+      // comprou só um dos sexos e o outro está à venda: já deixa a pesquisa pronta
       ACT.buscarMercado(`${o.esp}|${outro}`); toast(`Comprado! Agora escolha ${outro === 'F' ? 'uma fêmea' : 'um macho'} de ${nome}.`);
+    } else {
+      renderAba(); toast(`Comprado! Não há ${outro === 'F' ? 'fêmea' : 'macho'} de ${nome} agora. O mercado muda a cada hora.`);
     }
   },
   comprarEspaco(){

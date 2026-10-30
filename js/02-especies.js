@@ -1,5 +1,5 @@
 // As 50 espécies e a Wikipédia do jogo.
-// p = preço de referência em euros (estimativa, jovem e classificação C); vida = expectativa em anos (1 ano = 1 dia real).
+// p = preço de referência em euros (estimativa, jovem e nota mediana); vida = expectativa em anos (1 ano = 1 dia real).
 'use strict';
 
 const ESPECIES = [
@@ -62,11 +62,13 @@ const ESPECIES = [
 const ESP = Object.fromEntries(ESPECIES.map((e, i) => [e.id, Object.assign(e, {i})]));
 
 const CATEGORIAS = [
-  {id:'basica', n:'Básica', ate:100},
-  {id:'comum', n:'Comum', ate:1000},
-  {id:'incomum', n:'Incomum', ate:5000},
-  {id:'rara', n:'Rara', ate:25000},
-  {id:'lendaria', n:'Lendária', ate:Infinity},
+  // nmin e nmax: a nota dos animais desta categoria vai de um ao outro, conforme a média dos 5 status
+  // peso: chance (%) de cada espécie sorteada no mercado ser desta categoria
+  {id:'basica', n:'Básica', ate:100, nmin:1, nmax:10, peso:42},
+  {id:'comum', n:'Comum', ate:1000, nmin:15, nmax:27, peso:30},
+  {id:'incomum', n:'Incomum', ate:5000, nmin:150, nmax:400, peso:18},
+  {id:'rara', n:'Rara', ate:25000, nmin:2000, nmax:2800, peso:8},
+  {id:'lendaria', n:'Lendária', ate:Infinity, nmin:9000, nmax:15000, peso:2},
 ];
 const categoria = e => CATEGORIAS.find(c => e.p < c.ate);
 

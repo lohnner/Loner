@@ -15,23 +15,39 @@ function indice(esp, t = agora()){
 }
 
 function animalDoMercado(key, esp, sx, dia, r){
-  let x = r() * 100, faixa = RANKS[RANKS.length - 1];
-  for(const k of RANKS){ if(x < k.p){ faixa = k; break; } x -= k.p; }
+  let x = r() * 100, faixa = FAIXAS[FAIXAS.length - 1];
+  for(const k of FAIXAS){ if(x < k.p){ faixa = k; break; } x -= k.p; }
   const alvo = faixa.de + r() * (faixa.ate - faixa.de - .5);
   const vida = esp.vida, idade = Math.min(vida - 1, 1 + Math.floor(r() * r() * (vida - 1)));
   return {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), dia0: dia, idade0: idade};
 }
-// Cada ciclo tem 1 macho e 1 fêmea de cada uma das espécies, vendidos separados: quem comprou um sempre acha o outro sexo.
+function sorteiaEspecie(r, usadas){
+  for(let tent = 0; tent < 12; tent++){
+    let x = r() * 100, cat = CATEGORIAS[0];
+    for(const c of CATEGORIAS){ if(x < c.peso){ cat = c; break; } x -= c.peso; }
+    const l = ESPECIES.filter(e => categoria(e) === cat), e = l[Math.floor(r() * l.length)];
+    if(!usadas.has(e.id)) return e;
+  }
+  return ESPECIES.find(e => !usadas.has(e.id));
+}
+// Cada ciclo tem ANIMAIS_NO_MERCADO animais em grupos de 1 a 3 da mesma espécie, e os raros aparecem menos.
+// O primeiro grupo é sempre de uma espécie Básica com macho e fêmea, para quem está começando ter o que comprar.
 let mercadoCache = null;
 function mercado(t = agora()){
   const c = cicloDe(t);
   if(mercadoCache && mercadoCache.c === c) return mercadoCache.lista;
   const r = rng(Math.imul(c, 2654435761));
-  const dia = diaBR(c * CICLO_MERCADO);
-  const lista = [];
-  for(const e of ESPECIES.slice().sort((a, b) => a.p - b.p)){
-    for(const sx of ['M', 'F']) lista.push(animalDoMercado(`${c}-${e.id}-${sx}`, e, sx, dia, r));
+  const dia = diaBR(c * CICLO_MERCADO), lista = [], usadas = new Set();
+  const basicas = ESPECIES.filter(e => categoria(e).id === 'basica');
+  let e = basicas[Math.floor(r() * basicas.length)], grupo = 0;
+  usadas.add(e.id);
+  for(const sx of ['M', 'F']) lista.push(animalDoMercado(`${c}-${lista.length}`, e, sx, dia, r));
+  while(lista.length < ANIMAIS_NO_MERCADO){
+    e = sorteiaEspecie(r, usadas); usadas.add(e.id);
+    grupo = Math.min(1 + Math.floor(r() * 3), ANIMAIS_NO_MERCADO - lista.length);
+    for(let i = 0; i < grupo; i++) lista.push(animalDoMercado(`${c}-${lista.length}`, e, r() < .5 ? 'M' : 'F', dia, r));
   }
+  lista.sort((a, b) => ESP[a.esp].p - ESP[b.esp].p);
   mercadoCache = {c, lista};
   return lista;
 }
@@ -81,7 +97,7 @@ function vender(id){
   const v = precoVenda(a);
   S.dinheiro = cent(S.dinheiro + v); S.receita = cent(S.receita + v); S.vendidos++;
   S.animais = S.animais.filter(x => x !== a);
-  diario(`Vendeu ${ESP[a.esp].n} ${sexoS(a.sx)} (${rankDe(a.st)}, ${anos(idadeDe(a))}) por ${eur(v)}.`);
+  diario(`Vendeu ${ESP[a.esp].n} ${sexoS(a.sx)} (nota ${fmtNota(notaDe(a))}, ${anos(idadeDe(a))}) por ${eur(v)}.`);
   return '';
 }
 const patrimonio = () => cent(S.dinheiro + S.animais.reduce((t, a) => t + precoVenda(a), 0));

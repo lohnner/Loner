@@ -1,9 +1,18 @@
-// Animais: idade, morte, classificação (E a S), valor em euros e a fusão genética dos pais.
+// Animais: idade, morte, nota, valor em euros e a fusão genética dos pais.
 // Um animal = {id, esp, sx:'M'|'F', st:{for,agi,int,sau,bel}, dia0, idade0}: tinha idade0 anos no dia dia0 (dia de Brasília).
 'use strict';
 
 const mediaSt = st => STATUS.reduce((t, [k]) => t + st[k], 0) / STATUS.length;
-const rankDe = st => { const m = mediaSt(st); return (RANKS.find(x => m >= x.de) || RANKS[RANKS.length - 1]).r; };
+// Nota do animal: sai da média dos status, dentro da faixa da categoria da espécie (ex.: Comum vai de 15 a 27).
+function notaDe(a){
+  const c = categoria(ESP[a.esp]);
+  return Math.round(c.nmin + (c.nmax - c.nmin) * mediaSt(a.st) / 100);
+}
+function posNota(a){
+  const c = categoria(ESP[a.esp]);
+  return (notaDe(a) - c.nmin) / (c.nmax - c.nmin) * 100;
+}
+const fmtNota = n => n.toLocaleString('pt-BR');
 const idadeDe = (a, t = agora()) => a.idade0 + diaBR(t) - a.dia0;
 // Morre na meia-noite de Brasília em que completa a expectativa de vida da espécie.
 const morreEm = a => inicioDiaBR(a.dia0 + ESP[a.esp].vida - a.idade0);
@@ -13,17 +22,17 @@ const sexoS = sx => sx === 'M' ? '♂' : '♀';
 
 // Quanto mais velho, mais barato: de 100% ao nascer até IDADE_PISO no fim da vida.
 function fatorIdade(idade, vida){ return Math.max(IDADE_PISO, 1 - (1 - IDADE_PISO) * idade / vida); }
-function multRank(media){
-  for(let i = 1; i < CURVA_RANK.length; i++){
-    const [a, va] = CURVA_RANK[i - 1], [b, vb] = CURVA_RANK[i];
-    if(media <= b) return va + (vb - va) * (media - a) / (b - a);
+function multNota(pos){
+  for(let i = 1; i < CURVA_PRECO.length; i++){
+    const [a, va] = CURVA_PRECO[i - 1], [b, vb] = CURVA_PRECO[i];
+    if(pos <= b) return va + (vb - va) * (pos - a) / (b - a);
   }
-  return CURVA_RANK[CURVA_RANK.length - 1][1];
+  return CURVA_PRECO[CURVA_PRECO.length - 1][1];
 }
 // Valor sem o índice do mercado
 function valorDe(a, t = agora()){
   const e = ESP[a.esp];
-  return e.p * multRank(mediaSt(a.st)) * fatorIdade(idadeDe(a, t), e.vida);
+  return e.p * multNota(posNota(a)) * fatorIdade(idadeDe(a, t), e.vida);
 }
 const precoCompra = (a, t = agora()) => Math.max(1, cent(valorDe(a, t) * indice(a.esp, t) * MARGEM_COMPRA));
 const precoVenda = (a, t = agora()) => Math.max(.5, cent(valorDe(a, t) * indice(a.esp, t) * MARGEM_VENDA));

@@ -15,7 +15,7 @@ const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const DINHEIRO_INICIAL = 500;
 const ESPACOS_INICIAIS = 3, ESPACOS_MAX = 50;
 const espacoPreco = k => 2500 * k * k; // k-ésimo espaço comprado: 2.500, 10.000, 22.500, 40.000...
-const CICLO_MERCADO = 5 * 60e3;
+const CICLO_MERCADO = 3600e3, ANIMAIS_NO_MERCADO = 20;
 const MARGEM_COMPRA = 1.25, MARGEM_VENDA = .8; // sobre o valor do animal; com o índice de ±20% não dá lucro só comprando e vendendo
 const GRAVIDEZ_MIN = 1 * 3600e3, GRAVIDEZ_MAX = 3 * 3600e3, PARTO = 1 * 3600e3;
 const IDADE_FERTIL = 1;
@@ -27,19 +27,19 @@ const CACA_PASSO = 1 * 3600e3, FOME = 6 * 3600e3, CACA_MAX_PASSOS = 168;
 const TRISTE_MISTURA = 40, TRISTE_DESEQ = 40, TRISTE_DESEQ_POR = 10, TRISTE_MEDO = 20;
 const TRISTE_POR_PONTO = 4; // a cada 4 de tristeza, o filhote nasce com 1 ponto a menos em cada status
 
-/* ---------- OS 5 STATUS E A CLASSIFICAÇÃO ---------- */
+/* ---------- OS 5 STATUS E A NOTA ---------- */
 const STATUS = [['for', 'Força'], ['agi', 'Agilidade'], ['int', 'Inteligência'], ['sau', 'Saúde'], ['bel', 'Beleza']];
-// A classificação sai da média dos 5 status (0 a 100). `de` = média mínima; `p` = chance no mercado (%).
-const RANKS = [
-  {r:'S', de:90, ate:100, p:.3},
-  {r:'A', de:80, ate:90, p:1.2},
-  {r:'B', de:68, ate:80, p:4.5},
-  {r:'C', de:55, ate:68, p:14},
-  {r:'D', de:40, ate:55, p:30},
-  {r:'E', de:0, ate:40, p:50},
+// Faixas de qualidade (0 a 100), da melhor para a pior: `de` = mínimo; `p` = chance no mercado (%). Também dão a cor da nota.
+const FAIXAS = [
+  {de:90, ate:100, p:.3},
+  {de:80, ate:90, p:1.2},
+  {de:68, ate:80, p:4.5},
+  {de:55, ate:68, p:14},
+  {de:40, ate:55, p:30},
+  {de:0, ate:40, p:50},
 ];
-// Média dos status → multiplicador do preço (entre os pontos, em linha reta)
-const CURVA_RANK = [[0, .4], [40, .7], [55, 1], [68, 1.4], [80, 2.2], [90, 4], [100, 10]];
+// Posição da nota dentro da faixa da categoria (0 a 100) → multiplicador do preço (entre os pontos, em linha reta)
+const CURVA_PRECO = [[0, .4], [40, .7], [55, 1], [68, 1.4], [80, 2.2], [90, 4], [100, 10]];
 
 /* ---------- RELÓGIO ---------- */
 // Tudo usa agora(): a hora do servidor (cabeçalho Date do versao.json, em 09), para adiantar o relógio do celular não apressar o jogo.

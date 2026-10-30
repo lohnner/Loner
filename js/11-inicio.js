@@ -30,12 +30,18 @@ ACT.update = () => {
 if(/[?&]u=/.test(location.search)) history.replaceState(null, '', location.pathname);
 document.addEventListener('visibilitychange', () => {
   if(document.hidden){ save(); cloudFlush(); }
-  else { checkUpdate(); tick(); }
+  else { checkUpdate(); tick(); travaEmPe(); }
 });
+// O jogo é em pé. No app instalado isto também vence um APK antigo gerado deitado, se o aparelho deixar; no navegador comum ele recusa e nada muda.
+function travaEmPe(){
+  try{ screen.orientation.lock('portrait').catch(() => {}); }catch(e){}
+}
+document.addEventListener('pointerdown', travaEmPe, {once: true});
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- INÍCIO ---------- */
 checkUpdate();
+travaEmPe();
 startAccount();
 setInterval(() => { tick(); accountTick(1); }, 1000);
 requestAnimationFrame(quadroTerreno);
