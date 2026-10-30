@@ -1,8 +1,8 @@
-// As 50 espécies e a Wikipédia do jogo.
+// As espécies e a Wikipédia do jogo. Por enquanto só as terrestres estão no jogo (FORA_DO_JOGO).
 // p = preço de referência em euros (estimativa, jovem e nota mediana); vida = expectativa em anos (1 ano = 1 dia real).
 'use strict';
 
-const ESPECIES = [
+const TODAS_ESPECIES = [
   // Básicas
   {id:'hamster', n:'Hamster-sírio', c:'Mesocricetus auratus', p:12, vida:3, hab:'Estepes da Síria e da Turquia', die:'Onívoro: sementes, grãos e insetos', ges:'16 dias', nota:'Guarda comida nas bochechas, que esticam até perto dos ombros.'},
   {id:'rato', n:'Rato-doméstico', c:'Rattus norvegicus domestica', p:10, vida:3, hab:'Casas, no mundo todo', die:'Onívoro', ges:'21 a 23 dias', nota:'Reconhece o dono e aprende truques com facilidade.'},
@@ -59,16 +59,27 @@ const ESPECIES = [
   {id:'elefante', n:'Elefante-africano', c:'Loxodonta africana', p:60000, vida:65, hab:'Savanas da África', die:'Herbívoro', ges:'22 meses', nota:'Tem a gestação mais longa entre os mamíferos terrestres.'},
   {id:'gorila', n:'Gorila-ocidental', c:'Gorilla gorilla', p:150000, vida:40, hab:'Florestas da África Central', die:'Principalmente plantas', ges:'8,5 meses', nota:'Compartilha cerca de 98% do DNA com os humanos.'},
 ];
-const ESP = Object.fromEntries(ESPECIES.map((e, i) => [e.id, Object.assign(e, {i})]));
+// ESP tem todas, para quem já comprou uma espécie que saiu continuar com ela; mercado e Wikipédia usam só ESPECIES.
+const ESP = Object.fromEntries(TODAS_ESPECIES.map((e, i) => [e.id, Object.assign(e, {i})]));
+const FORA_DO_JOGO = new Set(['peixe', 'tartaruga', 'pato', 'jacare', 'hipopotamo', 'periquito', 'canario', 'calopsita', 'papagaio', 'arara', 'tucano']);
+const ESPECIES = TODAS_ESPECIES.filter(e => !FORA_DO_JOGO.has(e.id));
+
+// Faixa de nota de cada espécie [mínima, máxima]: a nota sai da média dos 5 status. Espécie melhor tem faixa um pouco maior.
+Object.entries({
+  rato:[1,8], peixe:[1,9], hamster:[1,10], galinha:[2,11], pato:[2,12], periquito:[3,12], tartaruga:[3,13], porquinho:[3,13], coelho:[4,15], canario:[4,15], iguana:[6,18], calopsita:[7,20],
+  piton:[12,24], gato:[15,27], furao:[15,28], ovelha:[16,30], cabra:[17,31], chinchila:[20,34], porco:[22,36], pavao:[24,40], jiboia:[28,45], naja:[32,50], cao:[38,60], burro:[50,80], suricata:[65,100],
+  papagaio:[110,190], lhama:[110,190], avestruz:[120,210], capivara:[120,200], vaca:[150,260], arara:[170,290], alpaca:[190,330], jacare:[190,330], lemure:[270,450], canguru:[280,470], tucano:[320,520], cavalo:[380,620],
+  zebra:[1100,1700], leopardo:[1300,2000], tigre:[1900,2700], leao:[2000,2800], camelo:[2100,2900], urso:[2400,3300], macaco:[2800,3900],
+  guepardo:[7000,10500], hipopotamo:[8000,12000], girafa:[9000,14000], rinoceronte:[11000,17000], elefante:[14000,21000], gorila:[24000,36000],
+}).forEach(([id, [a, b]]) => { ESP[id].nmin = a; ESP[id].nmax = b; });
 
 const CATEGORIAS = [
-  // nmin e nmax: a nota dos animais desta categoria vai de um ao outro, conforme a média dos 5 status
   // peso: chance (%) de cada espécie sorteada no mercado ser desta categoria
-  {id:'basica', n:'Básica', ate:100, nmin:1, nmax:10, peso:42},
-  {id:'comum', n:'Comum', ate:1000, nmin:15, nmax:27, peso:30},
-  {id:'incomum', n:'Incomum', ate:5000, nmin:150, nmax:400, peso:18},
-  {id:'rara', n:'Rara', ate:25000, nmin:2000, nmax:2800, peso:8},
-  {id:'lendaria', n:'Lendária', ate:Infinity, nmin:9000, nmax:15000, peso:2},
+  {id:'basica', n:'Básica', ate:100, peso:42},
+  {id:'comum', n:'Comum', ate:1000, peso:30},
+  {id:'incomum', n:'Incomum', ate:5000, peso:18},
+  {id:'rara', n:'Rara', ate:25000, peso:8},
+  {id:'lendaria', n:'Lendária', ate:Infinity, peso:2},
 ];
 const categoria = e => CATEGORIAS.find(c => e.p < c.ate);
 

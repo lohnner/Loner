@@ -62,6 +62,7 @@ function quad(p){
   if(tl && p.caudaTipo === 'pend'){ box(-1, -1, 0, 0, top - tl + 1, top, tc); if(p.tufo) put(-1, 0, top - tl, p.tufo); }
   else if(tl && p.caudaTipo === 'sobe'){ box(-1, -1, 0, 0, top, top + tl, tc); }
   else if(tl){ box(-tl, -1, 0, 0, p.caudaBaixa ? leg : top, p.caudaBaixa ? leg : top, tc); if(p.tufo) put(-tl, 0, top, p.tufo); }
+  M.tipo = 'quad'; M.p = p;
   return M;
 }
 function ave(p){
@@ -87,6 +88,7 @@ function ave(p){
       put(-1 - (z >> 1), y, leg + z, hashV(y, z, 3) < 5 ? p.leqC : tc);
     }
   } else box(-tl, -1, 0, Math.max(0, hw - 1) ? 0 : 0, p.caudaBaixa ? leg : top - 1, p.caudaBaixa ? leg : top - 1, tc);
+  M.tipo = 'ave'; M.p = p;
   return M;
 }
 function bipede(p){
@@ -108,6 +110,7 @@ function bipede(p){
   if(p.caudaL && p.caudaTipo === 'sobe'){
     for(let i = 0; i < p.caudaL; i++){ const c = p.caudaA && i % 2 ? p.caudaA : (p.cauda || p.c); put(-1, 0, leg + i, c); }
   } else if(p.caudaL){ box(-p.caudaL, -1, 0, 0, p.caudaZ || 1, p.caudaZ || 1, p.cauda || p.c); }
+  M.tipo = 'bipede'; M.p = p;
   return M;
 }
 function cobra(p){
@@ -125,6 +128,7 @@ function cobra(p){
   box(0, 2, -1, 0, h + 1, h + 1, p.ch || p.c);
   put(2, -1, h + 1, OLHO); put(2, 0, h + 1, OLHO);
   put(3, -1, h + 1, '#d3364a');
+  M.tipo = 'cobra'; M.p = p;
   return M;
 }
 function peixe(p){
@@ -132,6 +136,7 @@ function peixe(p){
   box(0, 3, -1, 0, 0, 1, p.c); box(1, 2, -1, 0, 2, 2, p.c);
   box(-2, -1, -1, 0, 0, 2, p.c3 || p.c); put(1, -1, 3, p.c3 || p.c);
   put(3, -1, 1, OLHO); put(3, 0, 1, OLHO);
+  M.tipo = 'peixe'; M.p = p;
   return M;
 }
 function arvore(c, c2, h){

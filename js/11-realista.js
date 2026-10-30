@@ -1,10 +1,11 @@
-// Terreno com gráficos 3D de verdade (WebGL, biblioteca Three.js): luz do sol, sombras, grama, água e animais arredondados.
-// Os corpos saem dos voxels de 09-voxel.js, alisados por Surface Nets. Mesma simulação e câmera do 10-terreno3d.js.
-// Sem WebGL ou sem a biblioteca, desenhaRealista devolve false e o terreno em voxels continua funcionando.
+// Terreno com gráficos 3D de verdade (WebGL, biblioteca Three.js): luz do sol, sombras, grama, água e animais esculpidos.
+// Os corpos são montados com partes arredondadas a partir dos números de MODELOS (09-voxel.js) e viram malha por Surface Nets.
+// Mesma simulação e câmera do 10-terreno3d.js. Sem WebGL ou sem a biblioteca, o terreno em voxels continua funcionando.
 'use strict';
 
 let R3 = null; // null = ainda não tentou; false = não dá; objeto = pronto
 const geoCache = {};
+const ESCALA_ANIMAL = .62;
 
 function linearDe(hex){ return new THREE.Color(hex).convertSRGBToLinear(); }
 function ruido(x, y){
@@ -14,43 +15,210 @@ function ruido(x, y){
 }
 const fbm = (x, y) => ruido(x, y) * .55 + ruido(x * 2.3 + 7, y * 2.3 + 3) * .3 + ruido(x * 5.1 + 2, y * 5.1 + 9) * .15;
 
-/* ---------- MODELOS ---------- */
-// Voxels → malha lisa. O grid tem 2 células por voxel; densidade e cor são suavizadas e a superfície sai em iso = .3.
+/* ---------- ESCULTURA DOS ANIMAIS ---------- */
+// Cada parte é um cone arredondado de a até b (x = frente, y = altura, z = lado). e = achatamento [y, z]; k = quanto se funde;
+// cor = função (x, y, z) → cor; g = grupo da perna; topo = pinta por cima das vizinhas (olhos, nariz).
+function Escultor(){
+  const partes = [];
+  const add = (a, b, r1, r2, cor, o = {}) => { partes.push(Object.assign({a, b, r1, r2, cor, k: .55, g: 0, e: null, topo: false}, o)); };
+  return {partes, add};
+}
+const fixa = hex => { const c = linearDe(hex); return () => c; };
+function padrao(p){
+  const c = linearDe(p.c), c3 = p.c3 ? linearDe(p.c3) : c, c2 = p.c2 ? linearDe(p.c2) : null, t = new THREE.Color();
+  const bar = p.leg + (p.H || 2) * .34;
+  return (x, y, z) => {
+    let base = c;
+    if(p.pat === 'listra'){ if(Math.sin(x * 1.55 + Math.sin(y * .8) * 1.1 + Math.abs(z) * .25) > .2) base = c3; }
+    else if(p.pat === 'pinta'){ if(ruido(x * 1.5 + 3, y * 1.5 + Math.abs(z) * 1.1) > .64) base = c3; }
+    else if(p.pat === 'mancha'){ if(fbm(x * .42 + 1, y * .42 + Math.abs(z) * .3 + 5) > .52) base = c3; }
+    if(c2 && y < bar) return t.copy(base).lerp(c2, clamp((bar - y) / 1.2, 0, 1));
+    return base;
+  };
+}
+function orelhas(S, p, hx, hy, hw, hh, cor){
+  const z = hw * .42, t = hy + hh * .42;
+  for(const s of [-1, 1]){
+    if(p.orelha === 'ponta') S.add([hx - .2, t, s * z], [hx - .35, t + 1.1, s * (z + .15)], .42, .1, cor, {k: .25, e: [1, .55]});
+    if(p.orelha === 'redonda') S.add([hx - .2, t + .15, s * z], [hx - .25, t + .45, s * z], .5, .42, cor, {k: .2, e: [1, .55]});
+    if(p.orelha === 'longa') S.add([hx - .2, t, s * z * .8], [hx - .75, t + 2.5, s * (z + .15)], .42, .24, cor, {k: .2, e: [1, .5]});
+    if(p.orelha === 'caida') S.add([hx - .1, t, s * (z + .15)], [hx - .25, t - 1.25, s * (z + .4)], .42, .3, cor, {k: .2, e: [1, .45]});
+    if(p.orelha === 'grande') S.add([hx - .9, hy + .3, s * (z + .7)], [hx - 1.5, hy - .4, s * (z + 2.5)], 1.7, 1.25, cor, {k: .3, e: [1, .28]});
+  }
+}
+function esculpeQuad(S, p){
+  const L = p.L, W = p.W, H = p.H, leg = p.leg, top = leg + H - 1, n = p.neck || 0, lw = p.lw || 1;
+  const corpo = padrao(p), cy = leg + H / 2 - .1, raio = Math.min(H, W) / 2 + .2, ez = W > H ? W / H : 1;
+  const trasX = raio * .7, freX = Math.max(trasX + .5, L - 1 - raio * .35);
+  S.add([trasX, cy, 0], [freX, cy + .1, 0], raio * .93, raio, corpo, {e: [1, ez], k: .4});
+  if(L > 7) S.add([(trasX + freX) / 2, cy, 0], [(trasX + freX) / 2 + .1, cy, 0], raio * 1.02, raio * 1.02, corpo, {e: [1, ez]});
+  const pc = fixa(p.pata || p.c), pernaR = lw * .42 + .22;
+  [[freX, 1], [trasX, 2]].forEach(([x, i], ii) => [-1, 1].forEach(s => {
+    const zp = s * Math.max(.45, W / 2 - lw * .4), g = (ii + (s > 0 ? 1 : 0)) % 2 ? 2 : 1, corP = p.pat && !p.pata ? corpo : pc;
+    S.add([x, cy - raio * .25, zp], [x + (ii ? -.15 : .1), leg * .45, zp], pernaR * 1.35, pernaR * .85, corP, {g, k: .55});
+    S.add([x + (ii ? -.15 : .1), leg * .45, zp], [x + .05, .24, zp], pernaR * .85, pernaR * .62, corP, {g, k: .2});
+    if(p.casco) S.add([x + .05, .24, zp], [x + .15, .08, zp], pernaR * .72, pernaR * .78, fixa(p.casco), {g, k: .08, topo: true});
+  }));
+  const hl = p.hl || 2, hw = p.hw || Math.min(W, 3), hh = p.hh || 2, hx = (n ? L - .4 : L + .1) + hl * .1;
+  const hy = top + (p.hup == null ? 1 : p.hup) + n - hh * .35, ch = p.pat ? corpo : fixa(p.ch || p.c), hr = Math.max(hw, hh) * .46;
+  const nw = p.nw || Math.min(W, 2);
+  S.add([freX, cy + raio * .25, 0], [hx - .1, hy - hh * .1, 0], Math.max(nw * .62, raio * (n ? .55 : .8)), nw * .42 + hr * .25, corpo, {k: .7});
+  S.add([hx, hy, 0], [hx + hl * .55, hy - hh * .1, 0], hr, hr * .78, ch, {e: [1, hw >= hh ? 1 : .85], k: .4});
+  const fl = p.fl == null ? .5 : p.fl, frente = hx + hl * .55;
+  const corF = fixa(p.fc || p.c2 || p.ch || p.c);
+  let ponta = frente + hr * .55;
+  if(fl){
+    ponta = frente + hr * .3 + fl + .25;
+    S.add([frente, hy - hh * .16, 0], [ponta, hy - hh * .24, 0], hr * .68, hr * .46, corF, {k: .3});
+  }
+  if(!p.tromba) S.add([ponta + hr * .28, hy - hh * .2, 0], [ponta + hr * .3, hy - hh * .2, 0], Math.max(.16, hr * .2), Math.max(.16, hr * .2), fixa(p.nariz || '#241915'), {k: .05, topo: true});
+  for(const s of [-1, 1]) S.add([frente - hl * .08, hy + hh * .14, s * hw * .39], [frente - hl * .08, hy + hh * .14, s * hw * .41], .13 + hh * .045, .13 + hh * .045, fixa('#120d0a'), {k: .03, topo: true});
+  orelhas(S, p, hx, hy, hw, hh, fixa(p.oc || p.ch || p.c));
+  if(p.juba) S.add([hx - .6, hy - .15, 0], [hx - .9, hy - .4, 0], hr * 1.55, hr * 1.4, fixa(p.juba), {k: .35});
+  if(p.crina) S.add([L - 3.5, top + .4, 0], [hx - .4, hy + hh * .35, 0], .28, .22, fixa(p.crina), {k: .15, e: [1.5, .45]});
+  if(p.chifre) for(const s of [-1, 1]) S.add([hx - .2, hy + hh * .35, s * hw * .28], [hx - .7, hy + hh * .35 + 1.8, s * hw * .42], .26, .08, fixa(p.chifre), {k: .1});
+  if(p.ossicone) for(const s of [-1, 1]) S.add([hx - .1, hy + hh * .35, s * hw * .22], [hx - .15, hy + hh * .35 + .8, s * hw * .26], .16, .19, fixa(p.ossicone), {k: .08});
+  if(p.corno){ S.add([ponta - .5, hy, 0], [ponta + .6, hy + 2.2, 0], .62, .08, fixa(p.corno), {k: .15}); S.add([ponta - 1.8, hy + .7, 0], [ponta - 1.9, hy + 1.8, 0], .42, .08, fixa(p.corno), {k: .12}); }
+  if(p.tromba){
+    S.add([frente + .3, hy - .3, 0], [frente + 1.3, hy - 2.2, 0], hr * .42, hr * .32, ch, {k: .35});
+    S.add([frente + 1.3, hy - 2.2, 0], [frente + 1.7, .8, 0], hr * .32, hr * .22, ch, {k: .2});
+    S.add([frente + 1.7, .8, 0], [frente + 2.3, .45, 0], hr * .22, hr * .16, ch, {k: .15});
+  }
+  if(p.presa) for(const s of [-1, 1]) S.add([frente + .3, hy - hh * .4, s * hw * .28], [frente + 2.1, hy - hh * .85, s * hw * .36], .27, .08, fixa(p.presa), {k: .08, topo: true});
+  if(p.corcova) S.add([(p.corcova[0] + p.corcova[1]) / 2 - .6, top + .7, 0], [(p.corcova[0] + p.corcova[1]) / 2 + .6, top + .7, 0], 1.55, 1.45, corpo, {k: .9});
+  if(p.escama) for(let x = 0; x < L; x += 1.4) S.add([x, top + .55, 0], [x + .2, top + .95, 0], .24, .06, fixa(p.escama), {k: .1});
+  if(p.casco2) S.add([trasX, top + .55, 0], [freX, top + .55, 0], Math.max(W, L) * .36, Math.max(W, L) * .34, fixa(p.casco2), {e: [.55, 1], k: .25});
+  const tl = p.caudaL || 0, tc = fixa(p.cauda || p.c), ty = cy + raio * .55;
+  if(tl && p.caudaTipo === 'pend'){
+    S.add([.1, ty, 0], [-.6, ty - tl * .55, 0], .3, .16, tc, {k: .25}); S.add([-.6, ty - tl * .55, 0], [-.65, ty - tl, 0], .16, .12, tc, {k: .1});
+    if(p.tufo) S.add([-.65, ty - tl, 0], [-.65, ty - tl - .7, 0], .34, .1, fixa(p.tufo), {k: .12});
+  } else if(tl && p.caudaTipo === 'sobe'){
+    S.add([0, ty, 0], [-.8, ty + tl * .55, 0], .3, .18, tc, {k: .25}); S.add([-.8, ty + tl * .55, 0], [-.5, ty + tl, 0], .18, .1, tc, {k: .1});
+  } else if(tl){
+    const ybx = p.caudaBaixa ? leg + .2 : ty;
+    S.add([0, ybx, 0], [-tl * .5, ybx - (p.caudaBaixa ? .1 : .5), 0], .45, .26, tc, {k: .35});
+    S.add([-tl * .5, ybx - (p.caudaBaixa ? .1 : .5), 0], [-tl, ybx - (p.caudaBaixa ? .2 : .3), 0], .26, .08, tc, {k: .1});
+    if(p.tufo) S.add([-tl, ty - .3, 0], [-tl - .5, ty - .2, 0], .3, .1, fixa(p.tufo), {k: .1});
+  }
+}
+function esculpeAve(S, p){
+  const L = p.L, W = p.W, H = p.H, leg = p.leg, top = leg + H - 1, n = p.neck || 0, corpo = padrao(p);
+  const cy = leg + H / 2, r = Math.min(H, W) / 2 + .15, asa = fixa(p.asa || p.c), pc = fixa(p.pata || '#d8922b');
+  S.add([.3, cy, 0], [L - 1, cy + .35, 0], r * .85, r * 1.05, corpo, {k: .4});
+  for(const s of [-1, 1]){
+    S.add([1.1, leg + .2, s * W * .22], [1.15, .4, s * W * .22], .2, .13, pc, {g: s > 0 ? 1 : 2, k: .15});
+    S.add([1.15, .22, s * W * .22], [1.8, .1, s * W * .22], .17, .12, pc, {g: s > 0 ? 1 : 2, k: .08});
+    S.add([L - 1.2, cy + .4, s * (r * .85)], [-.2, cy - .05, s * (r * .75)], r * .62, .15, asa, {k: .2, e: [1, .32]});
+  }
+  const hw = p.hw || Math.min(W, 2), hl = p.hl || 2, hx = L - .7 + hl * .2, hy = top + n + (p.hup == null ? 1 : p.hup) + .1, hr = Math.max(.5, hw * .55), ch = fixa(p.ch || p.c);
+  S.add([L - 1, cy + .5, 0], [hx - .1, hy - .1, 0], Math.max(.32, r * (n ? .42 : .65)), hr * .62, fixa(p.cn || p.c), {k: .5});
+  S.add([hx, hy, 0], [hx + hl * .3, hy, 0], hr, hr * .9, ch, {k: .3});
+  const bl = p.bicoL || 1, fr = hx + hl * .3 + hr * .55, ba = (p.bicoA || 0) * .25;
+  S.add([fr, hy - .02 + ba, 0], [fr + bl + .45, hy - .3 - ba * .3, 0], hr * .55 + ba, .08, fixa(p.bico || '#e39a24'), {k: .08, topo: true});
+  for(const s of [-1, 1]) S.add([hx + hl * .25, hy + hr * .28, s * hr * .78], [hx + hl * .25, hy + hr * .28, s * hr * .8], .16, .16, fixa('#0f0b09'), {k: .02, topo: true});
+  if(p.crista){ const N = p.cristaN || 2, A = p.cristaA || 1; for(let i = 0; i < N + 1; i++) S.add([hx + .3 - i * .45, hy + hr * .7, 0], [hx + .15 - i * .5, hy + hr * .75 + A * .75, 0], .24, .1, fixa(p.crista), {k: .1, e: [1, .5]}); }
+  const tc = fixa(p.cauda || p.c);
+  if(p.leque){
+    const cf = linearDe(p.cauda), ol = linearDe(p.leqC), cor = (x, y, z) => (Math.sin(y * 1.7) + Math.sin(z * 1.7) > 1 ? ol : cf);
+    for(let i = -5; i <= 5; i++){
+      const a = i / 5 * 1.15, len = p.leque * 1.05;
+      S.add([.3, cy + .1, 0], [-1.2, cy + Math.cos(a) * len, Math.sin(a) * len], .3, .55, cor, {k: .15, e: [1, 1]});
+    }
+  } else {
+    const tl = p.caudaL || 1;
+    S.add([.3, p.caudaBaixa ? leg + .4 : cy, 0], [-tl - .2, p.caudaBaixa ? leg + .2 : cy - tl * .3, 0], r * .55, .12, tc, {k: .2, e: [.45, 1]});
+  }
+}
+function esculpeBipede(S, p){
+  const W = p.W, D = p.D || 2, leg = p.leg, top = leg + p.H - 1, lw = p.lw || 1, c = fixa(p.c), r = W * .46 + .1, x = D / 2 - .2;
+  S.add([x - .1, leg + r * .5, 0], [x + .1, top - r * .25, 0], r * 1.02, r * .86, c, {k: .4});
+  if(p.c2) S.add([x + r * .55, leg + r * .45, 0], [x + r * .5, top - r * .55, 0], r * .62, r * .5, fixa(p.c2), {k: .25});
+  for(const s of [-1, 1]){
+    const g = s > 0 ? 2 : 1, z = s * (W / 2 - lw * .2 - .1), lr = lw * .45 + .15;
+    S.add([x, leg + .3, z], [x + .05, .25, z], lr * 1.25, lr * .8, fixa(p.pata || p.c), {g, k: .4});
+    S.add([x, .2, z], [x + (p.pe ? p.pe + .3 : .7), .14, z], lr * .72, lr * .58, fixa(p.pata || p.c), {g, k: .15});
+    const al = p.bracoL || 2, ar = (p.braco || 1) * .36 + .12;
+    S.add([x, top - .2, s * (r + ar * .3)], [x + .25, top - al - .2, s * (r + ar * .55)], ar * 1.2, ar * .8, c, {g: g === 1 ? 2 : 1, k: .3});
+  }
+  const hw = p.hw || W, hh = p.hh || 2, hl = p.hl || D, ch = fixa(p.ch || p.c), hx = (p.hxo || 0) + x, hy = top + hh * .55, hr = Math.max(hw, hh) * .46;
+  S.add([hx, hy, 0], [hx + hl * .25, hy, 0], hr, hr * .9, ch, {k: .35});
+  if(p.rosto) S.add([hx + hr * .55, hy - hr * .12, 0], [hx + hr * .7, hy - hr * .2, 0], hr * .62, hr * .55, fixa(p.rosto), {k: .15});
+  if(p.fl) S.add([hx + hr * .6, hy - hr * .25, 0], [hx + hr + p.fl, hy - hr * .35, 0], hr * .45, hr * .3, fixa(p.fc || p.ch || p.c), {k: .2});
+  for(const s of [-1, 1]) S.add([hx + hr * .78, hy + hr * .15, s * hr * .42], [hx + hr * .8, hy + hr * .15, s * hr * .42], .13 + hh * .04, .13 + hh * .04, fixa('#0f0b09'), {k: .02, topo: true});
+  orelhas(S, p, hx, hy, hw, hh, ch);
+  if(p.caudaL && p.caudaTipo === 'sobe'){
+    const cc = linearDe(p.cauda || p.c), ca = p.caudaA ? linearDe(p.caudaA) : cc, cor = (cx, cy2) => (Math.sin(cy2 * 2.4) > 0 ? cc : ca);
+    S.add([-r * .6, leg + .2, 0], [-1.6, leg + p.caudaL * .55, 0], .36, .3, cor, {k: .25});
+    S.add([-1.6, leg + p.caudaL * .55, 0], [-1.2, leg + p.caudaL, 0], .3, .2, cor, {k: .12});
+  } else if(p.caudaL){
+    S.add([-r * .55, leg + .2, 0], [-p.caudaL * .55, .75, 0], .62, .36, fixa(p.cauda || p.c), {k: .35});
+    S.add([-p.caudaL * .55, .75, 0], [-p.caudaL, .35, 0], .36, .12, fixa(p.cauda || p.c), {k: .1});
+  }
+}
+function esculpeCobra(S, p){
+  const c = linearDe(p.c), c3 = linearDe(p.c3), cor = (x, y, z) => (Math.sin(Math.atan2(z, x) * 7 + y * 2.3) > .35 ? c3 : c), voltas = 3.2, passos = 44;
+  let ant = null;
+  for(let i = 0; i <= passos; i++){
+    const t = i / passos, a = t * voltas * 6.283, R = p.r + .4 - t * (p.r - .7), P = [Math.cos(a) * R, .42 + t * 1.5, Math.sin(a) * R];
+    if(ant) S.add(ant, P, .52 - t * .08, .5 - t * .08, cor, {k: .12});
+    ant = P;
+  }
+  const h = 3.4 + (p.alto || 1);
+  S.add(ant, [.25, h, 0], .42, .32, cor, {k: .3});
+  if(p.capuz) S.add([.2, h - 1.4, 0], [.25, h - .15, 0], 1.25, .9, fixa(p.capuz), {k: .25, e: [1, 1.05]});
+  S.add([.25, h + .05, 0], [1.35, h + .1, 0], .42, .28, fixa(p.ch || p.c), {k: .2, e: [.75, 1]});
+  for(const s of [-1, 1]) S.add([.8, h + .28, s * .26], [.82, h + .28, s * .26], .1, .1, fixa('#0d0907'), {k: .02, topo: true});
+  S.add([1.5, h + .05, 0], [2.05, h, 0], .05, .03, fixa('#c9304a'), {k: .02, topo: true});
+}
+function esculpePeixe(S, p){
+  const c = fixa(p.c), c3 = fixa(p.c3 || p.c);
+  S.add([-.4, 1, 0], [1.5, 1, 0], .95, .7, c, {e: [1, .6], k: .3});
+  S.add([-1.2, 1, 0], [-2.5, 1.7, 0], .35, .5, c3, {k: .15, e: [1, .2]});
+  S.add([-1.2, 1, 0], [-2.5, .3, 0], .35, .5, c3, {k: .15, e: [1, .2]});
+  S.add([.6, 1.6, 0], [-.2, 2.3, 0], .4, .14, c3, {k: .15, e: [1, .22]});
+  for(const s of [-1, 1]) S.add([1.5, 1.2, s * .4], [1.52, 1.2, s * .4], .16, .16, fixa('#0d0907'), {k: .02, topo: true});
+}
+const ESCULPE = {quad: esculpeQuad, ave: esculpeAve, bipede: esculpeBipede, cobra: esculpeCobra, peixe: esculpePeixe};
+function distParte(p, x, y, z){
+  let dx = x - p.a[0], dy = y - p.a[1], dz = z - p.a[2], ex = p.b[0] - p.a[0], ey = p.b[1] - p.a[1], ez = p.b[2] - p.a[2];
+  if(p.e){ dy /= p.e[0]; ey /= p.e[0]; dz /= p.e[1]; ez /= p.e[1]; }
+  const l = ex * ex + ey * ey + ez * ez, t = l > 1e-6 ? clamp((dx * ex + dy * ey + dz * ez) / l, 0, 1) : 0;
+  dx -= ex * t; dy -= ey * t; dz -= ez * t;
+  const d = Math.sqrt(dx * dx + dy * dy + dz * dz) - (p.r1 + (p.r2 - p.r1) * t);
+  return p.e ? d * Math.min(p.e[0], p.e[1], 1) : d;
+}
 function geometriaDe(id){
   if(geoCache[id]) return geoCache[id];
-  const vox = listaDe(id), RES = 2, PAD = 3, ISO = .3;
-  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z1 = 0, topoPerna = 0;
-  for(const v of vox){
-    x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); z1 = Math.max(z1, v.z);
-    if(v.g) topoPerna = Math.max(topoPerna, v.z + 1);
-  }
-  const nx = (x1 - x0 + 1) * RES + PAD * 2, ny = (y1 - y0 + 1) * RES + PAD * 2, nz = (z1 + 1) * RES + PAD * 2, n = nx * ny * nz;
-  const I = (a, b, c) => a + b * nx + c * nx * ny;
-  let d = new Float32Array(n), cr = new Float32Array(n), cg = new Float32Array(n), cb = new Float32Array(n);
-  const gr = new Int8Array(n);
-  for(const v of vox){
-    const c = linearDe(v.c);
-    for(let a = 0; a < RES; a++) for(let b = 0; b < RES; b++) for(let e = 0; e < RES; e++){
-      const k = I((v.x - x0) * RES + a + PAD, (v.y - y0) * RES + b + PAD, v.z * RES + e + PAD);
-      d[k] = 1; cr[k] = c.r; cg[k] = c.g; cb[k] = c.b; gr[k] = v.g;
+  const modelo = MODELOS[id](), S = Escultor();
+  ESCULPE[modelo.tipo](S, modelo.p);
+  const partes = S.partes;
+  let x0 = 1e9, x1 = -1e9, y1 = 0, z1 = 0, topoPerna = 0;
+  for(const p of partes){
+    const r = Math.max(p.r1, p.r2) * (p.e ? Math.max(p.e[0], p.e[1], 1) : 1) + .6;
+    for(const q of [p.a, p.b]){
+      x0 = Math.min(x0, q[0] - r); x1 = Math.max(x1, q[0] + r);
+      y1 = Math.max(y1, q[1] + r); z1 = Math.max(z1, Math.abs(q[2]) + r);
     }
+    if(p.g) topoPerna = Math.max(topoPerna, Math.max(p.a[1], p.b[1]));
   }
-  const borra = (src, passo) => {
-    const out = new Float32Array(n);
-    for(let c = 1; c < nz - 1; c++) for(let b = 1; b < ny - 1; b++) for(let a = 1; a < nx - 1; a++){
-      const k = I(a, b, c);
-      out[k] = (src[k - passo] + 2 * src[k] + src[k + passo]) / 4;
+  const y0 = -.3, maior = Math.max(x1 - x0, y1 - y0, z1 * 2), RES = Math.min(7, 58 / maior);
+  const nx = Math.ceil((x1 - x0) * RES) + 2, ny = Math.ceil((y1 - y0) * RES) + 2, nz = Math.ceil(z1 * 2 * RES) + 2, n = nx * ny * nz;
+  const I = (a, b, c) => a + b * nx + c * nx * ny, GX = a => x0 + a / RES, GY = b => y0 + b / RES, GZ = c => -z1 + c / RES;
+  const d = new Float32Array(n);
+  // campo de distância com as partes fundidas (o sinal fica positivo dentro, para o Surface Nets)
+  for(let c = 0; c < nz; c++) for(let b = 0; b < ny; b++) for(let a = 0; a < nx; a++){
+    const X = GX(a), Y = GY(b), Z = GZ(c);
+    let m = 1e9;
+    for(const p of partes){
+      const q = distParte(p, X, Y, Z), h = clamp(.5 + .5 * (m - q) / p.k, 0, 1);
+      m = m === 1e9 ? q : m * (1 - h) + q * h - p.k * h * (1 - h);
     }
-    return out;
-  };
-  const eixos = [1, nx, nx * ny];
-  for(let it = 0; it < 2; it++) for(const p of eixos){ d = borra(d, p); cr = borra(cr, p); cg = borra(cg, p); cb = borra(cb, p); }
-  // Surface Nets: um vértice por célula cortada pela superfície
-  const idx = new Int32Array(n).fill(-1), pos = [], cor = [], mor = [];
-  const P = (a, b, c) => [(a - PAD) / RES + x0, (c - PAD) / RES, (b - PAD) / RES + y0]; // voxel (x, y, z) → cena (x, z, y)
+    d[I(a, b, c)] = Y < 0 ? Math.min(-m, Y * 3) : -m;
+  }
+  const idx = new Int32Array(n).fill(-1), pos = [], cor = [], mor = [], ISO = 0;
   const CANTOS = [[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]];
   const ARESTAS = [[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
-  const v = new Float32Array(8);
+  const v = new Float32Array(8), T = new THREE.Color();
   for(let c = 0; c < nz - 1; c++) for(let b = 0; b < ny - 1; b++) for(let a = 0; a < nx - 1; a++){
     let tem = 0;
     for(let q = 0; q < 8; q++){ v[q] = d[I(a + CANTOS[q][0], b + CANTOS[q][1], c + CANTOS[q][2])]; if(v[q] > ISO) tem |= 1 << q; }
@@ -61,24 +229,28 @@ function geometriaDe(id){
       const t = (ISO - v[p]) / (v[q] - v[p]), A = CANTOS[p], B = CANTOS[q];
       sx += A[0] + (B[0] - A[0]) * t; sy += A[1] + (B[1] - A[1]) * t; sz += A[2] + (B[2] - A[2]) * t; m++;
     }
-    const [X, Y, Z] = P(a + sx / m, b + sy / m, c + sz / m);
+    const X = GX(a + sx / m), Y = GY(b + sy / m), Z = GZ(c + sz / m);
     idx[I(a, b, c)] = pos.length / 3;
     pos.push(X, Y, Z);
-    let tr = 0, tg = 0, tb = 0, td = 0, g = 0;
-    for(const K of CANTOS){
-      const k = I(a + K[0], b + K[1], c + K[2]);
-      tr += cr[k]; tg += cg[k]; tb += cb[k]; td += d[k];
+    // cor: mistura as partes mais próximas para a transição parecer natural
+    let tr = 0, tg = 0, tb = 0, tp = 0, gp = 0, gd = 1e9, topo = null;
+    for(const p of partes){
+      const q = Math.max(0, distParte(p, X, Y, Z));
+      if(p.topo && q < .06) topo = p;
+      if(q < gd){ gd = q; gp = p.g; }
+      const w = Math.exp(-q * 7);
+      if(w < .004) continue;
+      const k = p.cor(X, Y, Z);
+      tr += k.r * w; tg += k.g * w; tb += k.b * w; tp += w;
     }
-    for(let e = -1; e <= 2 && !g; e++) for(let f = -1; f <= 2 && !g; f++) for(let h = -1; h <= 2 && !g; h++){
-      const aa = a + e, bb = b + f, cc = c + h;
-      if(aa >= 0 && bb >= 0 && cc >= 0 && aa < nx && bb < ny && cc < nz) g = gr[I(aa, bb, cc)];
-    }
-    const pelo = .9 + hashV(a, b, c) / 15 * .2;
-    td = Math.max(td, 1e-3);
-    cor.push(tr / td * pelo, tg / td * pelo, tb / td * pelo);
+    if(topo){ const k = topo.cor(X, Y, Z); tr = k.r; tg = k.g; tb = k.b; tp = 1; }
+    tp = Math.max(tp, 1e-4);
+    const pelo = topo ? 1 : .88 + (ruido(X * 5 + Z * 3, Y * 5) * .6 + hashV(a, b, c) / 15 * .4) * .26;
+    T.setRGB(tr / tp * pelo, tg / tp * pelo, tb / tp * pelo);
+    cor.push(T.r, T.g, T.b);
     // morph: a perna balança para a frente e para trás (grupo 1 e 2 em oposição)
-    const f = g && Y < topoPerna ? clamp(1 - Y / topoPerna, 0, 1) : 0, am = Math.min(1.4, topoPerna * .4) * f * (g === 1 ? 1 : -1);
-    mor.push(am, f * .15, 0);
+    const f = gp && topoPerna ? clamp(1 - Y / topoPerna, 0, 1) : 0, am = Math.min(1.1, topoPerna * .34) * f * (gp === 1 ? 1 : -1);
+    mor.push(am, f * .14, 0);
   }
   const tri = [];
   const quad = (a, b, c, e, para) => {
@@ -92,15 +264,9 @@ function geometriaDe(id){
   };
   for(let c = 1; c < nz - 1; c++) for(let b = 1; b < ny - 1; b++) for(let a = 1; a < nx - 1; a++){
     const k = I(a, b, c), den = d[k] > ISO;
-    if(den !== (d[k + 1] > ISO)){ // aresta em x
-      quad(idx[I(a, b - 1, c - 1)], idx[I(a, b, c - 1)], idx[k], idx[I(a, b - 1, c)], [den ? 1 : -1, 0, 0]);
-    }
-    if(den !== (d[k + nx] > ISO)){ // aresta em y do voxel = z da cena
-      quad(idx[I(a - 1, b, c - 1)], idx[I(a, b, c - 1)], idx[k], idx[I(a - 1, b, c)], [0, 0, den ? 1 : -1]);
-    }
-    if(den !== (d[k + nx * ny] > ISO)){ // aresta em z do voxel = y da cena
-      quad(idx[I(a - 1, b - 1, c)], idx[I(a, b - 1, c)], idx[k], idx[I(a - 1, b, c)], [0, den ? 1 : -1, 0]);
-    }
+    if(den !== (d[k + 1] > ISO)) quad(idx[I(a, b - 1, c - 1)], idx[I(a, b, c - 1)], idx[k], idx[I(a, b - 1, c)], [den ? 1 : -1, 0, 0]);
+    if(den !== (d[k + nx] > ISO)) quad(idx[I(a - 1, b, c - 1)], idx[I(a, b, c - 1)], idx[k], idx[I(a - 1, b, c)], [0, den ? 1 : -1, 0]);
+    if(den !== (d[k + nx * ny] > ISO)) quad(idx[I(a - 1, b - 1, c)], idx[I(a, b - 1, c)], idx[k], idx[I(a - 1, b, c)], [0, 0, den ? 1 : -1]);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -108,7 +274,7 @@ function geometriaDe(id){
   g.setIndex(tri);
   g.computeVertexNormals();
   if(topoPerna){ g.morphAttributes.position = [new THREE.Float32BufferAttribute(mor, 3)]; g.morphTargetsRelative = true; }
-  g.userData.altura = z1 + 1;
+  g.userData.altura = y1 - .6;
   return geoCache[id] = g;
 }
 
@@ -120,15 +286,15 @@ function alturaChao(x, y){
   return base * clamp(r - 1, 0, 1) - clamp(1.3 - r, 0, 1) * 2.2;
 }
 function texturaChao(n){
-  const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const S = 768, cv = document.createElement('canvas'); cv.width = cv.height = S;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), D = img.data;
   for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
     const x = px / S * n, y = py / S * n, k = (px + py * S) * 4;
-    const t = fbm(x * .22, y * .22), m = fbm(x * .9 + 40, y * .9), f = ruido(x * 4.5, y * 4.5);
-    let r = 58 + t * 46 + f * 20, g = 96 + t * 62 + f * 26, b = 30 + t * 20 + f * 10;
-    if(m > .62){ const u = (m - .62) * 2.2; r += u * 70; g += u * 28; b += u * 12; } // falhas de terra na grama
+    const t = fbm(x * .2, y * .2), m = fbm(x * .55 + 40, y * .55), f = ruido(x * 7, y * 7);
+    let r = 62 + t * 42 + f * 22, g = 88 + t * 52 + f * 30, b = 34 + t * 18 + f * 10;
+    if(m > .62){ const u = clamp((m - .62) * 4, 0, 1); r += u * 62; g += u * 22; b += u * 14; } // falhas de terra na grama
     const h = alturaChao(x, y);
-    if(h < -.05){ const u = clamp(-h / .5, 0, 1); r += (188 - r) * u; g += (168 - g) * u; b += (118 - b) * u; }
+    if(h < -.05){ const u = clamp(-h / .5, 0, 1); r += (176 - r) * u; g += (154 - g) * u; b += (106 - b) * u; }
     if(h < -.7){ const u = clamp((-h - .7) / .8, 0, 1); r *= 1 - u * .55; g *= 1 - u * .4; b *= 1 - u * .3; }
     D[k] = r; D[k + 1] = g; D[k + 2] = b; D[k + 3] = 255;
   }
@@ -165,11 +331,11 @@ function ceuEnv(renderer){
   return env;
 }
 function bolhaIrregular(raio, semente, cor){
-  const g = new THREE.IcosahedronGeometry(raio, 2), p = g.attributes.position, c = new Float32Array(p.count * 3), base = linearDe(cor), t = new THREE.Color();
+  const g = new THREE.SphereGeometry(raio, 20, 14), p = g.attributes.position, c = new Float32Array(p.count * 3), base = linearDe(cor), t = new THREE.Color();
   for(let i = 0; i < p.count; i++){
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = 1 + (ruido(x * 1.3 + semente, y * 1.3 + z) - .5) * .5;
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = 1 + (fbm(x * 1.1 + semente, y * 1.1 + z * .8) - .5) * .55;
     p.setXYZ(i, x * f, y * f, z * f);
-    t.copy(base).multiplyScalar(.75 + ruido(x * 2 + z, y * 2 + semente) * .55);
+    t.copy(base).multiplyScalar(.55 + fbm(x * 2.2 + z * 1.3, y * 2.2 + semente) * .9);
     c.set([t.r, t.g, t.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
@@ -188,35 +354,35 @@ function montaCenario(){
   const pp = pl.attributes.position;
   for(let i = 0; i < pp.count; i++) pp.setY(i, alturaChao(pp.getX(i) + n / 2, pp.getZ(i) + n / 2));
   pl.computeVertexNormals();
-  const chao = new THREE.Mesh(pl, new THREE.MeshStandardMaterial({map: texturaChao(n), roughness: .95}));
+  const chao = new THREE.Mesh(pl, new THREE.MeshStandardMaterial({map: texturaChao(n), roughness: .95, envMapIntensity: .55}));
   chao.receiveShadow = true; G.add(chao);
   // laterais de terra
-  const terra = new THREE.MeshStandardMaterial({color: linearDe('#6b4a2e'), roughness: 1});
+  const terra = new THREE.MeshStandardMaterial({color: linearDe('#5d4029'), roughness: 1, envMapIntensity: .4});
   [[0, -n / 2, n, .6], [0, n / 2, n, .6], [-n / 2, 0, .6, n], [n / 2, 0, .6, n]].forEach(([x, z, w, d]) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, 4, d), terra);
-    b.position.set(x, -2, z); G.add(b);
+    b.position.set(x, -2.05, z); G.add(b);
   });
   // água
   r3.ondas = r3.ondas || texturaOndas();
   r3.ondas.repeat.set(3, 3);
   const agua = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshStandardMaterial({
-    color: linearDe('#2f7fb0'), roughness: .12, metalness: .35, normalMap: r3.ondas, normalScale: new THREE.Vector2(.35, .35), transparent: true, opacity: .84,
+    color: linearDe('#1f6a97'), roughness: .1, metalness: .3, normalMap: r3.ondas, normalScale: new THREE.Vector2(.3, .3), transparent: true, opacity: .86,
   }));
   agua.rotation.x = -Math.PI / 2; agua.scale.set(n * .17 * 1.04, n * .15 * 1.04, 1);
   agua.position.set(n * .76 - n / 2, -.22, n * .24 - n / 2); G.add(agua);
-  // grama em tufos
-  const lam = new THREE.PlaneGeometry(.22, .9, 1, 2); lam.translate(0, .45, 0);
+  // grama em tufos baixos e densos
+  const lam = new THREE.PlaneGeometry(.2, .5, 1, 2); lam.translate(0, .25, 0);
   const lp = lam.attributes.position;
-  for(let i = 0; i < lp.count; i++){ const y = lp.getY(i) / .9; lp.setX(i, lp.getX(i) * (1 - y)); lp.setZ(i, y * y * .22); }
+  for(let i = 0; i < lp.count; i++){ const y = lp.getY(i) / .5; lp.setX(i, lp.getX(i) * (1 - y * .85)); lp.setZ(i, y * y * .14); }
   const nrm = lam.attributes.normal; for(let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0);
-  const mult = r3.fraco ? 1.2 : 3, qt = Math.floor(n * n * mult);
-  const grama = new THREE.InstancedMesh(lam, new THREE.MeshStandardMaterial({side: THREE.DoubleSide, roughness: 1}), qt);
-  const M = new THREE.Object3D(), C = new THREE.Color(), rn = rng(n * 131), verdes = ['#4d8a2c', '#5f9c35', '#3f7a2a', '#79a83e', '#8aa646'].map(linearDe);
+  const qt = Math.floor(n * n * (r3.fraco ? 3 : 6));
+  const grama = new THREE.InstancedMesh(lam, new THREE.MeshStandardMaterial({side: THREE.DoubleSide, roughness: 1, envMapIntensity: .35}), qt);
+  const M = new THREE.Object3D(), C = new THREE.Color(), rn = rng(n * 131), verdes = ['#4a7a2a', '#567f2e', '#3f6c28', '#6a8c38', '#7a8f3f'].map(linearDe);
   let u = 0;
   for(let i = 0; i < qt * 2 && u < qt; i++){
     const x = rn() * (n - 1) + .5, y = rn() * (n - 1) + .5;
-    if(noLago(x, y, 1.25)) continue;
-    const a = rn() * 6.28, e = .7 + rn() * .9;
+    if(noLago(x, y, 1.25) || fbm(x * .55 + 40, y * .55) > .66) continue;
+    const a = rn() * 6.28, e = .7 + rn() * .8;
     M.position.set(x - n / 2, alturaChao(x, y) - .02, y - n / 2); M.rotation.set(0, a, 0); M.scale.set(e, e, e); M.updateMatrix();
     grama.setMatrixAt(u, M.matrix);
     C.copy(verdes[Math.floor(rn() * verdes.length)]).multiplyScalar(.85 + rn() * .3);
@@ -225,34 +391,34 @@ function montaCenario(){
   }
   grama.count = u; grama.receiveShadow = true; G.add(grama);
   // cerca de madeira
-  const madeira = new THREE.MeshStandardMaterial({color: linearDe('#8a6239'), roughness: .85});
-  const posteG = new THREE.CylinderGeometry(.22, .26, 2.3, 8); posteG.translate(0, 1.05, 0);
-  const lado = n - 1, passo = 6, cada = Math.floor(lado / passo) + 1, postes = new THREE.InstancedMesh(posteG, madeira, cada * 4);
+  const madeira = new THREE.MeshStandardMaterial({color: linearDe('#7a5531'), roughness: .85, envMapIntensity: .5});
+  const posteG = new THREE.CylinderGeometry(.14, .17, 1.5, 8); posteG.translate(0, .7, 0);
+  const lado = n - 1, passo = 5, cada = Math.floor(lado / passo) + 1, postes = new THREE.InstancedMesh(posteG, madeira, cada * 4);
   let ip = 0;
   const poste = (x, z) => { M.position.set(x - n / 2, alturaChao(x, z), z - n / 2); M.rotation.set(0, 0, 0); M.scale.set(1, 1, 1); M.updateMatrix(); postes.setMatrixAt(ip++, M.matrix); };
   for(let i = 0; i < cada; i++){ const t = .5 + i * passo; poste(t, .5); poste(t, n - .5); poste(.5, t); poste(n - .5, t); }
   postes.castShadow = true; G.add(postes);
-  [[n / 2, .5, n - 1, .16], [n / 2, n - .5, n - 1, .16], [.5, n / 2, .16, n - 1], [n - .5, n / 2, .16, n - 1]].forEach(([x, z, w, d]) => {
-    for(const h of [.95, 1.75]){
-      const t = new THREE.Mesh(new THREE.BoxGeometry(w, .2, d), madeira);
+  [[n / 2, .5, n - 1, .1], [n / 2, n - .5, n - 1, .1], [.5, n / 2, .1, n - 1], [n - .5, n / 2, .1, n - 1]].forEach(([x, z, w, d]) => {
+    for(const h of [.6, 1.15]){
+      const t = new THREE.Mesh(new THREE.BoxGeometry(w, .12, d), madeira);
       t.position.set(x - n / 2, h, z - n / 2); t.castShadow = true; G.add(t);
     }
   });
   // árvores e pedras
-  const folha = new THREE.MeshStandardMaterial({vertexColors: true, roughness: .9});
-  const casca = new THREE.MeshStandardMaterial({color: linearDe('#5a3f28'), roughness: .95});
+  const folha = new THREE.MeshStandardMaterial({vertexColors: true, roughness: .92, envMapIntensity: .5});
+  const casca = new THREE.MeshStandardMaterial({color: linearDe('#4c3522'), roughness: .95, envMapIntensity: .4});
   for(const e of enfeites){
     const P = new THREE.Vector3(e.x - n / 2, alturaChao(e.x, e.y), e.y - n / 2);
     if(e.id === '_pedra'){
-      const m = new THREE.Mesh(bolhaIrregular(1.5, e.x, '#8d8f88'), folha);
-      m.position.copy(P); m.scale.set(1.2, .7, 1); m.castShadow = m.receiveShadow = true; G.add(m);
+      const m = new THREE.Mesh(bolhaIrregular(1.3, e.x, '#85877f'), folha);
+      m.position.copy(P); m.scale.set(1.2, .65, 1); m.castShadow = m.receiveShadow = true; G.add(m);
       continue;
     }
-    const h = e.id === '_arvore2' ? 8 : 6;
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(.42, .72, h, 8), casca);
+    const h = e.id === '_arvore2' ? 6.5 : 5;
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(.3, .55, h, 8), casca);
     tr.position.copy(P).setY(P.y + h / 2); tr.castShadow = true; G.add(tr);
-    const cf = e.id === '_arvore2' ? '#2f6b38' : '#487f33';
-    [[0, h + 1.2, 0, 3.1], [1.7, h, .5, 2.2], [-1.5, h + .2, -.8, 2.3], [.3, h + 2.9, -.4, 2], [-.5, h - .4, 1.7, 2]].forEach(([a, b, c, ra], i) => {
+    const cf = e.id === '_arvore2' ? '#2d5f2e' : '#3f6f2a';
+    [[0, h + 1, 0, 2.5], [1.5, h, .4, 1.8], [-1.3, h + .2, -.7, 1.9], [.2, h + 2.4, -.3, 1.7], [-.4, h - .3, 1.4, 1.7], [.9, h + 1.3, -1.2, 1.5]].forEach(([a, b, c, ra], i) => {
       const fm = new THREE.Mesh(bolhaIrregular(ra, e.x + i * 3, cf), folha);
       fm.position.set(P.x + a, P.y + b, P.z + c); fm.castShadow = fm.receiveShadow = true; G.add(fm);
     });
@@ -262,9 +428,9 @@ function montaCenario(){
   s.position.set(-n * .55, n * 1.15, n * .2);
   s.shadow.camera.left = -q; s.shadow.camera.right = q; s.shadow.camera.top = q; s.shadow.camera.bottom = -q; s.shadow.camera.far = n * 3.2;
   s.shadow.camera.updateProjectionMatrix();
-  const dist = n * 3.05;
+  const dist = n * 3.3;
   r3.camera.position.set(dist * .62, dist * .55, dist * .62);
-  r3.camera.lookAt(0, -1, 0);
+  r3.camera.lookAt(0, -1.5, 0);
 }
 const EMOJI = {coracao: '❤️', chuva: '🌧️', alerta: '❗', caveira: '💀'};
 function materialIcone(nome){
@@ -285,32 +451,32 @@ function iniciaRealista(){
     cv.setAttribute('aria-label', 'Terreno em 3D com seus animais. Toque em um animal para ver a ficha.');
     const renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance'});
     renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const fraco = (navigator.hardwareConcurrency || 4) <= 4;
     const scene = new THREE.Scene(); scene.environment = ceuEnv(renderer);
     const camera = new THREE.PerspectiveCamera(17, 236 / 168, 1, 800);
-    const sol = new THREE.DirectionalLight(new THREE.Color('#fff1d6'), 2.6);
-    sol.castShadow = true; sol.shadow.mapSize.set(fraco ? 1024 : 2048, fraco ? 1024 : 2048); sol.shadow.bias = -.0006; sol.shadow.normalBias = .06;
-    scene.add(sol, sol.target, new THREE.HemisphereLight(new THREE.Color('#cfe6ff'), new THREE.Color('#5d6b3f'), .35));
+    const sol = new THREE.DirectionalLight(new THREE.Color('#fff0d4'), 1.5);
+    sol.castShadow = true; sol.shadow.mapSize.set(fraco ? 1024 : 2048, fraco ? 1024 : 2048); sol.shadow.bias = -.0006; sol.shadow.normalBias = .05;
+    scene.add(sol, sol.target, new THREE.HemisphereLight(new THREE.Color('#cfe6ff'), new THREE.Color('#4d5a33'), .18));
     R3 = {renderer, scene, camera, sol, fraco, cv, ondas: null, cenario: null, cenarioN: 0, malhas: new Map(), efeitos: [], icones: {},
-      material: new THREE.MeshStandardMaterial({vertexColors: true, roughness: .78, metalness: 0}), pr: Math.min(devicePixelRatio || 1, fraco ? 1.5 : 2), custo: 0, nQuadros: 0, ultimo: 0};
+      material: new THREE.MeshStandardMaterial({vertexColors: true, roughness: .82, metalness: 0, envMapIntensity: .55}), pr: Math.min(devicePixelRatio || 1, fraco ? 1.5 : 2), custo: 0, nQuadros: 0};
     cv.addEventListener('click', cliqueRealista);
   }catch(e){ R3 = false; }
   return R3;
 }
 function posDoAnimal(a, m){
   const n = terrenoN;
-  if(a.esp === 'peixe') return [m.x - n / 2, -1.05, m.y - n / 2];
+  if(a.esp === 'peixe') return [m.x - n / 2, -1.3, m.y - n / 2];
   return [m.x - n / 2, Math.max(alturaChao(m.x, m.y), AQUATICOS[a.esp] ? -.7 : -1), m.y - n / 2];
 }
 function cliqueRealista(e){
   const r3 = R3, r = r3.cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = new THREE.Vector3();
   let melhor = null, dist = 1e9;
   for(const [id, o] of r3.malhas){
-    v.copy(o.mesh.position); v.y += o.alt * .45; v.project(r3.camera);
+    v.copy(o.mesh.position); v.y += o.alt * ESCALA_ANIMAL * .45; v.project(r3.camera);
     const sx = (v.x + 1) / 2 * r.width, sy = (1 - v.y) / 2 * r.height, q = Math.hypot(sx - mx, sy - my);
-    if(q < dist && q < Math.max(22, o.alt * 3)){ dist = q; melhor = id; }
+    if(q < dist && q < Math.max(22, o.alt * 2.4)){ dist = q; melhor = id; }
   }
   if(melhor) ACT.verAnimal(melhor);
 }
@@ -338,7 +504,7 @@ function desenhaRealista(tempoMs, dt){
     if(!o){
       const g = geometriaDe(a.esp), mesh = new THREE.Mesh(g, r3.material);
       mesh.castShadow = true; mesh.receiveShadow = true;
-      const ic = new THREE.Sprite(materialIcone('coracao')); ic.visible = false; ic.scale.set(3.2, 3.2, 1);
+      const ic = new THREE.Sprite(materialIcone('coracao')); ic.visible = false; ic.scale.set(2.6, 2.6, 1);
       r3.scene.add(mesh, ic);
       o = {mesh, ic, alt: g.userData.altura, yaw: -m.dir * Math.PI / 2, fase: Math.random() * 6, ax: m.x, ay: m.y};
       r3.malhas.set(a.id, o);
@@ -351,12 +517,12 @@ function desenhaRealista(tempoMs, dt){
       while(dif > Math.PI) dif -= Math.PI * 2;
       while(dif < -Math.PI) dif += Math.PI * 2;
       o.yaw += dif * Math.min(1, dt * 8);
-      o.fase += dt * 11;
+      o.fase += dt * 10;
     }
-    const filhote = idadeDe(a) < IDADE_FERTIL ? .68 : 1, resp = 1 + Math.sin(tempoMs / 700 + o.fase) * .012;
-    o.mesh.position.set(X, Y + (anda ? Math.abs(Math.sin(o.fase)) * .12 : 0), Z);
+    const tam = ESCALA_ANIMAL * (idadeDe(a) < IDADE_FERTIL ? .68 : 1), resp = 1 + Math.sin(tempoMs / 700 + o.fase) * .012;
+    o.mesh.position.set(X, Y + (anda ? Math.abs(Math.sin(o.fase)) * .07 : 0), Z);
     o.mesh.rotation.y = o.yaw;
-    o.mesh.scale.set(filhote, filhote * resp, filhote);
+    o.mesh.scale.set(tam, tam * resp, tam);
     if(o.mesh.morphTargetInfluences) o.mesh.morphTargetInfluences[0] = anda ? Math.sin(o.fase) : 0;
     const c = casalDe(a.id);
     let nome = '';
@@ -364,19 +530,18 @@ function desenhaRealista(tempoMs, dt){
     else if(ESP[a.esp].caca && m.alvo) nome = 'alerta';
     else if(humores[a.esp] >= 40) nome = 'chuva';
     o.ic.visible = !!nome && !!pisca;
-    if(o.ic.visible){ o.ic.material = materialIcone(nome); o.ic.position.set(X, Y + o.alt * filhote + 2.2, Z); }
+    if(o.ic.visible){ o.ic.material = materialIcone(nome); o.ic.position.set(X, Y + o.alt * tam + 1.6, Z); }
   }
   for(const [id, o] of r3.malhas) if(!vivos.has(id)){ r3.scene.remove(o.mesh, o.ic); r3.malhas.delete(id); }
   // caveiras dos que foram comidos
   for(const e of efeitos) if(!e.spr){
-    e.spr = new THREE.Sprite(materialIcone('caveira')); e.spr.scale.set(3.4, 3.4, 1);
+    e.spr = new THREE.Sprite(materialIcone('caveira')); e.spr.scale.set(2.8, 2.8, 1);
     r3.scene.add(e.spr);
   }
   for(const e of r3.efeitos) if(e.t <= 0) r3.scene.remove(e.spr);
   r3.efeitos = efeitos.filter(e => e.spr);
-  for(const e of r3.efeitos) e.spr.position.set(e.x - terrenoN / 2, 3 + (3 - e.t) * 1.4, e.y - terrenoN / 2);
+  for(const e of r3.efeitos) e.spr.position.set(e.x - terrenoN / 2, 2 + (3 - e.t) * 1.2, e.y - terrenoN / 2);
   if(r3.ondas){ r3.ondas.offset.x = tempoMs * .00002; r3.ondas.offset.y = tempoMs * .000013; }
-  const ini = performance.now();
   r3.renderer.render(r3.scene, r3.camera);
   // aparelho lento: baixa a resolução, sem nunca passar de 1 pixel por ponto da tela
   r3.custo += dt; r3.nQuadros++;
@@ -384,5 +549,5 @@ function desenhaRealista(tempoMs, dt){
     if(r3.custo / r3.nQuadros > .05 && r3.pr > 1) r3.pr = Math.max(1, r3.pr - .25);
     r3.custo = 0; r3.nQuadros = 0;
   }
-  return performance.now() >= ini;
+  return true;
 }

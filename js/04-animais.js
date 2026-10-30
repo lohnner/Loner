@@ -3,14 +3,14 @@
 'use strict';
 
 const mediaSt = st => STATUS.reduce((t, [k]) => t + st[k], 0) / STATUS.length;
-// Nota do animal: sai da média dos status, dentro da faixa da categoria da espécie (ex.: Comum vai de 15 a 27).
+// Nota do animal: sai da média dos status, dentro da faixa da espécie (ex.: gato vai de 15 a 27).
 function notaDe(a){
-  const c = categoria(ESP[a.esp]);
-  return Math.round(c.nmin + (c.nmax - c.nmin) * mediaSt(a.st) / 100);
+  const e = ESP[a.esp];
+  return Math.round(e.nmin + (e.nmax - e.nmin) * mediaSt(a.st) / 100);
 }
 function posNota(a){
-  const c = categoria(ESP[a.esp]);
-  return (notaDe(a) - c.nmin) / (c.nmax - c.nmin) * 100;
+  const e = ESP[a.esp];
+  return (notaDe(a) - e.nmin) / (e.nmax - e.nmin) * 100;
 }
 const fmtNota = n => n.toLocaleString('pt-BR');
 const idadeDe = (a, t = agora()) => a.idade0 + diaBR(t) - a.dia0;

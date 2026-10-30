@@ -159,7 +159,7 @@ function sheetEspecie(id){
     <h2>${esc(e.n)}</h2><p class="cient">${esc(e.c)}</p>
     <div class="wk-tab">
       ${li('Categoria', categoria(e).n)}
-      ${li('Nota', `${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}`)}
+      ${li('Nota', `${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}`)}
       ${li('Quanto vive', `${anos(e.vida)} (${e.vida} dias reais)`)}
       ${li('Preço de referência', `${eur(e.p)} ${setaIndice(id)}`)}
       ${li('Porte', PORTES[e.po])}
@@ -182,7 +182,7 @@ function telaConta(){
     <details class="regras"><summary>Como jogar</summary><ul>
       <li>Compre um macho e uma fêmea da mesma espécie no Mercado. Ele muda a cada hora, com 20 animais, e os raros aparecem menos.</li>
       <li>Coloque os dois em Acasalar. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</li>
-      <li>Cada animal tem uma nota, que define quanto ele vale. Bicho simples vai de 1 a 10, o um pouco melhor de 15 a 27, e os raros passam de 2.000.</li>
+      <li>Cada animal tem uma nota, que define quanto ele vale. Cada espécie tem sua faixa: bicho simples fica perto de 1 a 10, o um pouco melhor perto de 15 a 27, e os raros passam de 2.000.</li>
       <li>A nota sai dos 5 status, que vão de 0 a 100. O filhote é uma fusão sorteada dos pais.</li>
       <li>Cada meia-noite de Brasília vale 1 ano. Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
       <li>Venda em Animais. Filhotes de pais fortes dão mais lucro.</li>
@@ -237,7 +237,7 @@ function sheetOferta(key){
   const e = ESP[o.esp], p = precoCompra(o), semEspaco = !temEspaco(o.esp);
   return `<img class="sh-foto" src="${fotoEsp(o.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(o.sx)} ${selo(o)}</h2>
-    <p class="cient">Nota ${fmtNota(notaDe(o))} · nesta categoria vai de ${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}</p>
+    <p class="cient">Nota ${fmtNota(notaDe(o))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
     <p class="cient">${anos(idadeDe(o))} de ${e.vida} · morre em ${e.vida - idadeDe(o)} ${e.vida - idadeDe(o) === 1 ? 'dia real' : 'dias reais'}</p>
     ${barrasStatus(o.st)}
     ${semEspaco ? `<p class="aviso">Seu terreno está cheio. Compre mais espaço em Animais ou venda uma espécie.</p>` : ''}
@@ -252,7 +252,7 @@ function sheetAnimal(id, novo){
   const presa = c && c.fase === 'gravida';
   return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>${a.pen ? `<p class="aviso">Os pais estavam tristes: ele nasceu cerca de ${a.pen} pontos mais fraco.</p>` : ''}` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a)}</h2>
-    <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta categoria vai de ${fmtNota(categoria(e).nmin)} a ${fmtNota(categoria(e).nmax)}</p>
+    <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
     <p class="cient">${anos(idade)} de ${e.vida} · ${resta === 1 ? 'morre à meia-noite' : `vive mais ${resta} dias reais`}</p>
     ${barrasStatus(a.st)}
     <button class="btn cheio ${arm ? 'alerta' : 'pri'}" data-act="vender" data-v="${id}" ${presa ? 'disabled' : ''}>${presa ? 'Gestação em andamento' : arm ? `Toque de novo para vender por ${eur(precoVenda(a))}` : `Vender por ${eur(precoVenda(a))}`}</button>
