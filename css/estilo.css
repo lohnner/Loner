@@ -76,7 +76,7 @@ small{font-size:12.5px}
 .n0{background:linear-gradient(135deg,#ffe48a,#e0a910 60%,#b97f00);color:#3b2a00;box-shadow:0 0 0 1.5px #b97f00}
 .ani-tx{flex:1;min-width:0}.ani-tx b{display:block;font-size:14px}.ani-tx em{font-style:normal;font-weight:400;color:var(--dim)}.ani-tx small{color:var(--dim)}
 .tag{display:inline-block;padding:0 6px;border-radius:5px;font-size:11px;font-weight:800;line-height:17px;margin-right:3px}
-.aca{background:#d9e8dc;color:#1f5a33}.gra{background:#f7dbe8;color:#8d2a5e}.fil{background:#d8e7f4;color:#1f5a86}.mor{background:#f6d9d4;color:#8f2a1d}
+.aca{background:#d9e8dc;color:#1f5a33}.gra{background:#f7dbe8;color:#8d2a5e}.fil{background:#d8e7f4;color:#1f5a86}.mor{background:#f6d9d4;color:#8f2a1d}.raro{background:#fbe9b4;color:#7a5200}
 
 .terreno{background:var(--mata);color:#f8f3e6;border-radius:14px;padding:12px;margin-bottom:10px}
 .ter-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -188,3 +188,14 @@ small{font-size:12.5px}
 .cq .sx{width:19px;height:19px;font-size:12px}.cq .selo{height:19px;min-width:22px;font-size:12px;border-radius:5px;padding:0 5px}
 .cq-nada{color:var(--dim);font-size:13px}.cq-max{font-style:normal;font-size:13px}
 .cq.off .foto{filter:grayscale(1);opacity:.45}.cq.off b{color:var(--dim)}
+
+/* Acasalar: o que o filhote herda igual */
+.herda{margin:10px 0 4px}
+.hd-tit{font-size:13.5px;margin:0 0 6px;line-height:1.35}.hd-tit small{display:block;color:var(--dim);font-size:12px;font-weight:400}
+.hd-lin{margin-bottom:6px}.hd-quem{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;margin-bottom:4px}
+.hd-quem .sx{width:18px;height:18px;font-size:12px}
+.hd-ops{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.hd{display:flex;flex-direction:column;align-items:center;padding:5px 1px;border-radius:9px;border:1.5px solid var(--linha);background:var(--cartao);min-height:44px;overflow:hidden}
+.hd small{font-size:10px;color:var(--dim);white-space:nowrap;letter-spacing:-.2px}.hd b{font:800 15px/1.2 var(--tit)}
+.hd.on{background:var(--mata);border-color:var(--mata);color:#fff}.hd.on small{color:#e6efe8}
+.hd:disabled{opacity:.6}.hd.on:disabled{opacity:1}
