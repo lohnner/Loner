@@ -3,7 +3,7 @@
 'use strict';
 
 let aba = 'mercado', mercadoTipo = 'gaiola', filtroMercado = 'todas', sexoMercado = 'todos', buscaMercado = '', wikiBusca = '';
-let parEscolhido = {M: '', F: ''}, armado = {id: '', ate: 0}, sheetAberta = null, toastT = 0;
+let herdaNovo = {M: '', F: ''}, parEscolhido = {M: '', F: ''}, armado = {id: '', ate: 0}, sheetAberta = null, toastT = 0;
 
 const foto = (id, cls = '') => `<img class="foto ${cls}" src="${fotoEsp(id)}" alt="${esc(ESP[id].n)}" width="360" height="360" loading="lazy">`;
 const indFaixa = v => Math.max(0, FAIXAS.findIndex(x => v >= x.de));
@@ -45,7 +45,7 @@ function listaMercadoHTML(){
   return lista.map(o => {
     const foi = jaComprado(o.id), e = ESP[o.esp], tem = !!vagaPara(o.esp);
     return `<button class="ofe ${tem ? '' : 'trancado'}" data-act="verOferta" data-v="${o.id}" ${foi ? 'disabled' : ''}>${foto(o.esp)}
-      <span class="ofe-tx"><b>${esc(e.n)}</b><small>${sexo(o.sx)}${selo(o)} ${anos(idadeDe(o, t))} de ${e.vida}</small>${tem ? '' : `<small class="tranca">🔒 ${S.terrenos.some(x => moraEm(o.esp, x.tipo)) ? 'Sem vaga' : `Precisa de ${esc(terrenoDe(o.esp).n)}`}</small>`}</span>
+      <span class="ofe-tx"><b>${esc(e.n)}</b><small>${sexo(o.sx)}${selo(o)} ${fmtIdade(o, t)} de ${anos(e.vida)}</small>${tem ? '' : `<small class="tranca">🔒 ${S.terrenos.some(x => moraEm(o.esp, x.tipo)) ? 'Sem vaga' : `Precisa de ${esc(terrenoDe(o.esp).n)}`}</small>`}</span>
       <span class="ofe-pr"><span class="preco">${foi ? 'Comprado' : eur(precoCompra(o, t))}</span>${foi ? '' : setaIndice(o.esp)}</span></button>`;
   }).join('');
 }
@@ -81,12 +81,13 @@ function chipsAnimal(a){
   let h = '';
   if(c) h += `<span class="tag ${c.fase === 'gravida' && a.id === c.f ? 'gra' : 'aca'}">${c.fase === 'gravida' ? (a.id === c.f ? 'Grávida' : 'Pai') : c.fase === 'tentando' ? 'Acasalando' : 'Em casal'}</span>`;
   if(id < IDADE_FERTIL) h += `<span class="tag fil">Filhote</span>`;
-  if(morreEm(a) - agora() <= DIA) h += `<span class="tag mor">Morre à meia-noite</span>`;
+  if(muitoRaro(a)) h += `<span class="tag raro">✨ Muito raro</span>`;
+  if(morreEm(a) - agora() <= DIA) h += `<span class="tag mor">Morre hoje</span>`;
   return h;
 }
 function linhaAnimal(a, acao = 'verAnimal'){
   return `<button class="ani" data-act="${acao}" data-v="${a.id}">${sexo(a.sx)}${selo(a)}
-    <span class="ani-tx"><b>${anos(idadeDe(a))}<em> de ${ESP[a.esp].vida}</em></b>${chipsAnimal(a) ? `<small>${chipsAnimal(a)}</small>` : ''}</span>
+    <span class="ani-tx"><b>${fmtIdade(a)}<em> de ${anos(ESP[a.esp].vida)}</em></b>${chipsAnimal(a) ? `<small>${chipsAnimal(a)}</small>` : ''}</span>
     <span class="preco">${eur(precoVenda(a))}</span></button>`;
 }
 function humorHTML(esp, ter = S.terrenoAtual){
@@ -112,15 +113,22 @@ function telaAnimais(){
 function telaAcasalar(){
   const m = animal(parEscolhido.M), f = animal(parEscolhido.F), espera = S.casais.filter(c => animal(c.f));
   const lado = (sx, a) => `<button class="lado ${a ? 'tem' : ''}" data-act="escolherLado" data-v="${sx}">
-    ${a ? `${foto(a.esp)}<span>${sexo(sx)}${selo(a)}</span><small>${anos(idadeDe(a))}</small>` : `<span class="vazio-sx">${sexoS(sx)}</span><b>Escolher ${sexoN(sx).toLowerCase()}</b>`}</button>`;
+    ${a ? `${foto(a.esp)}<span>${sexo(sx)}${selo(a)}</span><small>${fmtIdade(a)}</small>` : `<span class="vazio-sx">${sexoS(sx)}</span><b>Escolher ${sexoN(sx).toLowerCase()}</b>`}</button>`;
   const erro = (m && f) ? motivoCasal(m, f) : '';
   const prontos = pareados().length;
-  return `<section class="acasalar"><h3>Novo casal</h3><p class="dim">Coloque um macho e uma fêmea da mesma espécie. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</p>
+  return `<section class="acasalar"><h3>Novo casal</h3><p class="dim">Coloque um macho e uma fêmea da mesma espécie. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois. Dá para escolher 1 status do pai e 1 da mãe para o filhote herdar igual.</p>
     <div class="lados">${lado('M', m)}<span class="cruza">+</span>${lado('F', f)}</div>
+    ${m && f && m.esp === f.esp ? herdaHTML('novo', m, f, herdaNovo) : ''}
     ${erro ? `<p class="aviso">${esc(erro)}</p>` : ''}
     <button class="btn pri cheio" data-act="acasalar" ${m && f && !erro ? '' : 'disabled'}>Colocar para acasalar</button></section>
     <div class="ter-top sec"><h3>Casais</h3>${prontos > 1 ? `<button class="chip on" data-act="repetirTodos">Acasalar os ${prontos} de novo</button>` : ''}</div>
     ${espera.length ? espera.map(cartaoCasal).join('') : `<p class="vazio">Nenhum casal ainda.</p>`}`;
+}
+// Escolher o que o filhote herda igual: 1 status do pai e 1 da mãe. alvo = 'novo' (casal sendo montado) ou o id do casal.
+function herdaHTML(alvo, m, f, herda, trava){
+  const h = herda || {}, linha = (sx, a) => `<div class="hd-lin"><span class="hd-quem">${sexo(sx)} ${sx === 'M' ? 'Do pai' : 'Da mãe'}</span><div class="hd-ops">${STATUS.map(([k, n]) =>
+    `<button class="hd ${h[sx] === k ? 'on' : ''}" data-act="herda" data-v="${alvo}|${sx}|${k}" ${trava || !a ? 'disabled' : ''}><small>${n}</small><b>${a ? a.st[k] : '–'}</b></button>`).join('')}</div></div>`;
+  return `<div class="herda"><p class="hd-tit"><b>O filhote herda igual</b> <small>escolha 1 do pai e 1 da mãe; os outros saem da mistura dos dois, podendo vir melhores ou piores</small></p>${linha('M', m)}${linha('F', f)}</div>`;
 }
 function cartaoCasal(c){
   const m = animal(c.m), f = animal(c.f), e = ESP[f.esp], t = agora();
@@ -137,8 +145,9 @@ function cartaoCasal(c){
       ${livres(instancia(f.ter)) <= 0 ? `<p class="aviso">${esc(nomeInst(instancia(f.ter)))} sem vaga: venda um animal para o próximo filhote ter lugar.</p>` : ''}
       <div class="dois"><button class="btn pri" data-act="repetir" data-v="${c.id}" ${livres(instancia(f.ter)) <= 0 ? 'disabled' : ''}>Acasalar de novo</button><button class="btn" data-act="separar" data-v="${c.id}">Separar</button></div>`;
   }
+  corpo = herdaHTML(c.id, m, f, c.herda, c.fase === 'gravida') + corpo;
   return `<article class="card casal"><div class="card-top" data-act="verEspecie" data-v="${e.id}">${foto(e.id)}<div class="card-tit"><h3>${esc(e.n)}</h3>
-    <small>${m ? `${sexo('M')}${selo(m)} ${anos(idadeDe(m, t))}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f)} ${anos(idadeDe(f, t))}</small></div></div>${c.fase === 'tentando' ? humorHTML(e.id, f.ter) : ''}${corpo}</article>`;
+    <small>${m ? `${sexo('M')}${selo(m)} ${fmtIdade(m, t)}` : 'O pai morreu'} &nbsp; ${sexo('F')}${selo(f)} ${fmtIdade(f, t)}</small></div></div>${c.fase === 'tentando' ? humorHTML(e.id, f.ter) : ''}${corpo}</article>`;
 }
 
 /* ---------- WIKIPÉDIA ---------- */
@@ -245,8 +254,9 @@ function telaConta(){
       <li>Compre um macho e uma fêmea da mesma espécie no Mercado. Há um mercado de gaiola e outro para os demais animais. Eles mudam a cada hora, com 20 animais cada, e os raros aparecem menos.</li>
       <li>Coloque os dois em Acasalar. A gravidez vem entre 1 e 3 horas, e o filhote nasce 1 hora depois.</li>
       <li>Cada animal tem uma nota, que define quanto ele vale. Cada espécie tem sua faixa: bicho simples fica perto de 1 a 10, o um pouco melhor perto de 15 a 27, e os raros passam de 2.000.</li>
-      <li>A nota sai dos 5 status, que vão de 0 a 100. O filhote é uma fusão sorteada dos pais.</li>
-      <li>Cada ${DIAS_POR_ANO} dias reais valem 1 ano (a virada é à meia-noite de Brasília). Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
+      <li>A nota sai dos 5 status, que vão de 0 a 100. No Acasalar, escolha 1 status do pai e 1 da mãe para o filhote herdar igual; os outros 3 saem de uma fusão sorteada dos dois e podem vir melhores ou piores.</li>
+      <li>Cada ${DIAS_POR_ANO} dias reais valem 1 ano, e cada ${MES / 3600e3} horas, 1 mês. Cada animal envelhece desde que nasceu e cresce até virar adulto. Mais novo vale mais; ao chegar à idade máxima, o animal morre.</li>
+      <li>Animal muito raro (nota no topo da espécie) fica dourado no terreno.</li>
       <li>Venda em Animais. Filhotes de pais fortes dão mais lucro.</li>
       <li>Você começa com 1 Gaiola: cabem 5 animais, de uma espécie só. Só dá para comprar animal se tiver vaga em um terreno certo para ele. Compre mais terrenos para criar mais.</li>
       <li>No mesmo terreno, predador adulto caça e mata os mais fracos. Em terrenos diferentes, um não alcança o outro.</li>
@@ -312,7 +322,7 @@ function sheetOferta(key){
   return `<img class="sh-foto" src="${fotoEsp(o.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(o.sx)} ${selo(o)}</h2>
     <p class="cient">Nota ${fmtNota(notaDe(o))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
-    <p class="cient">${anos(idadeDe(o))} de ${e.vida} · ${restaVida(o)}</p>
+    <p class="cient">${fmtIdade(o)} de ${anos(e.vida)} · ${restaVida(o)}</p>
     ${barrasStatus(o.st)}
     ${semTerreno ? `<p class="aviso">🔒 ${esc(motivoSemVaga(o.esp))}</p><button class="btn cheio" data-act="verTerrenos">Ver terrenos</button>` : `<p class="cient">Vai para: ${TERRENO[lugar.tipo].ic} ${esc(nomeInst(lugar))} (${animaisDoTerreno(lugar.id).length}/${TERRENO[lugar.tipo].cap})</p>`}
     ${avisoCaca(o.esp)}
@@ -327,11 +337,11 @@ function sheetAnimal(id, novo){
   return `${novo ? `<p class="nasceu">Nasceu um filhote!</p>${a.pen ? `<p class="aviso">Os pais estavam tristes: ele nasceu cerca de ${a.pen} pontos mais fraco.</p>` : ''}` : ''}<img class="sh-foto" src="${fotoEsp(a.esp)}" alt="${esc(e.n)}" width="360" height="360">
     <h2>${esc(e.n)} ${sexo(a.sx)} ${selo(a)}</h2>
     <p class="cient">Nota ${fmtNota(notaDe(a))} · nesta espécie vai de ${fmtNota(e.nmin)} a ${fmtNota(e.nmax)}</p>
-    <p class="cient">${anos(idade)} de ${e.vida} · ${restaVida(a)}</p>
+    <p class="cient">${fmtIdade(a)} de ${anos(e.vida)} · ${restaVida(a)}${muitoRaro(a) ? ' · ✨ muito raro' : ''}</p>
     ${barrasStatus(a.st)}
     <button class="btn cheio ${arm ? 'alerta' : 'pri'}" data-act="vender" data-v="${id}" ${presa ? 'disabled' : ''}>${presa ? 'Gestação em andamento' : arm ? `Toque de novo para vender por ${eur(precoVenda(a))}` : `Vender por ${eur(precoVenda(a))}`}</button>
     ${!c && fertil(a) ? `<button class="btn cheio" data-act="levarAcasalar" data-v="${id}">Colocar para acasalar</button>` : ''}
-    ${!fertil(a) ? `<p class="dim centro">Filhote: acasala a partir de ${anos(IDADE_FERTIL)}, à meia-noite de Brasília que abre o dia ${dataBR(inicioDiaBR(a.dia0 + IDADE_FERTIL - a.idade0))}.</p>` : ''}
+    ${!fertil(a) ? `<p class="dim centro">Filhote: acasala a partir de ${anos(IDADE_FERTIL)}, daqui a ${tempoLongo(fertilEm(a) - agora())}.</p>` : ''}
     ${novo ? `<button class="btn cheio" data-act="fechar">Ficar com ele</button>` : ''}`;
 }
 function sheetEscolher(sx){
@@ -379,9 +389,16 @@ function atualizaTimers(){
 }
 // Uma vez por segundo: coloca o jogo em dia e redesenha só se algo mudou.
 let ultimoCiclo = 0, ultimoDia = 0;
+// Muda sempre que algum animal (seu ou do mercado aberto) faz mais um mês: aí a tela é redesenhada.
+function chaveIdades(t = agora()){
+  let k = 0;
+  for(const a of S.animais) k += Math.floor(idadeDe(a, t) * 12);
+  if(aba === 'mercado') for(const o of mercado(t)) k += Math.floor(idadeDe(o, t) * 12) * 3;
+  return k;
+}
 function tick(){
   if(!accountReady) return;
-  const t = agora(), mudou = processar(t), c = cicloDe(t), d = diaBR(t);
+  const t = agora(), mudou = processar(t), c = cicloDe(t), d = chaveIdades(t);
   const virou = c !== ultimoCiclo || d !== ultimoDia;
   ultimoCiclo = c; ultimoDia = d;
   if(mudou) save();
@@ -469,12 +486,21 @@ const ACT = {
     parEscolhido[a.sx] = v;
     fechaSheet(); renderAba();
   },
-  limparPar(){ parEscolhido = {M: '', F: ''}; fechaSheet(); renderAba(); },
+  limparPar(){ parEscolhido = {M: '', F: ''}; herdaNovo = {M: '', F: ''}; fechaSheet(); renderAba(); },
   acasalar(){
-    const erro = formaCasal(parEscolhido.M, parEscolhido.F);
+    const erro = formaCasal(parEscolhido.M, parEscolhido.F, herdaNovo);
     if(erro) return toast(erro, true);
-    parEscolhido = {M: '', F: ''};
+    parEscolhido = {M: '', F: ''}; herdaNovo = {M: '', F: ''};
     save(); renderAba(); toast('O casal está tentando. A gravidez vem entre 1 e 3 horas.');
+  },
+  herda(v){
+    const [alvo, sx, k] = String(v).split('|'), c = alvo === 'novo' ? null : S.casais.find(x => x.id === alvo);
+    if(alvo !== 'novo' && (!c || c.fase === 'gravida')) return;
+    const h = alvo === 'novo' ? herdaNovo : (c.herda = c.herda || {M: '', F: ''}), outro = sx === 'M' ? 'F' : 'M';
+    h[sx] = h[sx] === k ? '' : k;
+    if(h[sx] && h[outro] === k) h[outro] = ''; // o mesmo status não vem dos dois
+    if(c) save();
+    renderAba();
   },
   repetir(v){
     const c = S.casais.find(x => x.id === v);
@@ -491,7 +517,7 @@ const ACT = {
   pedirReset(){ abreSheet('resetar'); },
   resetarConta(){
     const nome = S.nome;
-    S = defaults(); S.nome = nome; nascimentosNovos = []; avisosCaca = []; parEscolhido = {M: '', F: ''};
+    S = defaults(); S.nome = nome; nascimentosNovos = []; avisosCaca = []; parEscolhido = {M: '', F: ''}; herdaNovo = {M: '', F: ''};
     mundo.clear(); efeitos = []; buscaMercado = ''; sexoMercado = 'todos'; filtroMercado = 'todas';
     diario(`Conta resetada. Recomeçou com ${eur(DINHEIRO_INICIAL)}.`);
     save(); cloudFlush(); pushRank();

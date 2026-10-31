@@ -204,11 +204,12 @@ function desenhaTerreno(tempoMs){
       ctx.drawImage(s.cv, Math.round(projX(it.x, it.y) - s.ax), Math.round(projY(it.x, it.y) - s.ay));
       continue;
     }
-    const {a, m} = it, s = spriteDe(a.esp, m.dir, m.passo), px = Math.round(projX(m.x, m.y)), py = Math.round(projY(m.x, m.y));
-    const salto = m.passo === 1 ? 1 : 0, dx = px - s.ax, dy = py - s.ay - salto;
-    if(a.esp !== 'peixe'){ ctx.fillStyle = 'rgba(30,50,25,.28)'; ctx.fillRect(px - (s.w >> 2), py + 1, s.w >> 1, 2); }
-    ctx.drawImage(s.cv, dx, dy);
-    cv._clicaveis.push({id: a.id, x: dx, y: dy, w: s.w, h: s.h});
+    const {a, m} = it, s = spriteDe(a.esp, m.dir, m.passo, muitoRaro(a)), px = Math.round(projX(m.x, m.y)), py = Math.round(projY(m.x, m.y));
+    const k = tamanhoIdade(a), w = Math.max(2, Math.round(s.w * k)), h = Math.max(2, Math.round(s.h * k)); // filhote é desenhado menor
+    const salto = m.passo === 1 ? 1 : 0, dx = px - Math.round(s.ax * k), dy = py - Math.round(s.ay * k) - salto;
+    if(a.esp !== 'peixe'){ ctx.fillStyle = 'rgba(30,50,25,.28)'; ctx.fillRect(px - (w >> 2), py + 1, w >> 1, 2); }
+    ctx.drawImage(s.cv, dx, dy, w, h);
+    cv._clicaveis.push({id: a.id, x: dx, y: dy, w, h});
     const c = casalDe(a.id), top = dy - 8;
     if(c && a.id === c.f && c.fase !== 'pronto' && pisca) icone(ctx, 'coracao', px, top);
     else if(ESP[a.esp].caca && m.alvo && pisca) icone(ctx, 'alerta', px, top);

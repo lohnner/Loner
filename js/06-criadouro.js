@@ -1,5 +1,6 @@
 // Acasalamento e o passar do tempo. Tudo é guardado com horários, então continua correndo com o jogo fechado.
-// Casal = {id, m, f, fase, tGrav, tParto, filho}. fase: 'tentando' (sorteia de 1 a 3 h) → 'gravida' (1 h) → 'pronto' (nasceu; pode acasalar de novo).
+// Casal = {id, m, f, fase, tGrav, tParto, filho, herda}. herda = {M: status, F: status}: o que o filhote recebe igual do pai e da mãe.
+// fase: 'tentando' (sorteia de 1 a 3 h) → 'gravida' (1 h) → 'pronto' (nasceu; pode acasalar de novo).
 'use strict';
 
 const casalDe = id => S.casais.find(c => c.m === id || c.f === id);
@@ -21,10 +22,17 @@ function motivoCasal(m, f){
   if(livres(instancia(f.ter)) <= 0) return `${nomeInst(instancia(f.ter))} sem vaga: venda um animal para o filhote ter lugar.`;
   return '';
 }
-function formaCasal(mid, fid){
+// Escolha do jogador: no máximo 1 status do pai e 1 da mãe, diferentes. Valor inválido vira ''.
+function limpaHerda(h){
+  const ok = k => STATUS.some(([s]) => s === k) ? k : '';
+  const r = {M: ok(h && h.M), F: ok(h && h.F)};
+  if(r.M && r.M === r.F) r.M = '';
+  return r;
+}
+function formaCasal(mid, fid, herda){
   const m = animal(mid), f = animal(fid), erro = motivoCasal(m, f);
   if(erro) return erro;
-  const c = {id: 'k' + S.seq++, m: mid, f: fid};
+  const c = {id: 'k' + S.seq++, m: mid, f: fid, herda: limpaHerda(herda)};
   iniciaTentativa(c);
   S.casais.push(c);
   diario(`${ESP[m.esp].n}: casal colocado para acasalar.`);
@@ -60,9 +68,15 @@ function humor(esp, ter = S.terrenoAtual){
 }
 const penalidade = t => Math.floor(t / TRISTE_POR_PONTO);
 const nomeHumor = t => t < 15 ? 'Feliz' : t < 40 ? 'Tranquilo' : t < 70 ? 'Triste' : 'Muito triste';
-function filhoteDoCasal(m, f){
-  const st = fundeStatus(m.st, f.st), pen = penalidade(humor(f.esp, f.ter).total);
-  for(const [k] of STATUS) st[k] = Math.round(clamp(st[k] - pen * (.7 + Math.random() * .6), 0, 100));
+// Os status escolhidos em herda passam iguais (do pai e da mãe); os outros saem da mistura sorteada dos dois, podendo vir melhores ou piores,
+// e só eles sofrem a tristeza do casal.
+function filhoteDoCasal(m, f, herda){
+  const st = fundeStatus(m.st, f.st), pen = penalidade(humor(f.esp, f.ter).total), h = limpaHerda(herda);
+  for(const [k] of STATUS){
+    if(k === h.M) st[k] = m.st[k];
+    else if(k === h.F) st[k] = f.st[k];
+    else st[k] = Math.round(clamp(st[k] - pen * (.7 + Math.random() * .6), 0, 100));
+  }
   return {st, pen};
 }
 
@@ -110,15 +124,14 @@ function processar(t = agora()){
     const m = animal(c.m), f = animal(c.f), nome = ESP[(m || f || {esp:'gato'}).esp].n;
     if(c.fase === 'tentando' && t >= c.tGrav){
       if(!m || !f || morreEm(m) <= c.tGrav || morreEm(f) <= c.tGrav) continue; // a morte, abaixo, desfaz o casal
-      const fi = filhoteDoCasal(m, f);
+      const fi = filhoteDoCasal(m, f, c.herda);
       c.fase = 'gravida'; c.tParto = c.tGrav + PARTO; c.filho = fi.st; c.pen = fi.pen;
       diario(`${nome}: a fêmea está grávida! O filhote nasce em 1 hora.${fi.pen ? ' Como o casal está triste, ele vai nascer mais fraco.' : ''}`);
       mudou = true;
     }
     if(c.fase === 'gravida' && t >= c.tParto){
       if(!f || morreEm(f) <= c.tParto) continue;
-      const d = diaBR(c.tParto);
-      const filho = {id: 'a' + S.seq++, ter: f.ter, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, dia0: d, idade0: 0, pen: c.pen || 0};
+      const filho = {id: 'a' + S.seq++, ter: f.ter, esp: f.esp, sx: Math.random() < .5 ? 'M' : 'F', st: c.filho, nasc: c.tParto, pen: c.pen || 0};
       S.animais.push(filho); S.nascidos++; registraConquista(filho);
       nascimentosNovos.push(filho.id);
       diario(`${nome}: nasceu ${filho.sx === 'M' ? 'um macho' : 'uma fêmea'}, nota ${fmtNota(notaDe(filho))}.`);

@@ -19,7 +19,7 @@ function animalDoMercado(key, esp, sx, dia, r){
   for(const k of FAIXAS){ if(x < k.p){ faixa = k; break; } x -= k.p; }
   const alvo = faixa.de + r() * (faixa.ate - faixa.de - .5);
   const vida = esp.vida, idade = Math.min(vida - 1, 1 + Math.floor(r() * r() * (vida - 1)));
-  const a = {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), dia0: dia, idade0: idade};
+  const a = {id: key, esp: esp.id, sx, st: statusDaFaixa(alvo, r), nasc: dia - (idade + r() * .98) * ANO};
   // A nota máxima da espécie (a mais rara) não aparece no mercado: só nasce no criadouro. Baixa o maior status até sair dela.
   while(notaDe(a) >= esp.nmax){
     const k = STATUS.map(([k]) => k).reduce((x, y) => a.st[y] > a.st[x] ? y : x);
@@ -56,7 +56,7 @@ function mercado(t = agora(), tipo = mercadoTipo){
   if(mercadoCache.c !== c) mercadoCache = {c, gaiola: null, outros: null};
   if(mercadoCache[tipo]) return mercadoCache[tipo];
   const r = rng(Math.imul(c, 2654435761) + (tipo === 'gaiola' ? 0 : 7919));
-  const dia = diaBR(c * CICLO_MERCADO), lista = [], usadas = new Set(), pool = ESPECIES.filter(e => mercadoDe(e.id) === tipo);
+  const dia = c * CICLO_MERCADO, lista = [], usadas = new Set(), pool = ESPECIES.filter(e => mercadoDe(e.id) === tipo);
   const novo = (e, sx) => lista.push(animalDoMercado(`${c}-${tipo}-${lista.length}`, e, sx, dia, r));
   if(tipo === 'gaiola'){
     const baratas = pool.filter(e => e.p <= 15), e = baratas[Math.floor(r() * baratas.length)];
@@ -146,7 +146,7 @@ function vender(id){
   const v = precoVenda(a);
   S.dinheiro = cent(S.dinheiro + v); S.receita = cent(S.receita + v); S.vendidos++;
   S.animais = S.animais.filter(x => x !== a);
-  diario(`Vendeu ${ESP[a.esp].n} ${sexoS(a.sx)} (nota ${fmtNota(notaDe(a))}, ${anos(idadeDe(a))}) por ${eur(v)}.`);
+  diario(`Vendeu ${ESP[a.esp].n} ${sexoS(a.sx)} (nota ${fmtNota(notaDe(a))}, ${fmtIdade(a)}) por ${eur(v)}.`);
   return '';
 }
 const patrimonio = () => cent(S.dinheiro + S.animais.reduce((t, a) => t + precoVenda(a), 0));

@@ -104,7 +104,7 @@ function loadAccount(cloud){
   S = normalize(base);
   if(novo) diario(`Criadouro aberto com ${eur(DINHEIRO_INICIAL)}. Boa sorte!`);
   accountReady = true; renderLogin();
-  ultimoCiclo = cicloDe(agora()); ultimoDia = diaBR(agora());
+  ultimoCiclo = cicloDe(agora()); ultimoDia = chaveIdades();
   processar(); save(); cloudFlush();
   aba = S.animais.length ? 'animais' : 'mercado';
   renderAba(); mostraNascimento();

@@ -645,7 +645,9 @@ function iniciaRealista(){
     sol.castShadow = true; sol.shadow.mapSize.set(fraco ? 1024 : 2048, fraco ? 1024 : 2048); sol.shadow.bias = -.0006; sol.shadow.normalBias = .05;
     scene.add(sol, sol.target, new THREE.HemisphereLight(new THREE.Color('#cfe6ff'), new THREE.Color('#4d5a33'), .18));
     R3 = {renderer, scene, camera, sol, fraco, cv, ondas: null, cenario: null, cenarioN: 0, cenarioId: '', malhas: new Map(), efeitos: [], icones: {},
-      material: new THREE.MeshStandardMaterial({vertexColors: true, roughness: .82, metalness: 0, envMapIntensity: .55}), pr: Math.min(devicePixelRatio || 1, fraco ? 1.5 : 2), custo: 0, nQuadros: 0};
+      material: new THREE.MeshStandardMaterial({vertexColors: true, roughness: .82, metalness: 0, envMapIntensity: .55}),
+      // muito raro: dourado brilhante por cima das cores do animal
+      materialRaro: new THREE.MeshStandardMaterial({vertexColors: true, color: linearDe('#ffd25c'), emissive: linearDe('#7a5200'), emissiveIntensity: .45, roughness: .4, metalness: .35, envMapIntensity: 1.1}), pr: Math.min(devicePixelRatio || 1, fraco ? 1.5 : 2), custo: 0, nQuadros: 0};
     cv.addEventListener('click', cliqueRealista);
   }catch(e){ R3 = false; }
   return R3;
@@ -664,7 +666,7 @@ function cliqueRealista(e){
   const r3 = R3, r = r3.cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = new THREE.Vector3();
   let melhor = null, dist = 1e9;
   for(const [id, o] of r3.malhas){
-    v.copy(o.mesh.position); v.y += o.alt * escalaAnimal() * .45; v.project(r3.camera);
+    v.copy(o.mesh.position); v.y += o.alt * (o.tam || escalaAnimal()) * .45; v.project(r3.camera);
     const sx = (v.x + 1) / 2 * r.width, sy = (1 - v.y) / 2 * r.height, q = Math.hypot(sx - mx, sy - my);
     if(q < dist && q < Math.max(22, o.alt * 2.4)){ dist = q; melhor = id; }
   }
@@ -692,7 +694,7 @@ function desenhaRealista(tempoMs, dt){
     vivos.add(a.id);
     let o = r3.malhas.get(a.id);
     if(!o){
-      const g = geometriaDe(a.esp), mesh = new THREE.Mesh(g, r3.material);
+      const g = geometriaDe(a.esp), mesh = new THREE.Mesh(g, muitoRaro(a) ? r3.materialRaro : r3.material);
       mesh.castShadow = true; mesh.receiveShadow = true;
       const ic = new THREE.Sprite(materialIcone('coracao')); ic.visible = false; ic.scale.set(2.6, 2.6, 1);
       r3.scene.add(mesh, ic);
@@ -709,7 +711,7 @@ function desenhaRealista(tempoMs, dt){
       o.yaw += dif * Math.min(1, dt * (m.ang != null ? 18 : 8));
       o.fase += Math.hypot(ddx, ddy) * clamp(12 / o.alt, .9, 5); // o passo acompanha a distância, para a pata não deslizar no chão
     }
-    const tam = escalaAnimal() * (idadeDe(a) < IDADE_FERTIL ? .68 : 1), resp = 1 + Math.sin(tempoMs / 700 + o.fase) * .012;
+    const tam = escalaAnimal() * tamanhoIdade(a), resp = 1 + Math.sin(tempoMs / 700 + o.fase) * .012;
     o.mesh.position.set(X, Y + (anda ? Math.abs(Math.sin(o.fase)) * (m.ang != null ? .03 : .07) : 0), Z);
     o.mesh.rotation.y = o.yaw;
     o.mesh.rotation.z = 0;
@@ -717,7 +719,7 @@ function desenhaRealista(tempoMs, dt){
       o.mesh.rotation.y = o.yaw + Math.sin(tempoMs / 420 + o.fase) * .3;
       o.mesh.rotation.z = -.05 + Math.sin(tempoMs / 55) * .014;
     }
-    o.mesh.scale.set(tam, tam * resp, tam);
+    o.mesh.scale.set(tam, tam * resp, tam); o.tam = tam;
     if(o.mesh.morphTargetInfluences) o.mesh.morphTargetInfluences[0] = anda ? Math.sin(o.fase) : 0;
     const c = casalDe(a.id);
     let nome = '';

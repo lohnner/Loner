@@ -1,5 +1,5 @@
 // Animais: idade, morte, nota, valor em euros e a fusão genética dos pais.
-// Um animal = {id, esp, sx:'M'|'F', st:{for,agi,int,sau,bel}, dia0, idade0}: tinha idade0 anos no dia dia0 (número do ano do jogo, ver diaBR em 01).
+// Um animal = {id, esp, sx:'M'|'F', st:{for,agi,int,sau,bel}, nasc}: nasc = hora (ms) em que tinha 0 anos. dia0/idade0 são de saves antigos (ver normalize).
 'use strict';
 
 const mediaSt = st => STATUS.reduce((t, [k]) => t + st[k], 0) / STATUS.length;
@@ -13,15 +13,35 @@ function posNota(a){
   return (notaDe(a) - e.nmin) / (e.nmax - e.nmin) * 100;
 }
 const fmtNota = n => n.toLocaleString('pt-BR');
-const idadeDe = (a, t = agora()) => a.idade0 + diaBR(t) - a.dia0;
-// Morre na meia-noite de Brasília em que completa a expectativa de vida da espécie.
-const morreEm = a => inicioDiaBR(a.dia0 + ESP[a.esp].vida - a.idade0);
+// Idade em anos com fração (1 ano = ANO; 1 mês = MES). Cada animal envelhece desde o próprio nascimento.
+const idadeDe = (a, t = agora()) => Math.max(0, (t - a.nasc) / ANO);
+// Morre quando completa a expectativa de vida da espécie.
+const morreEm = a => a.nasc + ESP[a.esp].vida * ANO;
 const fertil = a => idadeDe(a) >= IDADE_FERTIL;
-// Tempo de vida que falta, em texto: "morre à meia-noite" nas últimas 24 h, senão "vive mais N dias reais".
-function restaVida(a, t = agora()){
-  const dias = Math.ceil((morreEm(a) - t) / DIA);
-  return dias <= 1 ? 'morre à meia-noite' : `vive mais ${dias} dias reais`;
+const fertilEm = a => a.nasc + IDADE_FERTIL * ANO;
+// "2 anos e 5 meses", "1 ano", "7 meses", "1 mês", "menos de 1 mês"
+function fmtIdade(a, t = agora()){
+  const meses = Math.floor(idadeDe(a, t) * 12 + 1e-9), y = Math.floor(meses / 12), m = meses % 12;
+  const ms = m === 1 ? '1 mês' : m + ' meses';
+  return y && m ? `${anos(y)} e ${ms}` : y ? anos(y) : m ? ms : 'menos de 1 mês';
 }
+// Tempo longo em texto: "4 dias e 3h", "5h 20min"
+function tempoLongo(ms){
+  const d = Math.floor(ms / DIA), h = Math.floor(ms % DIA / 3600e3);
+  return d ? `${d} ${d === 1 ? 'dia' : 'dias'}${h ? ` e ${h}h` : ''}` : tempo(ms);
+}
+// Tempo de vida que falta, em texto de dias reais
+function restaVida(a, t = agora()){
+  const falta = morreEm(a) - t;
+  return falta < DIA ? `morre em ${tempo(falta)}` : `vive mais ${tempoLongo(falta)} reais`;
+}
+// Tamanho no desenho 3D: o filhote nasce com 45% e cresce até virar adulto (ADULTO_FRACAO da vida).
+function tamanhoIdade(a, t = agora()){
+  const adulto = Math.max(IDADE_FERTIL, ESP[a.esp].vida * ADULTO_FRACAO);
+  return .45 + .55 * Math.sqrt(Math.min(1, idadeDe(a, t) / adulto));
+}
+// Muito raro: nota nos 10% de cima da faixa da espécie. Ganha cor dourada no terreno.
+const muitoRaro = a => posNota(a) >= 90;
 // Conquista: guarda em S.conq[esp][sx] o animal de nota mais alta daquela espécie e sexo que o jogador já teve (comprado ou nascido).
 // Fica guardado mesmo depois de vender ou morrer. Empate na nota: vale a maior média de status.
 function registraConquista(a, s = S){

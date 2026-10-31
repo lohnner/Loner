@@ -244,14 +244,22 @@ function listaDe(id){
   return modelosCache[id] = l;
 }
 // Imagem da espécie em uma direção (0 a 3) e passo (0 parado, 1 ou 2 andando); ax/ay = onde fica o chão.
-function spriteDe(id, dir, passo){
-  const k = id + dir + passo;
+// Animal muito raro: cada voxel vira dourado, mantendo o claro e o escuro do desenho original (manchas e listras continuam aparecendo).
+const douradoCache = {};
+function dourado(hex){
+  if(douradoCache[hex]) return douradoCache[hex];
+  const n = parseInt(hex.slice(1), 16), L = ((n >> 16 & 255) * .3 + (n >> 8 & 255) * .59 + (n & 255) * .11) / 255, f = .45 + L * .75;
+  const c = [255, 196, 48].map(x => Math.round(clamp(x * f + (L > .8 ? 40 : 0), 0, 255)));
+  return douradoCache[hex] = '#' + c.map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function spriteDe(id, dir, passo, raro){
+  const k = id + dir + passo + (raro ? 'R' : '');
   if(spritesCache[k]) return spritesCache[k];
   const r = ROT[dir], pts = [];
   for(const v of listaDe(id)){
     if(passo && v.g === passo && v.z === 0) continue;
     const [x, y] = r(v.x, v.y);
-    pts.push({x, y, z: v.z, c: v.c});
+    pts.push({x, y, z: v.z, c: raro ? dourado(v.c) : v.c});
   }
   pts.sort((a, b) => (a.x + a.y + a.z) - (b.x + b.y + b.z));
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
